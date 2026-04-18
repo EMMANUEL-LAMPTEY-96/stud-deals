@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #6d28d9, #8b5cf6, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@layer components {
+  /* ── Cards ─────────────────────────────────────────────────── */
+  .card {
+    @apply bg-white rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.08)] border border-gray-100;
+  }
+  .card-hover {
+    @apply card transition-all duration-200 hover:shadow-[0_8px_24px_rgba(109,40,217,0.12)] hover:-translate-y-0.5 cursor-pointer;
+  }
+
+  /* ── Buttons ────────────────────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           bg-brand-600 text-white text-sm font-semibold
+           hover:bg-brand-700 active:scale-[0.98] transition-all duration-150 shadow-sm;
+  }
+  .btn-vendor {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           bg-vendor-600 text-white text-sm font-semibold
+           hover:bg-vendor-700 active:scale-[0.98] transition-all duration-150 shadow-sm;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           bg-gray-100 text-gray-700 text-sm font-semibold
+           hover:bg-gray-200 active:scale-[0.98] transition-all duration-150;
+  }
+
+  /* ── Filter pills ───────────────────────────────────────────── */
+  .filter-pill {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium
+           whitespace-nowrap transition-all duration-150 cursor-pointer select-none;
+  }
+  .filter-pill-active {
+    @apply filter-pill bg-brand-600 text-white shadow-sm;
+  }
+  .filter-pill-inactive {
+    @apply filter-pill bg-white text-gray-600 border border-gray-200 hover:border-brand-300 hover:text-brand-700;
+  }
+
+  /* ── Discount badge ─────────────────────────────────────────── */
+  .discount-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-lg
+           bg-brand-600 text-white text-xs font-black tracking-wide;
+  }
+
+  /* ── Category badge ─────────────────────────────────────────── */
+  .category-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full
+           bg-gray-100 text-gray-600 text-xs font-medium;
+  }
+
+  /* ── QR container ───────────────────────────────────────────── */
+  .qr-container {
+    @apply p-4 bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.12)] inline-block;
+  }
+
+  /* ── Status chips ───────────────────────────────────────────── */
+  .status-verified   { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700; }
+  .status-pending    { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700; }
+  .status-unverified { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600; }
+  .status-active     { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-100 text-brand-700; }
+}

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CampusDeals — UI Preview</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js" defer></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --brand-50: #f5f3ff; --brand-100: #ede9fe; --brand-200: #ddd6fe;
+    --brand-300: #c4b5fd; --brand-400: #a78bfa; --brand-500: #8b5cf6;
+    --brand-600: #7c3aed; --brand-700: #6d28d9; --brand-800: #5b21b6;
+    --brand-900: #4c1d95; --brand-950: #2e1065;
+    --vendor-50: #f0fdf4; --vendor-100: #dcfce7; --vendor-500: #22c55e;
+    --vendor-600: #16a34a; --vendor-700: #15803d;
+    --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+    --gray-300: #d1d5db; --gray-400: #9ca3af; --gray-500: #6b7280;
+    --gray-600: #4b5563; --gray-700: #374151; --gray-800: #1f2937;
+    --gray-900: #111827; --gray-950: #030712;
+  }
+
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f13; color: var(--gray-900); }
+
+  /* ── Layout ─────────────────────────────────────────── */
+  .preview-header { background: #0f0f13; padding: 32px 24px 16px; text-align: center; }
+  .preview-header h1 { color: white; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .preview-header p  { color: #6b7280; font-size: 13px; margin-top: 6px; }
+
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 16px 24px; }
+  .tab  { padding: 8px 20px; border-radius: 999px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; background: #1f1f2a; color: #6b7280; }
+  .tab.active { background: var(--brand-600); color: white; }
+
+  .screen { display: none; max-width: 430px; margin: 0 auto; padding: 0 16px 48px; }
+  .screen.active { display: block; }
+
+  /* ── Shared Components ──────────────────────────────── */
+  .navbar { background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--gray-100); padding: 0 16px; height: 56px; display: flex; align-items: center; justify-content: space-between; border-radius: 16px 16px 0 0; position: sticky; top: 0; z-index: 10; }
+  .navbar .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-icon { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+  .logo-icon.purple { background: linear-gradient(135deg, var(--brand-500), var(--brand-700)); }
+  .logo-icon.green  { background: linear-gradient(135deg, var(--vendor-500), var(--vendor-700)); }
+  .logo-text { font-weight: 800; font-size: 15px; }
+  .logo-text span { color: var(--brand-600); }
+  .logo-text .biz { display: inline-block; background: var(--vendor-100); color: var(--vendor-700); font-size: 10px; padding: 1px 5px; border-radius: 4px; margin-left: 4px; vertical-align: 2px; }
+
+  .phone-shell { border-radius: 16px; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06); background: white; }
+
+  /* ── Buttons ────────────────────────────────────────── */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; }
+  .btn-primary   { background: var(--brand-600); color: white; }
+  .btn-vendor    { background: var(--vendor-600); color: white; }
+  .btn-secondary { background: white; color: var(--gray-800); border: 1px solid var(--gray-200); }
+  .btn-white     { background: white; color: var(--brand-700); font-weight: 800; }
+  .btn-outline   { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: white; }
+  .btn-full      { width: 100%; }
+
+  /* ── Cards ──────────────────────────────────────────── */
+  .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06); border: 1px solid var(--gray-100); }
+
+  /* ══════════════════════════════════════════════════════
+     SCREEN 1: LANDING PAGE
+  ══════════════════════════════════════════════════════ */
+  .hero { background: linear-gradient(160deg, var(--brand-950) 0%, var(--brand-800) 50%, var(--brand-600) 100%); padding: 48px 20px 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content:''; position:absolute; inset:0; background: radial-gradient(circle at 30% 20%, rgba(167,139,250,0.25) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(139,92,246,0.2) 0%, transparent 50%); pointer-events:none; }
+  .hero-eyebrow { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.85); font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; margin-bottom: 18px; }
+  .hero h1 { font-size: 30px; font-weight: 900; color: white; line-height: 1.1; letter-spacing: -1px; margin-bottom: 14px; }
+  .hero h1 span { background: linear-gradient(90deg, #c4b5fd, #ddd6fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+  .hero-ctas { display: flex; flex-direction: column; gap: 10px; }
+  .hero-pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+  .hero-pill { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); font-size: 11px; font-weight: 500; padding: 5px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+
+  .stats-bar { background: var(--gray-950); display: grid; grid-template-columns: repeat(4,1fr); }
+  .stat-item { padding: 14px 8px; text-align: center; border-right: 1px solid #1f1f2a; }
+  .stat-item:last-child { border-right: none; }
+  .stat-value { color: white; font-size: 18px; font-weight: 900; }
+  .stat-label { color: #4b5563; font-size: 10px; margin-top: 2px; }
+
+  .section { padding: 32px 20px; }
+  .section-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin-bottom: 12px; }
+  .section-tag.purple { background: var(--brand-100); color: var(--brand-700); }
+  .section-tag.green  { background: var(--vendor-100); color: var(--vendor-700); }
+  .section h2 { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .section p  { color: var(--gray-500); font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
+
+  .step-card { background: white; border-radius: 16px; border: 1px solid var(--gray-100); box-shadow: 0 1px 3px rgba(0,0,0,0.04); padding: 18px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 14px; }
+  .step-icon { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+  .step-icon.purple { background: var(--brand-100); color: var(--brand-600); }
+  .step-icon.green  { background: var(--vendor-100); color: var(--vendor-600); }
+  .step-num { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .step-num.purple { color: var(--brand-400); }
+  .step-num.green  { color: var(--vendor-500); }
+  .step-title { font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+  .step-desc  { font-size: 12px; color: var(--gray-500); line-height: 1.5; }
+
+  .dual-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px 32px; }
+  .cta-card { border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .cta-card.purple { background: linear-gradient(135deg, var(--brand-600), var(--brand-800)); }
+  .cta-card.dark   { background: linear-gradient(135deg, #1f2937, #374151); }
+  .cta-icon { font-size: 24px; opacity: 0.85; }
+  .cta-title { font-size: 16px; font-weight: 900; color: white; }
+  .cta-desc  { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.5; }
+
+  /* ══════════════════════════════════════════════════════
+     SCREEN 2: STUDENT DASHBOARD
+  ══════════════════════════════════════════════════════ */
+  .dash-header { padding: 16px 16px 0; }
+  .greeting { font-size: 22px; font-weight: 900; color: var(--gray-900); }
+  .greeting-sub { color: var(--gray-500); font-size: 13px; margin-top: 2px; }
+
+  .savings-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-50); border: 1px solid var(--brand-100); border-radius: 12px; padding: 8px 12px; margin-top: 12px; }
+  .savings-chip .label { font-size: 11px; font-weight: 600; color: var(--brand-600); }
+  .savings-chip .val   { font-size: 20px; font-weight: 900; color: var(--gray-900); }
+
+  .verify-banner { margin: 12px 16px 0; background: linear-gradient(90deg, var(--brand-600), var(--brand-700)); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .verify-banner-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; }
+  .verify-banner-text .t { font-size: 13px; font-weight: 700; color: white; }
+  .verify-banner-text .s { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .verify-banner-cta { margin-left: auto; background: white; color: var(--brand-700); font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; flex-shrink: 0; }
+
+  .search-bar { margin: 14px 16px 0; position: relative; }
+  .search-bar input { width: 100%; background: white; border: 1px solid var(--gray-200); border-radius: 12px; padding: 10px 12px 10px 36px; font-size: 13px; color: var(--gray-900); outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .search-bar .icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); font-size: 13px; }
+
+  .cat-filters { display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 0; scrollbar-width: none; }
+  .cat-filters::-webkit-scrollbar { display: none; }
+  .cat-pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
+  .cat-pill.active   { background: var(--brand-600); color: white; border-color: var(--brand-600); }
+  .cat-pill.inactive { background: white; color: var(--gray-600); border-color: var(--gray-200); }
+
+  .offers-grid { padding: 14px 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .offer-card  { background: white; border-radius: 16px; border: 1px solid var(--gray-100); box-shadow: 0 1px 4px rgba(0,0,0,0.05); overflow: hidden; }
+  .offer-img   { height: 80px; position: relative; display: flex; align-items: center; justify-content: center; }
+  .offer-img.food    { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+  .offer-img.grocery { background: linear-gradient(135deg, #d1fae5, #a7f3d0); }
+  .offer-img.tech    { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+  .offer-img.fashion { background: linear-gradient(135deg, #fce7f3, #fbcfe8); }
+  .offer-img-icon { font-size: 28px; }
+  .discount-badge-card { position: absolute; top: 8px; right: 8px; background: var(--brand-600); color: white; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 999px; }
+  .save-btn { position: absolute; top: 8px; left: 8px; width: 26px; height: 26px; background: rgba(255,255,255,0.9); border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .offer-body  { padding: 10px; }
+  .offer-vendor { font-size: 10px; color: var(--gray-500); font-weight: 600; margin-bottom: 4px; }
+  .offer-title  { font-size: 12px; font-weight: 700; color: var(--gray-900); line-height: 1.3; margin-bottom: 4px; }
+  .offer-loc    { font-size: 10px; color: var(--gray-400); display: flex; align-items: center; gap: 3px; }
+  .claim-btn { margin: 6px 10px 10px; background: var(--brand-600); color: white; font-size: 11px; font-weight: 700; padding: 7px; border-radius: 10px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+  /* VOUCHER MODAL */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; z-index: 100; padding: 0 8px 8px; }
+  .voucher-modal { background: white; border-radius: 24px; width: 100%; max-width: 380px; overflow: hidden; }
+  .voucher-header { padding: 20px 20px 14px; text-align: center; background: linear-gradient(to bottom, var(--brand-50), white); border-bottom: 1px solid var(--gray-100); }
+  .voucher-header .eyebrow { font-size: 10px; font-weight: 800; color: var(--brand-600); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .voucher-header .discount { font-size: 26px; font-weight: 900; color: var(--gray-900); }
+  .voucher-header .offer-name { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  .qr-area { padding: 18px; display: flex; justify-content: center; }
+  .qr-box { background: white; border: 2px dashed var(--brand-200); border-radius: 16px; padding: 14px; }
+  .qr-grid { width: 160px; height: 160px; display: grid; grid-template-columns: repeat(15, 1fr); gap: 1px; }
+  .qr-grid .cell { border-radius: 1px; }
+  .qr-grid .cell.b { background: #1a1a2e; }
+  .qr-grid .cell.w { background: white; }
+  .code-chip { margin: 0 20px; background: var(--gray-100); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .code-text { font-family: monospace; font-size: 16px; font-weight: 900; letter-spacing: 3px; color: var(--gray-900); }
+  .timer-bar { margin: 12px 20px; background: var(--brand-50); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--brand-700); }
+  .vendor-info { margin: 8px 20px; background: var(--gray-50); border-radius: 12px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 8px; }
+  .vendor-info .name { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+  .vendor-info .addr { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+  .instruction-box { margin: 8px 20px 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 10px 12px; font-size: 11px; color: #92400e; line-height: 1.5; text-align: center; }
+
+  /* ══════════════════════════════════════════════════════
+     SCREEN 3: VENDOR DASHBOARD
+  ══════════════════════════════════════════════════════ */
+  .vendor-header { padding: 16px; }
+  .vendor-h1 { font-size: 20px; font-weight: 900; color: var(--gray-900); }
+  .vendor-sub { font-size: 12px; color: var(--gray-500); margin-top: 3px; display: flex; align-items: center; gap: 5px; }
+
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; }
+  .metric-card { background: white; border: 1px solid var(--gray-100); border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .metric-label { font-size: 10px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .metric-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .metric-icon.blue   { background: #dbeafe; color: #1d4ed8; }
+  .metric-icon.green  { background: var(--vendor-100); color: var(--vendor-700); }
+  .metric-icon.purple { background: var(--brand-100); color: var(--brand-700); }
+  .metric-icon.amber  { background: #fef3c7; color: #92400e; }
+  .metric-value { font-size: 28px; font-weight: 900; color: var(--gray-900); }
+  .metric-sub   { font-size: 10px; color: var(--gray-400); margin-top: 3px; }
+  .metric-trend { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; margin-top: 6px; color: var(--vendor-600); }
+
+  .vendor-actions { display: flex; gap: 10px; padding: 14px 16px 0; }
+  .vendor-actions .btn { flex: 1; font-size: 12px; padding: 10px; border-radius: 12px; }
+
+  .section-card { margin: 14px 16px 0; background: white; border: 1px solid var(--gray-100); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .section-card-header { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+  .section-card-title  { font-size: 13px; font-weight: 800; color: var(--gray-900); display: flex; align-items: center; gap: 6px; }
+  .section-card-link   { font-size: 11px; color: var(--brand-600); font-weight: 600; }
+
+  .offer-row { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--gray-50); }
+  .offer-row:last-child { border-bottom: none; }
+  .offer-row-badge { width: 42px; height: 42px; border-radius: 10px; background: var(--brand-100); color: var(--brand-700); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; text-align: center; line-height: 1.2; flex-shrink: 0; }
+  .offer-row-info { flex: 1; min-width: 0; }
+  .offer-row-title  { font-size: 12px; font-weight: 700; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .offer-row-status { font-size: 10px; color: var(--gray-400); display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-green  { background: var(--vendor-500); }
+  .dot-yellow { background: #f59e0b; }
+  .dot-gray   { background: var(--gray-300); }
+  .offer-row-stats { text-align: right; flex-shrink: 0; }
+  .offer-row-stats .n { font-size: 13px; font-weight: 800; color: var(--vendor-600); }
+  .offer-row-stats .l { font-size: 10px; color: var(--gray-400); }
+
+  .activity-item { padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--gray-50); }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-dot { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+  .activity-dot.confirmed { background: var(--vendor-100); color: var(--vendor-600); }
+  .activity-dot.pending   { background: var(--gray-100); color: var(--gray-400); }
+  .activity-info { flex: 1; min-width: 0; }
+  .activity-title { font-size: 12px; font-weight: 600; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .activity-sub   { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+  .activity-right { text-align: right; flex-shrink: 0; }
+  .activity-status.c { font-size: 10px; font-weight: 700; color: var(--vendor-600); }
+  .activity-status.p { font-size: 10px; font-weight: 600; color: var(--gray-400); }
+  .activity-time { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+
+  .looker-banner { margin: 14px 16px; background: linear-gradient(90deg, var(--vendor-700), var(--vendor-600)); border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 10px; }
+  .looker-banner-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+  .looker-banner-text .t { font-size: 12px; font-weight: 800; color: white; }
+  .looker-banner-text .s { font-size: 10px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+  .looker-banner-cta { margin-left: auto; background: white; color: var(--vendor-700); font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; flex-shrink: 0; }
+
+  /* Scanner modal */
+  .scanner-modal { background: white; border-radius: 24px; width: 100%; max-width: 380px; overflow: hidden; }
+  .scanner-header { padding: 18px 18px 14px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+  .scanner-title { font-size: 17px; font-weight: 900; color: var(--gray-900); }
+  .scanner-sub   { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+  .scanner-mode-toggle { margin: 14px; background: var(--gray-100); border-radius: 12px; padding: 4px; display: flex; }
+  .scanner-mode-btn { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; }
+  .scanner-mode-btn.active { background: white; color: var(--gray-900); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .scanner-mode-btn.inactive { color: var(--gray-500); }
+  .code-input { margin: 0 14px 14px; background: var(--gray-50); border: 2px solid var(--gray-200); border-radius: 14px; padding: 14px; text-align: center; font-family: monospace; font-size: 22px; font-weight: 900; letter-spacing: 4px; color: var(--gray-900); }
+  .code-input-hint { text-align: center; font-size: 11px; color: var(--gray-400); margin-bottom: 14px; }
+  .confirm-btn { margin: 0 14px 14px; background: var(--vendor-600); color: white; font-size: 14px; font-weight: 800; padding: 14px; border-radius: 14px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  /* Screen label */
+  .screen-label { text-align: center; color: #4b5563; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 20px 0 12px; }
+</style>
+</head>
+<body>
+
+<div class="preview-header">
+  <h1>CampusDeals — UI Preview</h1>
+  <p>Interactive mockup of all three core screens. Click tabs to switch.</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showScreen('landing')">🏠 Landing Page</button>
+  <button class="tab" onclick="showScreen('student')">🎓 Student Dashboard</button>
+  <button class="tab" onclick="showScreen('vendor')">🏪 Vendor Dashboard</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN 1: LANDING PAGE
+══════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-landing">
+  <div class="screen-label">↓ Marketing Landing Page</div>
+  <div class="phone-shell">
+    <!-- Navbar -->
+    <div class="navbar">
+      <div class="logo">
+        <div class="logo-icon purple">🎓</div>
+        <div class="logo-text">Campus<span>Deals</span></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div class="btn btn-secondary" style="padding:7px 14px;font-size:12px;">Log in</div>
+        <div class="btn btn-primary" style="padding:7px 14px;font-size:12px;">Sign up</div>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-eyebrow">✨ Exclusively for university students</div>
+      <h1>Exclusive local deals.<br><span>Built for students like you.</span></h1>
+      <p>Verified student discounts at coffee shops, restaurants, and stores within walking distance. Show a QR code. Save money.</p>
+      <div class="hero-ctas">
+        <button class="btn btn-white btn-full" style="padding:13px;font-size:14px;">🎓 I'm a student — sign me up →</button>
+        <button class="btn btn-outline btn-full" style="padding:13px;font-size:14px;">🏪 I own a business</button>
+      </div>
+      <div style="display:flex;justify-content:center;gap:16px;margin-top:18px;flex-wrap:wrap;">
+        <span style="color:rgba(255,255,255,0.55);font-size:12px;">✓ Free to sign up</span>
+        <span style="color:rgba(255,255,255,0.55);font-size:12px;">✓ No app download</span>
+        <span style="color:rgba(255,255,255,0.55);font-size:12px;">✓ 100+ local deals</span>
+      </div>
+      <div class="hero-pills" style="margin-top:20px;">
+        <span class="hero-pill">☕ Coffee &amp; Café</span>
+        <span class="hero-pill">🍕 Food &amp; Dining</span>
+        <span class="hero-pill">🛒 Groceries</span>
+        <span class="hero-pill">💻 Tech</span>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-value">50+</div><div class="stat-label">Partners</div></div>
+      <div class="stat-item"><div class="stat-value">12K+</div><div class="stat-label">Students</div></div>
+      <div class="stat-item"><div class="stat-value">$180K</div><div class="stat-label">Saved</div></div>
+      <div class="stat-item"><div class="stat-value">94%</div><div class="stat-label">Retention</div></div>
+    </div>
+
+    <!-- How it works: Students -->
+    <div class="section" style="background:#f8f7ff;">
+      <div class="section-tag purple">🎓 For students</div>
+      <h2>Savings in <span style="background:linear-gradient(90deg,var(--brand-600),var(--brand-400));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">under 2 minutes</span></h2>
+      <p>No subscription. No app. Verify once, access every deal near campus.</p>
+      <div class="step-card">
+        <div class="step-icon purple">✉️</div>
+        <div><div class="step-num purple">01</div><div class="step-title">Verify your student status</div><div class="step-desc">Sign up with your .edu email and confirm in one click.</div></div>
+      </div>
+      <div class="step-card">
+        <div class="step-icon purple">📍</div>
+        <div><div class="step-num purple">02</div><div class="step-title">Browse deals near campus</div><div class="step-desc">Exclusive discounts at coffee shops, restaurants, and grocery stores.</div></div>
+      </div>
+      <div class="step-card">
+        <div class="step-icon purple">📱</div>
+        <div><div class="step-num purple">03</div><div class="step-title">Claim &amp; show your voucher</div><div class="step-desc">Tap "Get Voucher" for a unique QR code. Show it at the register.</div></div>
+      </div>
+      <button class="btn btn-primary btn-full" style="padding:12px;font-size:13px;margin-top:4px;">🎓 Create your free account →</button>
+    </div>
+
+    <!-- How it works: Vendors -->
+    <div class="section" style="background:white;">
+      <div class="section-tag green">🏪 For local businesses</div>
+      <h2>Turn students into <span style="background:linear-gradient(90deg,var(--vendor-600),var(--vendor-500));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">loyal regulars</span></h2>
+      <p>The only platform that gives you verified proof of student visits — not just clicks.</p>
+      <div class="step-card" style="border-top:3px solid var(--vendor-400);">
+        <div class="step-icon green">🏪</div>
+        <div><div class="step-num green">01</div><div class="step-title">Create your business profile</div><div class="step-desc">List your business and set your location in minutes.</div></div>
+      </div>
+      <div class="step-card" style="border-top:3px solid var(--vendor-400);">
+        <div class="step-icon green">⚡</div>
+        <div><div class="step-num green">02</div><div class="step-title">Publish a student discount</div><div class="step-desc">Set a discount, expiry date, and cap redemptions.</div></div>
+      </div>
+      <div class="step-card" style="border-top:3px solid var(--vendor-400);">
+        <div class="step-icon green">📊</div>
+        <div><div class="step-num green">03</div><div class="step-title">Track your real ROI</div><div class="step-desc">See exactly how many students visited and when peak hours are.</div></div>
+      </div>
+    </div>
+
+    <!-- Dual CTAs -->
+    <div class="dual-cta">
+      <div class="cta-card purple">
+        <div class="cta-icon">🎓</div>
+        <div class="cta-title">I'm a student</div>
+        <div class="cta-desc">Verify once, unlock hundreds of local discounts for free.</div>
+        <button class="btn" style="background:white;color:var(--brand-700);font-size:12px;padding:9px;">Get deals →</button>
+      </div>
+      <div class="cta-card dark">
+        <div class="cta-icon">🏪</div>
+        <div class="cta-title">I own a business</div>
+        <div class="cta-desc">Start free. Publish your first discount in 5 minutes.</div>
+        <button class="btn btn-vendor" style="font-size:12px;padding:9px;">List free →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN 2: STUDENT DASHBOARD + VOUCHER MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-student">
+  <div class="screen-label">↓ Student Dashboard (verified student view)</div>
+  <div class="phone-shell" style="position:relative;">
+    <div class="navbar">
+      <div class="logo">
+        <div class="logo-icon purple">🎓</div>
+        <div class="logo-text">Campus<span>Deals</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="position:relative;padding:6px;color:var(--gray-500);">🔔<span style="position:absolute;top:4px;right:4px;width:7px;height:7px;background:#ef4444;border-radius:50%;border:1px solid white;"></span></div>
+        <div style="display:flex;align-items:center;gap:6px;background:white;border:1px solid var(--gray-200);border-radius:10px;padding:5px 10px;">
+          <div style="width:24px;height:24px;border-radius:8px;background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:white;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;">E</div>
+          <span style="font-size:12px;font-weight:700;color:var(--gray-800);">Emmanuel</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="dash-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div>
+          <div class="greeting">Hey Emmanuel! 👋</div>
+          <div class="greeting-sub">📍 Exclusive deals near Ann Arbor</div>
+        </div>
+        <div class="savings-chip">
+          <div>
+            <div class="label">🏆 Total saved</div>
+            <div class="val">$47</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <span class="icon">🔍</span>
+      <input type="text" placeholder="Search deals (e.g. 'coffee', '20% off')" />
+    </div>
+
+    <!-- Category filters -->
+    <div class="cat-filters">
+      <div class="cat-pill active">✨ All Deals</div>
+      <div class="cat-pill inactive">☕ Food &amp; Drink</div>
+      <div class="cat-pill inactive">🛒 Groceries</div>
+      <div class="cat-pill inactive">💻 Tech</div>
+      <div class="cat-pill inactive">📚 Books</div>
+      <div class="cat-pill inactive">💪 Fitness</div>
+    </div>
+
+    <!-- Offer count -->
+    <div style="padding:10px 16px 0;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;font-weight:600;color:var(--gray-500);">24 deals available</span>
+      <span style="font-size:11px;color:var(--gray-400);display:flex;align-items:center;gap:3px;">📍 Ann Arbor</span>
+    </div>
+
+    <!-- Offers grid -->
+    <div class="offers-grid">
+      <!-- Card 1 -->
+      <div class="offer-card">
+        <div class="offer-img food">
+          <div class="offer-img-icon">☕</div>
+          <div class="discount-badge-card">20% OFF</div>
+          <div class="save-btn">🤍</div>
+        </div>
+        <div class="offer-body">
+          <div class="offer-vendor">Blue State Coffee</div>
+          <div class="offer-title">20% off all hot drinks</div>
+          <div class="offer-loc">📍 State St, Ann Arbor</div>
+        </div>
+        <div class="claim-btn">✨ Get Voucher</div>
+      </div>
+      <!-- Card 2 -->
+      <div class="offer-card">
+        <div class="offer-img grocery">
+          <div class="offer-img-icon">🛒</div>
+          <div class="discount-badge-card">$5 OFF</div>
+          <div class="save-btn">❤️</div>
+        </div>
+        <div class="offer-body">
+          <div class="offer-vendor">Aldi Campus</div>
+          <div class="offer-title">$5 off $30+ grocery shop</div>
+          <div class="offer-loc">📍 Plymouth Rd, Ann Arbor</div>
+        </div>
+        <div class="claim-btn">✨ Get Voucher</div>
+      </div>
+      <!-- Card 3 -->
+      <div class="offer-card">
+        <div class="offer-img tech">
+          <div class="offer-img-icon">💻</div>
+          <div class="discount-badge-card">15% OFF</div>
+          <div class="save-btn">🤍</div>
+        </div>
+        <div class="offer-body">
+          <div class="offer-vendor">TechHub Store</div>
+          <div class="offer-title">15% off all accessories</div>
+          <div class="offer-loc">📍 Main St, Ann Arbor</div>
+        </div>
+        <div class="claim-btn">✨ Get Voucher</div>
+      </div>
+      <!-- Card 4 -->
+      <div class="offer-card">
+        <div class="offer-img fashion">
+          <div class="offer-img-icon">👗</div>
+          <div class="discount-badge-card">FREE ITEM</div>
+          <div class="save-btn">🤍</div>
+        </div>
+        <div class="offer-body">
+          <div class="offer-vendor">Campus Bakery</div>
+          <div class="offer-title">Free cookie with any coffee</div>
+          <div class="offer-loc">📍 Liberty St, Ann Arbor</div>
+        </div>
+        <div class="claim-btn">✨ Get Voucher</div>
+      </div>
+    </div>
+
+    <!-- VOUCHER MODAL overlay -->
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:flex-end;padding:8px;z-index:20;">
+      <div class="voucher-modal">
+        <div style="position:absolute;top:14px;right:14px;width:28px;height:28px;background:var(--gray-100);border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;z-index:1;">✕</div>
+        <div class="voucher-header">
+          <div class="eyebrow">Your Voucher</div>
+          <div class="discount">20% OFF</div>
+          <div class="offer-name">All hot drinks — Blue State Coffee</div>
+        </div>
+        <!-- Simulated QR code -->
+        <div class="qr-area">
+          <div class="qr-box">
+            <svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Corner squares -->
+              <rect x="8" y="8" width="42" height="42" rx="4" fill="#1a1a2e"/>
+              <rect x="14" y="14" width="30" height="30" rx="2" fill="white"/>
+              <rect x="20" y="20" width="18" height="18" rx="1" fill="#1a1a2e"/>
+              <rect x="110" y="8" width="42" height="42" rx="4" fill="#1a1a2e"/>
+              <rect x="116" y="14" width="30" height="30" rx="2" fill="white"/>
+              <rect x="122" y="20" width="18" height="18" rx="1" fill="#1a1a2e"/>
+              <rect x="8" y="110" width="42" height="42" rx="4" fill="#1a1a2e"/>
+              <rect x="14" y="116" width="30" height="30" rx="2" fill="white"/>
+              <rect x="20" y="122" width="18" height="18" rx="1" fill="#1a1a2e"/>
+              <!-- Random data modules (simulated pattern) -->
+              <rect x="62" y="8" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="74" y="8" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="86" y="8" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="98" y="8" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="62" y="20" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="86" y="20" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="62" y="32" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="74" y="32" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="98" y="32" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="8" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="20" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="44" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="56" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="68" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="80" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="104" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="116" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="140" y="62" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="8" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="32" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="56" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="68" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="92" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="116" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="128" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="144" y="74" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="8" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="20" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="44" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="68" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="80" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="104" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="128" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="140" y="86" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="8" y="98" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="32" y="98" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="56" y="98" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="80" y="98" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="116" y="98" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="140" y="98" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="62" y="110" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="74" y="110" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="98" y="110" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="62" y="122" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="86" y="122" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="98" y="122" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="62" y="134" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="74" y="134" width="8" height="8" rx="1" fill="#1a1a2e"/>
+              <rect x="86" y="134" width="8" height="8" rx="1" fill="#1a1a2e"/>
+            </svg>
+          </div>
+        </div>
+        <div class="code-chip">
+          <div class="code-text">STUD-M3P9-X7K2</div>
+          <span style="color:var(--gray-400);font-size:14px;">⎘</span>
+        </div>
+        <div class="timer-bar">⏱ 23h 47m remaining</div>
+        <div class="vendor-info">
+          <span style="color:var(--gray-400);font-size:14px;">📍</span>
+          <div>
+            <div class="name">Blue State Coffee</div>
+            <div class="addr">123 State St, Ann Arbor, MI</div>
+          </div>
+        </div>
+        <div class="instruction-box">
+          <strong>How to redeem:</strong> Show this QR to the cashier. They'll scan it to apply your 20% discount. Single-use only.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN 3: VENDOR DASHBOARD + SCANNER MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-vendor">
+  <div class="screen-label">↓ Vendor Dashboard (coffee shop owner view)</div>
+  <div class="phone-shell" style="position:relative;">
+    <div class="navbar">
+      <div class="logo">
+        <div class="logo-icon green">🏪</div>
+        <div class="logo-text">Campus<span style="color:var(--vendor-600);">Deals</span><span class="biz">Biz</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="padding:6px;color:var(--gray-500);">🔔</div>
+        <div style="display:flex;align-items:center;gap:5px;background:white;border:1px solid var(--gray-200);border-radius:10px;padding:5px 10px;">
+          <div style="width:24px;height:24px;border-radius:8px;background:linear-gradient(135deg,var(--vendor-500),var(--vendor-700));color:white;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;">B</div>
+          <span style="font-size:12px;font-weight:700;color:var(--gray-800);">Blue State</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="vendor-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div>
+          <div class="vendor-h1">Blue State Coffee</div>
+          <div class="vendor-sub">🏪 Ann Arbor · free plan</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="vendor-actions">
+      <button class="btn btn-vendor" style="flex:1;font-size:12px;padding:10px;border-radius:12px;">📱 Scan voucher</button>
+      <button class="btn btn-secondary" style="flex:1;font-size:12px;padding:10px;border-radius:12px;">+ New offer</button>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid" style="margin-top:14px;">
+      <div class="metric-card">
+        <div class="metric-label">Total Views <div class="metric-icon blue">👁</div></div>
+        <div class="metric-value">2,847</div>
+        <div class="metric-sub">All-time impressions</div>
+        <div class="metric-trend">↑ +18% vs last week</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Redemptions <div class="metric-icon green">✅</div></div>
+        <div class="metric-value">314</div>
+        <div class="metric-sub">Confirmed in-store visits</div>
+        <div class="metric-trend">↑ +24% vs last week</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Conversion Rate <div class="metric-icon purple">📈</div></div>
+        <div class="metric-value">11.0%</div>
+        <div class="metric-sub">Views → visits</div>
+        <div class="metric-trend">↑ Strong performance</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Active Offers <div class="metric-icon amber">🏷</div></div>
+        <div class="metric-value">3</div>
+        <div class="metric-sub">2 pending confirmation</div>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:10px;color:var(--gray-400);">View all offers →</div>
+      </div>
+    </div>
+
+    <!-- Active offers -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-card-title">🏷 Your Offers</div>
+        <div class="section-card-link">Manage all →</div>
+      </div>
+      <div class="offer-row">
+        <div class="offer-row-badge">20%<br>OFF</div>
+        <div class="offer-row-info">
+          <div class="offer-row-title">20% off all hot drinks</div>
+          <div class="offer-row-status"><span class="status-dot dot-green"></span>Active · Expires Dec 31</div>
+        </div>
+        <div class="offer-row-stats"><div class="n">247</div><div class="l">Redeemed</div></div>
+      </div>
+      <div class="offer-row">
+        <div class="offer-row-badge">FREE<br>ITEM</div>
+        <div class="offer-row-info">
+          <div class="offer-row-title">Free cookie with any coffee</div>
+          <div class="offer-row-status"><span class="status-dot dot-green"></span>Active · Expires Nov 30</div>
+        </div>
+        <div class="offer-row-stats"><div class="n">67</div><div class="l">Redeemed</div></div>
+      </div>
+      <div class="offer-row">
+        <div class="offer-row-badge">$2<br>OFF</div>
+        <div class="offer-row-info">
+          <div class="offer-row-title">$2 off student meal deal</div>
+          <div class="offer-row-status"><span class="status-dot dot-yellow"></span>Paused</div>
+        </div>
+        <div class="offer-row-stats"><div class="n" style="color:var(--gray-400);">0</div><div class="l">Redeemed</div></div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-card-title">📊 Recent Activity</div>
+        <div style="font-size:10px;color:var(--gray-400);">Last 72h</div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-dot confirmed">✓</div>
+        <div class="activity-info"><div class="activity-title">20% off all hot drinks</div><div class="activity-sub">Redeemed in store</div></div>
+        <div class="activity-right"><div class="activity-status c">✓ Confirmed</div><div class="activity-time">8m ago</div></div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-dot confirmed">✓</div>
+        <div class="activity-info"><div class="activity-title">Free cookie with any coffee</div><div class="activity-sub">Redeemed in store</div></div>
+        <div class="activity-right"><div class="activity-status c">✓ Confirmed</div><div class="activity-time">31m ago</div></div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-dot pending">⏳</div>
+        <div class="activity-info"><div class="activity-title">20% off all hot drinks</div><div class="activity-sub">Code claimed · awaiting scan</div></div>
+        <div class="activity-right"><div class="activity-status p">⏳ Pending</div><div class="activity-time">1h ago</div></div>
+      </div>
+      <div class="activity-item">
+        <div class="activity-dot confirmed">✓</div>
+        <div class="activity-info"><div class="activity-title">20% off all hot drinks</div><div class="activity-sub">Redeemed in store</div></div>
+        <div class="activity-right"><div class="activity-status c">✓ Confirmed</div><div class="activity-time">3h ago</div></div>
+      </div>
+    </div>
+
+    <!-- Looker Studio banner -->
+    <div class="looker-banner">
+      <div class="looker-banner-icon">📊</div>
+      <div class="looker-banner-text">
+        <div class="t">Connect to Looker Studio</div>
+        <div class="s">PostgreSQL credentials ready. Build your ROI dashboard.</div>
+      </div>
+      <div class="looker-banner-cta">Set up →</div>
+    </div>
+
+    <!-- SCANNER MODAL overlay -->
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:flex-end;padding:8px;z-index:20;">
+      <div class="scanner-modal">
+        <div class="scanner-header">
+          <div>
+            <div class="scanner-title">Confirm Voucher</div>
+            <div class="scanner-sub">Scan or enter the student's code</div>
+          </div>
+          <div style="width:28px;height:28px;background:var(--gray-100);border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;">✕</div>
+        </div>
+        <div class="scanner-mode-toggle">
+          <div class="scanner-mode-btn active">⌨️ Enter code</div>
+          <div class="scanner-mode-btn inactive">📷 Scan QR</div>
+        </div>
+        <div style="padding:0 14px 6px;">
+          <div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Student voucher code</div>
+          <div class="code-input">STUD-M3P9-X7K2</div>
+        </div>
+        <div class="code-input-hint">The code is on the student's screen</div>
+        <div class="confirm-btn">✓ Confirm Voucher</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

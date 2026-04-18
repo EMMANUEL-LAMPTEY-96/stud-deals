@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CampusDeals — Launch Guide</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --brand:#7c3aed;--brand-light:#ede9fe;--brand-dark:#4c1d95;
+    --green:#16a34a;--green-light:#dcfce7;
+    --amber:#d97706;--amber-light:#fef3c7;
+    --red:#dc2626;--red-light:#fee2e2;
+    --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+    --gray-400:#9ca3af;--gray-500:#6b7280;--gray-700:#374151;--gray-900:#111827;
+    --code-bg:#1e1e2e;--code-text:#cdd6f4;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0a0f;color:var(--gray-900);line-height:1.6;}
+
+  /* ── Layout ── */
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:240px;background:#0f0f1a;border-right:1px solid #1e1e2e;overflow-y:auto;z-index:100;padding:24px 0;}
+  .main{margin-left:240px;padding:40px 48px 80px;}
+  @media(max-width:768px){.sidebar{display:none;}.main{margin-left:0;padding:24px 20px 60px;}}
+
+  /* ── Sidebar ── */
+  .sidebar-logo{padding:0 20px 20px;border-bottom:1px solid #1e1e2e;margin-bottom:8px;}
+  .sidebar-logo h2{font-size:14px;font-weight:800;color:white;}
+  .sidebar-logo p{font-size:11px;color:#4b5563;margin-top:2px;}
+  .nav-section{padding:8px 20px 4px;font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1px;}
+  .nav-item{display:flex;align-items:center;gap:8px;padding:7px 20px;font-size:12px;color:#6b7280;cursor:pointer;transition:all 0.15s;text-decoration:none;}
+  .nav-item:hover{background:#1a1a2a;color:#e5e7eb;}
+  .nav-item.active{background:#1e1a2e;color:#a78bfa;border-right:2px solid #7c3aed;}
+  .nav-item .step-num{width:20px;height:20px;border-radius:6px;background:#1e1e2e;color:#6b7280;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .nav-item.done .step-num{background:#14532d;color:#4ade80;}
+  .nav-item.active .step-num{background:#4c1d95;color:#c4b5fd;}
+
+  /* ── Content ── */
+  .page-header{margin-bottom:40px;}
+  .page-header h1{font-size:32px;font-weight:900;color:var(--gray-900);letter-spacing:-1px;}
+  .page-header .subtitle{font-size:15px;color:var(--gray-500);margin-top:6px;}
+  .time-badge{display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;color:var(--green);font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;margin-top:12px;}
+
+  .step-section{margin-bottom:48px;}
+  .step-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px;}
+  .step-circle{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0;}
+  .step-circle.brand{background:var(--brand-light);color:var(--brand);}
+  .step-circle.green{background:var(--green-light);color:var(--green);}
+  .step-circle.amber{background:var(--amber-light);color:var(--amber);}
+  .step-title{font-size:20px;font-weight:900;color:var(--gray-900);letter-spacing:-0.3px;}
+  .step-desc{font-size:13px;color:var(--gray-500);margin-top:3px;}
+
+  /* ── Alert boxes ── */
+  .alert{border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.6;}
+  .alert-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+  .alert.info  {background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;}
+  .alert.warn  {background:var(--amber-light);border:1px solid #fde68a;color:#78350f;}
+  .alert.success{background:var(--green-light);border:1px solid #bbf7d0;color:#14532d;}
+  .alert.tip   {background:var(--brand-light);border:1px solid var(--brand);color:var(--brand-dark);}
+
+  /* ── Code blocks ── */
+  .code-block{background:var(--code-bg);border-radius:12px;overflow:hidden;margin:12px 0 16px;border:1px solid #2a2a3a;}
+  .code-header{background:#16162a;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a2a3a;}
+  .code-label{font-size:11px;font-weight:700;color:#6272a4;letter-spacing:0.5px;}
+  .copy-btn{font-size:11px;color:#6272a4;background:#1e1e2e;border:1px solid #2a2a3a;border-radius:6px;padding:3px 10px;cursor:pointer;transition:all 0.15s;}
+  .copy-btn:hover{background:#2a2a3e;color:#cdd6f4;}
+  pre{padding:16px;overflow-x:auto;font-size:13px;line-height:1.7;}
+  code{font-family:'Fira Code','Cascadia Code',monospace;color:var(--code-text);}
+  .cmd{color:#50fa7b;}   /* green: commands */
+  .cmt{color:#6272a4;}   /* grey: comments */
+  .str{color:#f1fa8c;}   /* yellow: strings */
+  .kw {color:#ff79c6;}   /* pink: keywords */
+  .url{color:#8be9fd;}   /* cyan: urls */
+
+  /* ── Inline code ── */
+  .ic{background:#1e1e2e;color:#f1fa8c;border:1px solid #2a2a3a;border-radius:5px;padding:1px 6px;font-family:monospace;font-size:12px;}
+
+  /* ── Cards ── */
+  .card{background:white;border:1px solid var(--gray-200);border-radius:14px;padding:20px;margin-bottom:16px;}
+  .card h3{font-size:14px;font-weight:800;color:var(--gray-900);margin-bottom:6px;}
+  .card p{font-size:13px;color:var(--gray-500);}
+
+  /* ── Checklist ── */
+  .checklist{list-style:none;space-y:8px;}
+  .checklist li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px;color:var(--gray-700);}
+  .checklist li:last-child{border-bottom:none;}
+  .check-box{width:20px;height:20px;border:2px solid var(--gray-200);border-radius:6px;flex-shrink:0;margin-top:1px;}
+  .check-box.done{background:var(--green);border-color:var(--green);display:flex;align-items:center;justify-content:center;color:white;font-size:11px;}
+
+  /* ── Table ── */
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0 20px;}
+  th{background:var(--gray-50);font-weight:700;padding:10px 12px;text-align:left;color:var(--gray-700);border-bottom:2px solid var(--gray-200);}
+  td{padding:10px 12px;border-bottom:1px solid var(--gray-100);color:var(--gray-700);}
+  tr:last-child td{border-bottom:none;}
+
+  /* ── Tag pills ── */
+  .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+  .tag.free{background:var(--green-light);color:var(--green);}
+  .tag.paid{background:var(--amber-light);color:var(--amber);}
+  .tag.req {background:var(--brand-light);color:var(--brand);}
+
+  /* ── Divider ── */
+  hr{border:none;border-top:1px solid var(--gray-200);margin:32px 0;}
+
+  /* ── Section anchor ── */
+  .anchor{scroll-margin-top:24px;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h2>🚀 Launch Guide</h2>
+    <p>CampusDeals MVP Deploy</p>
+  </div>
+
+  <div class="nav-section">Setup</div>
+  <a class="nav-item active" href="#prereqs"><div class="step-num">1</div> Prerequisites</a>
+  <a class="nav-item" href="#scaffold"><div class="step-num">2</div> Scaffold Project</a>
+  <a class="nav-item" href="#install"><div class="step-num">3</div> Install Packages</a>
+
+  <div class="nav-section">Supabase</div>
+  <a class="nav-item" href="#supabase-project"><div class="step-num">4</div> Create Project</a>
+  <a class="nav-item" href="#run-schema"><div class="step-num">5</div> Run Schema</a>
+  <a class="nav-item" href="#auth-config"><div class="step-num">6</div> Configure Auth</a>
+  <a class="nav-item" href="#storage"><div class="step-num">7</div> Storage Buckets</a>
+  <a class="nav-item" href="#edge-functions"><div class="step-num">8</div> Edge Functions</a>
+  <a class="nav-item" href="#cron"><div class="step-num">9</div> Cron Job</a>
+
+  <div class="nav-section">Deploy</div>
+  <a class="nav-item" href="#env"><div class="step-num">10</div> Environment Vars</a>
+  <a class="nav-item" href="#vercel"><div class="step-num">11</div> Deploy to Vercel</a>
+  <a class="nav-item" href="#post-deploy"><div class="step-num">12</div> Post-Deploy Checks</a>
+
+  <div class="nav-section">Looker</div>
+  <a class="nav-item" href="#looker"><div class="step-num">13</div> Looker Studio</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <div class="page-header">
+    <h1>🚀 How to Launch CampusDeals</h1>
+    <p class="subtitle">From zero to live URL — complete deployment on Vercel + Supabase.</p>
+    <div class="time-badge">⏱ ~25 minutes total · $0/month on free tiers</div>
+  </div>
+
+  <div class="alert info">
+    <span class="alert-icon">💡</span>
+    <div><strong>Before you start:</strong> You need a computer with internet access. Every tool used here has a free tier. You will not be asked for a credit card until you exceed ~50K database rows or 100K Edge Function calls per month.</div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 1: PREREQUISITES
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="prereqs">
+    <div class="step-header">
+      <div class="step-circle brand">1</div>
+      <div>
+        <div class="step-title">Install Prerequisites</div>
+        <div class="step-desc">One-time setup. Skip anything you already have.</div>
+      </div>
+    </div>
+
+    <div class="alert warn">
+      <span class="alert-icon">⚠️</span>
+      <div>Run each of these checks first. If a command returns a version number, you already have it installed.</div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Check what you have</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt"># Check Node.js (need v18 or higher)</span>
+<span class="cmd">node --version</span>
+
+<span class="cmt"># Check npm</span>
+<span class="cmd">npm --version</span>
+
+<span class="cmt"># Check Git</span>
+<span class="cmd">git --version</span></code></pre>
+    </div>
+
+    <table>
+      <tr><th>Tool</th><th>Required</th><th>Install if missing</th></tr>
+      <tr><td><strong>Node.js</strong></td><td>v18+</td><td><a href="https://nodejs.org" style="color:var(--brand);">nodejs.org</a> → download LTS</td></tr>
+      <tr><td><strong>Git</strong></td><td>Any version</td><td><a href="https://git-scm.com" style="color:var(--brand);">git-scm.com</a></td></tr>
+      <tr><td><strong>Supabase CLI</strong></td><td>Latest</td><td>See command below</td></tr>
+      <tr><td><strong>Vercel CLI</strong></td><td>Latest</td><td>See command below</td></tr>
+    </table>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Install CLIs</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt"># Install Supabase CLI</span>
+<span class="cmd">npm install -g supabase</span>
+
+<span class="cmt"># Install Vercel CLI</span>
+<span class="cmd">npm install -g vercel</span>
+
+<span class="cmt"># Verify both installed</span>
+<span class="cmd">supabase --version</span>
+<span class="cmd">vercel --version</span></code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 2: SCAFFOLD
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="scaffold">
+    <div class="step-header">
+      <div class="step-circle brand">2</div>
+      <div>
+        <div class="step-title">Scaffold the Next.js Project</div>
+        <div class="step-desc">Create the project skeleton, then drop in the generated files.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Create project</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt"># Create the Next.js app (answer the prompts exactly as shown below)</span>
+<span class="cmd">npx create-next-app@14 campus-deals</span>
+
+<span class="cmt">  ✔ Would you like to use TypeScript?  › Yes
+  ✔ Would you like to use ESLint?      › Yes
+  ✔ Would you like to use Tailwind?    › Yes
+  ✔ Would you like to use src/ dir?    › No
+  ✔ Would you like to use App Router?  › Yes
+  ✔ Customize import alias (@/*)?      › Yes → press Enter (keep @/*)</span>
+
+<span class="cmd">cd campus-deals</span></code></pre>
+    </div>
+
+    <div class="alert tip">
+      <span class="alert-icon">📁</span>
+      <div><strong>Now copy your generated files.</strong> Open the <strong>outputs folder</strong> I created and copy everything inside it into the <span class="ic">campus-deals/</span> folder you just created. When asked about overwriting files (like <span class="ic">tailwind.config.ts</span> or <span class="ic">app/globals.css</span>), click <strong>Replace</strong>.</div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Initialize Supabase in the project</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt"># Still inside campus-deals/</span>
+<span class="cmd">supabase init</span>
+
+<span class="cmt"># This creates a supabase/ folder. Your Edge Functions are already inside it.</span></code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 3: INSTALL PACKAGES
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="install">
+    <div class="step-header">
+      <div class="step-circle brand">3</div>
+      <div>
+        <div class="step-title">Install npm Packages</div>
+        <div class="step-desc">One command. ~90 seconds.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">npm install \
+  @supabase/supabase-js \
+  @supabase/ssr \
+  @tanstack/react-query \
+  qrcode \
+  qrcode.react \
+  lucide-react \
+  class-variance-authority \
+  clsx \
+  tailwind-merge \
+  framer-motion \
+  react-hot-toast \
+  date-fns \
+  zod \
+  react-hook-form \
+  @hookform/resolvers</span>
+
+<span class="cmd">npm install --save-dev @types/qrcode</span></code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Test the build compiles cleanly</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">npm run build</span>
+
+<span class="cmt"># Expected output: ✓ Compiled successfully
+# If you see TypeScript errors, run: npm run type-check</span></code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 4: SUPABASE PROJECT
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="supabase-project">
+    <div class="step-header">
+      <div class="step-circle green">4</div>
+      <div>
+        <div class="step-title">Create Your Supabase Project</div>
+        <div class="step-desc">Free tier. No credit card required.</div>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li><div class="check-box"></div>Go to <strong><a href="https://supabase.com" style="color:var(--brand);">supabase.com</a></strong> → click <strong>Start your project</strong> → sign up with GitHub</li>
+      <li><div class="check-box"></div>Click <strong>New project</strong> → give it a name: <span class="ic">campus-deals</span></li>
+      <li><div class="check-box"></div>Set a strong database password (save it — you'll need it later)</li>
+      <li><div class="check-box"></div>Choose region closest to your target city (e.g. <em>US East</em> for Michigan)</li>
+      <li><div class="check-box"></div>Click <strong>Create new project</strong> — wait ~2 minutes for it to provision</li>
+    </ul>
+
+    <div class="alert success">
+      <span class="alert-icon">✓</span>
+      <div>Once the project is ready, go to <strong>Project Settings → API</strong>. You'll need the <strong>Project URL</strong> and the <strong>anon key</strong> and <strong>service_role key</strong> in Step 10.</div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Link your local project to Supabase</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">supabase login</span>
+<span class="cmt"># Opens browser — sign in with your Supabase account</span>
+
+<span class="cmd">supabase link --project-ref YOUR_PROJECT_REF</span>
+<span class="cmt"># Replace YOUR_PROJECT_REF with the string from your Supabase project URL
+# e.g. if URL is https://abcdefgh.supabase.co → ref is "abcdefgh"</span></code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 5: RUN SCHEMA
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="run-schema">
+    <div class="step-header">
+      <div class="step-circle green">5</div>
+      <div>
+        <div class="step-title">Run the Database Schema</div>
+        <div class="step-desc">Creates all 9 tables, indexes, triggers, RLS policies, and Looker views.</div>
+      </div>
+    </div>
+
+    <div class="alert warn">
+      <span class="alert-icon">⚠️</span>
+      <div>Do this on a <strong>brand new, empty project only</strong>. Running this on an existing database will cause conflicts.</div>
+    </div>
+
+    <p style="font-size:14px;color:var(--gray-700);margin-bottom:12px;"><strong>Option A — Supabase Dashboard (recommended for first timers):</strong></p>
+    <ul class="checklist">
+      <li><div class="check-box"></div>In your Supabase project, go to <strong>SQL Editor</strong> (left sidebar)</li>
+      <li><div class="check-box"></div>Click <strong>New query</strong></li>
+      <li><div class="check-box"></div>Open <span class="ic">001_initial_schema.sql</span> from your outputs folder, select all (<kbd>Ctrl+A</kbd>), copy it</li>
+      <li><div class="check-box"></div>Paste it into the SQL Editor</li>
+      <li><div class="check-box"></div>Click <strong>Run</strong> (or press <kbd>Ctrl+Enter</kbd>)</li>
+      <li><div class="check-box"></div>You should see: <span class="ic" style="color:var(--green);">Success. No rows returned.</span></li>
+    </ul>
+
+    <p style="font-size:14px;color:var(--gray-700);margin:16px 0 12px;"><strong>Option B — Terminal (faster):</strong></p>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">supabase db push</span>
+<span class="cmt"># Runs all files in supabase/migrations/ against your remote database</span></code></pre>
+    </div>
+
+    <div class="alert success">
+      <span class="alert-icon">✓</span>
+      <div>Verify it worked: In Supabase → <strong>Table Editor</strong>, you should see tables: <span class="ic">institutions</span>, <span class="ic">profiles</span>, <span class="ic">offers</span>, <span class="ic">redemptions</span>, and 5 others.</div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 6: AUTH CONFIG
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="auth-config">
+    <div class="step-header">
+      <div class="step-circle green">6</div>
+      <div>
+        <div class="step-title">Configure Supabase Auth</div>
+        <div class="step-desc">Set up email auth, redirect URLs, and the new user trigger.</div>
+      </div>
+    </div>
+
+    <p style="font-size:14px;color:var(--gray-700);margin-bottom:12px;"><strong>6a — Enable email auth:</strong></p>
+    <ul class="checklist">
+      <li><div class="check-box"></div>Supabase Dashboard → <strong>Authentication → Providers</strong></li>
+      <li><div class="check-box"></div>Ensure <strong>Email</strong> provider is enabled</li>
+      <li><div class="check-box"></div>Set <em>Confirm email</em> to <strong>ON</strong> (important for .edu verification flow)</li>
+    </ul>
+
+    <p style="font-size:14px;color:var(--gray-700);margin:16px 0 12px;"><strong>6b — Add redirect URLs (required for magic link emails):</strong></p>
+    <ul class="checklist">
+      <li><div class="check-box"></div>Supabase Dashboard → <strong>Authentication → URL Configuration</strong></li>
+      <li><div class="check-box"></div>Set <strong>Site URL</strong> to your Vercel URL (you'll get this in Step 11 — come back and add it)</li>
+      <li><div class="check-box"></div>Add to <strong>Redirect URLs</strong>: <span class="ic">https://YOUR-DOMAIN.vercel.app/**</span></li>
+      <li><div class="check-box"></div>Also add for local dev: <span class="ic">http://localhost:3000/**</span></li>
+    </ul>
+
+    <p style="font-size:14px;color:var(--gray-700);margin:16px 0 12px;"><strong>6c — Auto-create profile row on signup:</strong></p>
+    <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">Run this SQL in the Supabase SQL Editor. It creates a <span class="ic">profiles</span> row automatically whenever a new user signs up via Supabase Auth.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">SQL EDITOR — Paste and run this</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Function: auto-create profile row on new auth.users insert</span>
+<span class="kw">CREATE OR REPLACE FUNCTION</span> public.handle_new_user()
+<span class="kw">RETURNS TRIGGER AS</span> $$
+<span class="kw">BEGIN</span>
+  <span class="kw">INSERT INTO</span> public.profiles (id, role)
+  <span class="kw">VALUES</span> (
+    NEW.id,
+    COALESCE((NEW.raw_user_meta_data->><span class="str">'role'</span>)::public.user_role, <span class="str">'student'</span>)
+  );
+  <span class="kw">RETURN</span> NEW;
+<span class="kw">END</span>;
+$$ <span class="kw">LANGUAGE</span> plpgsql SECURITY DEFINER;
+
+<span class="kw">CREATE OR REPLACE TRIGGER</span> on_auth_user_created
+  <span class="kw">AFTER INSERT ON</span> auth.users
+  <span class="kw">FOR EACH ROW EXECUTE FUNCTION</span> public.handle_new_user();
+
+<span class="cmt">-- Function: auto-create student_profile row for student signups</span>
+<span class="kw">CREATE OR REPLACE FUNCTION</span> public.handle_new_student_profile()
+<span class="kw">RETURNS TRIGGER AS</span> $$
+<span class="kw">BEGIN</span>
+  <span class="kw">IF</span> NEW.role = <span class="str">'student'</span> <span class="kw">THEN</span>
+    <span class="kw">INSERT INTO</span> public.student_profiles (user_id)
+    <span class="kw">VALUES</span> (NEW.id)
+    ON CONFLICT (user_id) DO NOTHING;
+  <span class="kw">END IF</span>;
+  <span class="kw">IF</span> NEW.role = <span class="str">'vendor'</span> <span class="kw">THEN</span>
+    <span class="kw">INSERT INTO</span> public.vendor_profiles (user_id, business_name, city)
+    <span class="kw">VALUES</span> (NEW.id, <span class="str">'My Business'</span>, <span class="str">'City'</span>)
+    ON CONFLICT (user_id) DO NOTHING;
+  <span class="kw">END IF</span>;
+  <span class="kw">RETURN</span> NEW;
+<span class="kw">END</span>;
+$$ <span class="kw">LANGUAGE</span> plpgsql SECURITY DEFINER;
+
+<span class="kw">CREATE OR REPLACE TRIGGER</span> on_profile_created
+  <span class="kw">AFTER INSERT ON</span> public.profiles
+  <span class="kw">FOR EACH ROW EXECUTE FUNCTION</span> public.handle_new_student_profile();</code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 7: STORAGE
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="storage">
+    <div class="step-header">
+      <div class="step-circle green">7</div>
+      <div>
+        <div class="step-title">Create Storage Buckets</div>
+        <div class="step-desc">For student ID uploads and offer images.</div>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li><div class="check-box"></div>Supabase Dashboard → <strong>Storage</strong> → <strong>New bucket</strong></li>
+      <li><div class="check-box"></div>Create bucket: <span class="ic">verification-docs</span> → set to <strong>Private</strong> (ID documents must be private)</li>
+      <li><div class="check-box"></div>Create bucket: <span class="ic">offer-images</span> → set to <strong>Public</strong> (offer photos are public)</li>
+      <li><div class="check-box"></div>Create bucket: <span class="ic">vendor-logos</span> → set to <strong>Public</strong></li>
+    </ul>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">SQL EDITOR — Storage RLS policies</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Students can upload to their own verification-docs folder</span>
+<span class="kw">CREATE POLICY</span> <span class="str">"Students upload own verification docs"</span>
+  <span class="kw">ON</span> storage.objects <span class="kw">FOR INSERT</span>
+  <span class="kw">WITH CHECK</span> (
+    bucket_id = <span class="str">'verification-docs'</span>
+    <span class="kw">AND</span> auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+<span class="cmt">-- Admins can read all verification docs</span>
+<span class="kw">CREATE POLICY</span> <span class="str">"Admins read verification docs"</span>
+  <span class="kw">ON</span> storage.objects <span class="kw">FOR SELECT</span>
+  <span class="kw">USING</span> (
+    bucket_id = <span class="str">'verification-docs'</span>
+    <span class="kw">AND</span> EXISTS (
+      <span class="kw">SELECT</span> 1 <span class="kw">FROM</span> public.profiles
+      <span class="kw">WHERE</span> id = auth.uid() <span class="kw">AND</span> role = <span class="str">'admin'</span>
+    )
+  );
+
+<span class="cmt">-- Vendors can upload offer images</span>
+<span class="kw">CREATE POLICY</span> <span class="str">"Vendors upload offer images"</span>
+  <span class="kw">ON</span> storage.objects <span class="kw">FOR INSERT</span>
+  <span class="kw">WITH CHECK</span> (bucket_id = <span class="str">'offer-images'</span> <span class="kw">AND</span> auth.role() = <span class="str">'authenticated'</span>);
+
+<span class="cmt">-- Offer images are publicly readable</span>
+<span class="kw">CREATE POLICY</span> <span class="str">"Offer images public read"</span>
+  <span class="kw">ON</span> storage.objects <span class="kw">FOR SELECT</span>
+  <span class="kw">USING</span> (bucket_id = <span class="str">'offer-images'</span>);</code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 8: EDGE FUNCTIONS
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="edge-functions">
+    <div class="step-header">
+      <div class="step-circle green">8</div>
+      <div>
+        <div class="step-title">Deploy Edge Functions</div>
+        <div class="step-desc">The verification and redemption confirmation logic.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Deploy both Edge Functions</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt"># Set the secrets Edge Functions need (your Supabase service role key)</span>
+<span class="cmd">supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here</span>
+<span class="cmd">supabase secrets set SITE_URL=https://YOUR-DOMAIN.vercel.app</span>
+<span class="cmd">supabase secrets set ALLOWED_ORIGIN=https://YOUR-DOMAIN.vercel.app</span>
+
+<span class="cmt"># Deploy both functions</span>
+<span class="cmd">supabase functions deploy verify-student</span>
+<span class="cmd">supabase functions deploy confirm-redemption</span>
+
+<span class="cmt"># Expected output for each:
+# ✓ Done deploying Function verify-student
+# ✓ Done deploying Function confirm-redemption</span></code></pre>
+    </div>
+
+    <div class="alert success">
+      <span class="alert-icon">✓</span>
+      <div>Verify in Supabase Dashboard → <strong>Edge Functions</strong>. Both functions should appear with a green status dot.</div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 9: CRON JOB
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="cron">
+    <div class="step-header">
+      <div class="step-circle green">9</div>
+      <div>
+        <div class="step-title">Set Up the Cron Job</div>
+        <div class="step-desc">Auto-expires stale voucher codes every hour.</div>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li><div class="check-box"></div>Supabase Dashboard → <strong>Database → Extensions</strong> → search for <span class="ic">pg_cron</span> → enable it</li>
+      <li><div class="check-box"></div>Go to <strong>SQL Editor</strong> and run:</li>
+    </ul>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">SQL EDITOR</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Run code expiry every hour</span>
+<span class="kw">SELECT</span> cron.schedule(
+  <span class="str">'expire-redemption-codes'</span>,
+  <span class="str">'0 * * * *'</span>,
+  <span class="str">'SELECT public.expire_stale_redemptions();'</span>
+);
+
+<span class="cmt">-- Verify it was created</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> cron.job;</code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 10: ENV VARS
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="env">
+    <div class="step-header">
+      <div class="step-circle amber">10</div>
+      <div>
+        <div class="step-title">Set Environment Variables</div>
+        <div class="step-desc">Wire your Supabase project to your Next.js app.</div>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li><div class="check-box"></div>In your project folder, find <span class="ic">.env.local.example</span></li>
+      <li><div class="check-box"></div>Duplicate it and rename the copy to <span class="ic">.env.local</span></li>
+      <li><div class="check-box"></div>Fill in the values from Supabase Dashboard → <strong>Project Settings → API</strong>:</li>
+    </ul>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">.env.local — fill these in</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code>NEXT_PUBLIC_SUPABASE_URL=<span class="str">https://abcdefghijkl.supabase.co</span>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<span class="str">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</span>
+SUPABASE_SERVICE_ROLE_KEY=<span class="str">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</span>
+SUPABASE_PROJECT_ID=<span class="str">abcdefghijkl</span>
+NEXT_PUBLIC_APP_URL=<span class="str">http://localhost:3000</span>
+SITE_URL=<span class="str">http://localhost:3000</span></code></pre>
+    </div>
+
+    <div class="alert warn">
+      <span class="alert-icon">⚠️</span>
+      <div><strong>Never commit .env.local to Git.</strong> It contains your service role key which has full database access. The <span class="ic">.gitignore</span> file already excludes it, but double-check before pushing.</div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Test locally before deploying</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">npm run dev</span>
+<span class="cmt"># Open http://localhost:3000
+# You should see the landing page ✓
+# Try signing up as a student ✓</span></code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 11: VERCEL DEPLOY
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="vercel">
+    <div class="step-header">
+      <div class="step-circle amber">11</div>
+      <div>
+        <div class="step-title">Deploy to Vercel</div>
+        <div class="step-desc">Live URL in under 3 minutes.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Push to Git first</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt"># Initialize Git and push to GitHub</span>
+<span class="cmd">git init</span>
+<span class="cmd">git add .</span>
+<span class="cmd">git commit -m "feat: initial CampusDeals MVP"</span>
+
+<span class="cmt"># Create a repo on GitHub (github.com/new) then:</span>
+<span class="cmd">git remote add origin https://github.com/YOUR_USERNAME/campus-deals.git</span>
+<span class="cmd">git push -u origin main</span></code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Deploy to Vercel</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">vercel login</span>
+<span class="cmt"># Opens browser to authenticate with Vercel</span>
+
+<span class="cmd">vercel</span>
+<span class="cmt"># Prompts:
+#   Set up and deploy? › Yes
+#   Which scope? › (your account)
+#   Link to existing project? › No
+#   Project name: campus-deals
+#   Directory: ./  (press Enter)
+#   Override settings? › No
+#
+# ✅ Deployed to: https://campus-deals-xyz.vercel.app</span></code></pre>
+    </div>
+
+    <div class="alert tip">
+      <span class="alert-icon">🔑</span>
+      <div><strong>Add environment variables to Vercel</strong> — your deployed app needs them too. Run this command for each variable:</div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">TERMINAL — Add env vars to production</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmd">vercel env add NEXT_PUBLIC_SUPABASE_URL production</span>
+<span class="cmt"># Paste your value when prompted. Repeat for each:</span>
+
+<span class="cmd">vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production</span>
+<span class="cmd">vercel env add SUPABASE_SERVICE_ROLE_KEY production</span>
+<span class="cmd">vercel env add NEXT_PUBLIC_APP_URL production</span>
+<span class="cmt"># For NEXT_PUBLIC_APP_URL value: https://campus-deals-xyz.vercel.app</span>
+
+<span class="cmd">vercel env add SITE_URL production</span>
+<span class="cmt"># Same value as NEXT_PUBLIC_APP_URL</span>
+
+<span class="cmt"># Redeploy to pick up the env vars</span>
+<span class="cmd">vercel --prod</span>
+
+<span class="cmt"># ✅ Your live URL: https://campus-deals-xyz.vercel.app</span></code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 12: POST-DEPLOY
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="post-deploy">
+    <div class="step-header">
+      <div class="step-circle amber">12</div>
+      <div>
+        <div class="step-title">Post-Deploy Checks</div>
+        <div class="step-desc">Go through this before sharing the link with anyone.</div>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li><div class="check-box"></div><strong>Landing page loads</strong> — visit your Vercel URL, see the hero section</li>
+      <li><div class="check-box"></div><strong>Student signup works</strong> — register with a real .edu email, get a verification email</li>
+      <li><div class="check-box"></div><strong>Verification email arrives</strong> — check spam. Click the link. Profile updates to <span class="ic">verified</span></li>
+      <li><div class="check-box"></div><strong>Student dashboard loads</strong> — see the offer grid (empty until you create offers)</li>
+      <li><div class="check-box"></div><strong>Vendor signup works</strong> — register a vendor account</li>
+      <li><div class="check-box"></div><strong>Create a test offer</strong> — log in as vendor → Vendor Dashboard → Create Offer</li>
+      <li><div class="check-box"></div><strong>Student can see offer</strong> — log in as student → browse → offer appears</li>
+      <li><div class="check-box"></div><strong>Claim flow works</strong> — student clicks "Get Voucher" → QR code appears</li>
+      <li><div class="check-box"></div><strong>Vendor confirmation works</strong> — vendor clicks "Scan Voucher" → enters code → sees green ✓ screen</li>
+      <li><div class="check-box"></div><strong>Redemption count updated</strong> — vendor dashboard shows 1 redemption</li>
+      <li><div class="check-box"></div><strong>Go back to Step 6</strong> and add your Vercel URL to Supabase Auth redirect URLs</li>
+      <li><div class="check-box"></div><strong>Promote yourself to admin</strong> — run the SQL below so you can approve student ID uploads</li>
+    </ul>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">SQL EDITOR — Promote yourself to admin</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Run this after signing up with your own account</span>
+<span class="kw">UPDATE</span> public.profiles
+<span class="kw">SET</span> role = <span class="str">'admin'</span>
+<span class="kw">WHERE</span> id = (
+  <span class="kw">SELECT</span> id <span class="kw">FROM</span> auth.users
+  <span class="kw">WHERE</span> email = <span class="str">'your@email.com'</span>
+  <span class="kw">LIMIT</span> 1
+);</code></pre>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       STEP 13: LOOKER STUDIO
+  ═══════════════════════════════════ -->
+  <div class="step-section anchor" id="looker">
+    <div class="step-header">
+      <div class="step-circle brand">13</div>
+      <div>
+        <div class="step-title">Connect Looker Studio</div>
+        <div class="step-desc">Build your vendor ROI dashboards — no ETL needed.</div>
+      </div>
+    </div>
+
+    <div class="alert success">
+      <span class="alert-icon">📊</span>
+      <div>Supabase exposes a direct PostgreSQL connection. Looker Studio has a native PostgreSQL connector. No middleware, no export step — live data.</div>
+    </div>
+
+    <p style="font-size:14px;color:var(--gray-700);margin-bottom:12px;"><strong>Get your database credentials:</strong></p>
+    <ul class="checklist">
+      <li><div class="check-box"></div>Supabase Dashboard → <strong>Project Settings → Database</strong></li>
+      <li><div class="check-box"></div>Copy: <strong>Host</strong>, <strong>Database name</strong>, <strong>Port</strong> (5432), <strong>User</strong> (postgres)</li>
+      <li><div class="check-box"></div>Your password is the one you set in Step 4</li>
+    </ul>
+
+    <p style="font-size:14px;color:var(--gray-700);margin:16px 0 12px;"><strong>Create a read-only analytics user (recommended — never give Looker your main password):</strong></p>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">SQL EDITOR — Create read-only Looker user</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Create a read-only role for Looker Studio</span>
+<span class="kw">CREATE ROLE</span> looker_readonly LOGIN PASSWORD <span class="str">'PickAStrongPassword123!'</span>;
+
+<span class="kw">GRANT USAGE ON SCHEMA</span> public <span class="kw">TO</span> looker_readonly;
+<span class="kw">GRANT SELECT ON ALL TABLES IN SCHEMA</span> public <span class="kw">TO</span> looker_readonly;
+<span class="kw">GRANT SELECT ON ALL SEQUENCES IN SCHEMA</span> public <span class="kw">TO</span> looker_readonly;
+
+<span class="cmt">-- Allow future tables to be readable too</span>
+<span class="kw">ALTER DEFAULT PRIVILEGES IN SCHEMA</span> public
+  <span class="kw">GRANT SELECT ON TABLES TO</span> looker_readonly;</code></pre>
+    </div>
+
+    <p style="font-size:14px;color:var(--gray-700);margin:16px 0 12px;"><strong>Connect in Looker Studio:</strong></p>
+    <ul class="checklist">
+      <li><div class="check-box"></div>Go to <a href="https://lookerstudio.google.com" style="color:var(--brand);">lookerstudio.google.com</a> → <strong>Create → Data Source</strong></li>
+      <li><div class="check-box"></div>Search for <strong>PostgreSQL</strong> connector</li>
+      <li><div class="check-box"></div>Enter: Host = <span class="ic">db.YOUR_PROJECT_REF.supabase.co</span></li>
+      <li><div class="check-box"></div>Port: <span class="ic">5432</span>, Database: <span class="ic">postgres</span>, Username: <span class="ic">looker_readonly</span></li>
+      <li><div class="check-box"></div>Enable SSL</li>
+      <li><div class="check-box"></div>Click <strong>Authenticate</strong> → you'll see all your tables and views</li>
+    </ul>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>📊 Connect these views directly to Looker charts</h3>
+      <table style="margin:12px 0 0;">
+        <tr><th>View Name</th><th>Powers</th></tr>
+        <tr><td><span class="ic">v_vendor_performance_summary</span></td><td>KPI scorecards — views, redemptions, conversion rate</td></tr>
+        <tr><td><span class="ic">v_monthly_redemption_trend</span></td><td>Month-over-month line chart</td></tr>
+        <tr><td><span class="ic">v_redemptions_by_day_of_week</span></td><td>"Best days" bar chart</td></tr>
+        <tr><td><span class="ic">v_redemptions_by_hour</span></td><td>Peak hours heatmap</td></tr>
+        <tr><td><span class="ic">v_redemptions_by_institution</span></td><td>University breakdown pie chart</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ═══════════════════════════════════
+       COST SUMMARY
+  ═══════════════════════════════════ -->
+  <div class="step-section">
+    <h2 style="font-size:20px;font-weight:900;color:var(--gray-900);margin-bottom:16px;">💰 Monthly Cost Breakdown</h2>
+    <table>
+      <tr><th>Service</th><th>Free Tier</th><th>When you'll pay</th><th>Cost then</th></tr>
+      <tr><td><strong>Vercel</strong></td><td>Unlimited hobby deploys</td><td>Need team features or custom compute</td><td>$20/mo</td></tr>
+      <tr><td><strong>Supabase</strong></td><td>500MB DB, 50K MAU, 500K edge calls</td><td>>500MB data or >50K monthly active users</td><td>$25/mo</td></tr>
+      <tr><td><strong>Looker Studio</strong></td><td>100% free forever</td><td>Never — it's free</td><td>$0</td></tr>
+      <tr><td><strong>Domain</strong></td><td>Free .vercel.app subdomain</td><td>Custom domain (campusdeals.com)</td><td>~$12/yr</td></tr>
+      <tr style="background:#f0fdf4;"><td colspan="2"><strong>Total at launch</strong></td><td colspan="2"><strong>$0/month</strong></td></tr>
+      <tr><td colspan="2"><strong>Total at scale (500+ vendors)</strong></td><td colspan="2"><strong>~$45/month</strong></td></tr>
+    </table>
+  </div>
+
+</main>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!';
+    btn.style.color = '#4ade80';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = ''; }, 2000);
+  });
+}
+
+// Highlight active nav item on scroll
+const sections = document.querySelectorAll('.anchor');
+const navItems = document.querySelectorAll('.nav-item');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+  navItems.forEach(item => {
+    item.classList.remove('active');
+    if (item.getAttribute('href') === '#' + current) item.classList.add('active');
+  });
+}, { passive: true });
+</script>
+</body>
+</html>
