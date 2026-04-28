@@ -56,9 +56,24 @@ export async function GET(request: Request) {
       display_name: fullName || user.email?.split('@')[0] ?? '',
     });
 
-    // 2. Create student sub-profile (user_id FK, no other required fields)
+    // 2. Create student sub-profile
     if (userRole === 'student') {
-      await admin.from('student_profiles').insert({ user_id: user.id });
+      const UNI_DOMAINS = [
+        '.ac.uk', '.edu', '.edu.au', '.edu.ca', '.ac.nz', '.ac.za',
+        '.edu.ng', '.ac.gh', '.edu.gh', '.ac.in', '.edu.sg', '.ac.jp', '.edu.hk',
+      ];
+      const email = user.email ?? '';
+      const isUniEmail = UNI_DOMAINS.some(d => email.toLowerCase().endsWith(d));
+      const verificationMethod = (meta?.verification_method as string) ?? (isUniEmail ? 'email_domain' : null);
+      const autoVerified = isUniEmail;
+
+      await admin.from('student_profiles').insert({
+        user_id: user.id,
+        verification_status: autoVerified ? 'verified' : 'unverified',
+        verification_method: autoVerified ? 'edu_email' : null,
+        verified_at: autoVerified ? new Date().toISOString() : null,
+        student_email: isUniEmail ? email : null,
+      });
     }
     // vendor_profiles has required city — vendor fills this in profile settings
   }

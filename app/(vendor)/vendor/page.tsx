@@ -166,8 +166,9 @@ export default function VendorDashboard() {
         .from('vendor_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
+      // New vendor — no profile row yet. Send them to set up their business profile.
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorProfile(vp);
 

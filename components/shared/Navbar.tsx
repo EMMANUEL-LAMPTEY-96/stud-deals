@@ -172,7 +172,7 @@ export default function Navbar() {
             <Link href="/for-vendors" className="block py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>For businesses</Link>
             <hr className="border-gray-100" />
             <Link href="/login" className="block w-full btn-secondary text-center" onClick={() => setMobileOpen(false)}>Log in</Link>
-            <Link href="/register/student" className="block w-full btn-primary text-center" onClick={() => setMobileOpen(false)}>Get student deals</Link>
+            <Link href="/sign-up/student" className="block w-full btn-primary text-center" onClick={() => setMobileOpen(false)}>Get student deals</Link>
           </div>
         )}
       </nav>
@@ -189,9 +189,9 @@ export default function Navbar() {
   ];
 
   const vendorLinks = [
-    { href: '/vendor/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
-    { href: '/vendor/offers', label: 'My Offers', icon: <Tag size={15} /> },
-    { href: '/vendor/redeem', label: 'Scan Code', icon: <Store size={15} /> },
+    { href: '/vendor',          label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
+    { href: '/vendor/offers',   label: 'My Offers', icon: <Tag size={15} /> },
+    { href: '/vendor/analytics',label: 'Analytics', icon: <Store size={15} /> },
   ];
 
   const navLinks = role === 'vendor' ? vendorLinks : studentLinks;

@@ -183,12 +183,21 @@ export default function VendorProfilePage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/sign-in'); return; }
+      if (!user) { router.push('/login'); return; }
       setUserId(user.id);
 
       const { data } = await supabase
-        .from('vendor_profiles').select('*').eq('user_id', user.id).single();
-      if (!data) { router.push('/vendor'); return; }
+        .from('vendor_profiles').select('*').eq('user_id', user.id).maybeSingle();
+
+      // New vendor — no profile yet. Pre-fill from auth metadata and show the form in "create" mode
+      if (!data) {
+        const { data: { user: freshUser } } = await supabase.auth.getUser();
+        const meta = freshUser?.user_metadata ?? {};
+        setBusinessName((meta.business_name as string) ?? '');
+        setBusinessEmail(freshUser?.email ?? '');
+        setLoading(false);
+        return;
+      }
 
       setVp(data);
       setBusinessName(data.business_name);
@@ -216,13 +225,15 @@ export default function VendorProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!vp) return;
     if (!businessName.trim() || !city.trim()) {
       showFlash('error', 'Business name and city are required.');
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from('vendor_profiles').update({
+
+    const isNew = !vp;
+    const payload = {
+      user_id: userId!,
       business_name: businessName.trim(),
       business_type: businessType || null,
       description: description.trim() || null,
@@ -234,17 +245,27 @@ export default function VendorProfilePage() {
       city: city.trim(),
       state: state.trim() || null,
       postal_code: postalCode.trim() || null,
-      country: country,
+      country: country || 'United States',
       logo_url: logoUrl,
       cover_image_url: coverUrl,
-    }).eq('id', vp.id);
+    };
+
+    // Use upsert so this works for both new vendors (INSERT) and existing (UPDATE)
+    const { data: savedData, error } = await supabase
+      .from('vendor_profiles')
+      .upsert(payload, { onConflict: 'user_id' })
+      .select()
+      .single();
 
     setSaving(false);
     if (error) { showFlash('error', error.message); return; }
-    setVp((prev) => prev ? {
-      ...prev, business_name: businessName, city, logo_url: logoUrl, cover_image_url: coverUrl,
-    } : null);
-    showFlash('success', 'Profile updated successfully.');
+    if (savedData) setVp(savedData as VendorProfile);
+    showFlash('success', isNew ? 'Business profile created! You can now create offers.' : 'Profile updated successfully.');
+
+    // If this was the first save, redirect to dashboard
+    if (isNew) {
+      setTimeout(() => router.push('/vendor'), 1500);
+    }
   };
 
   if (loading) {
