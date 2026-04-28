@@ -14,16 +14,17 @@ import { createAdminClient } from '@/lib/supabase/server';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
+  const next = searchParams.get('next') ?? '';
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/sign-in?error=missing_code`);
+    return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !user) {
-    return NextResponse.redirect(`${origin}/sign-in?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
   // Use admin client to bypass RLS when creating the profile
@@ -39,28 +40,32 @@ export async function GET(request: Request) {
   if (!existingProfile) {
     const meta = user.user_metadata;
     const userRole = (meta?.role as string) ?? 'student';
-    const isEmailVerified =
-      userRole === 'student' && meta?.verification_method === 'email_domain';
 
-    // 1. Create the base profile
+    // Split full_name into first/last — matches actual profiles schema
+    const fullName = (meta?.full_name as string) ?? '';
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] ?? '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // 1. Create the base profile (correct column names from schema)
     await admin.from('profiles').insert({
       id: user.id,
-      email: user.email!,
-      full_name: (meta?.full_name as string) ?? '',
       role: userRole,
-      verification_status: isEmailVerified ? 'verified' : 'pending',
+      first_name: firstName || null,
+      last_name: lastName || null,
+      display_name: fullName || user.email?.split('@')[0] ?? '',
     });
 
-    // 2. Create role-specific profile
+    // 2. Create student sub-profile (user_id FK, no other required fields)
     if (userRole === 'student') {
-      await admin.from('student_profiles').insert({ id: user.id });
-    } else if (userRole === 'vendor') {
-      await admin.from('vendor_profiles').insert({
-        id: user.id,
-        business_name: (meta?.business_name as string) ?? '',
-        business_category: (meta?.business_category as string) ?? 'food_drink',
-      });
+      await admin.from('student_profiles').insert({ user_id: user.id });
     }
+    // vendor_profiles has required city — vendor fills this in profile settings
+  }
+
+  // Handle password reset flow
+  if (next === '/reset-password') {
+    return NextResponse.redirect(`${origin}/reset-password`);
   }
 
   const role = existingProfile?.role ?? (user.user_metadata?.role as string) ?? 'student';
