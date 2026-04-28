@@ -23,7 +23,7 @@ const CATEGORIES = ['All', 'Food & Drink', 'Coffee', 'Retail', 'Fitness', 'Tech'
 
 const STATS = [
   { label:'Students saving', value:'47,000+' },
-  { label:'Campus deals', value:'2,400+' },
+  { label:'Stud deals', value:'2,400+' },
   { label:'Partner businesses', value:'380+' },
   { label:'Avg. student saving', value:'£340/yr' },
 ];

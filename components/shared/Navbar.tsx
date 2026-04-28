@@ -130,7 +130,7 @@ export default function Navbar() {
                 <GraduationCap className="w-4.5 h-4.5 text-white" size={18} />
               </div>
               <span className="font-bold text-gray-900 text-lg">
-                Campus<span className="text-brand-600">Deals</span>
+                Stud<span className="text-brand-600">Deals</span>
               </span>
             </Link>
 
@@ -205,7 +205,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={role === 'vendor' ? '/vendor/dashboard' : '/dashboard'} className="flex items-center gap-2.5 group flex-shrink-0">
+          <Link href={role === 'vendor' ? '/vendor' : '/dashboard'} className="flex items-center gap-2.5 group flex-shrink-0">
             <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${logoGradient} flex items-center justify-center shadow-sm`}>
               {role === 'vendor'
                 ? <Store className="text-white" size={17} />
@@ -213,7 +213,7 @@ export default function Navbar() {
               }
             </div>
             <span className="font-bold text-gray-900 text-base hidden sm:block">
-              Campus<span className={accentClass}>Deals</span>
+              Stud<span className={accentClass}>Deals</span>
               {role === 'vendor' && <span className="ml-1.5 text-xs font-medium bg-vendor-100 text-vendor-700 px-1.5 py-0.5 rounded-md">Biz</span>}
             </span>
           </Link>
