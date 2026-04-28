@@ -9,15 +9,12 @@ import type { Database } from '@/lib/types/database.types';
 
 /**
  * Creates a typed Supabase client for use in browser/client components.
- * Reads credentials from public env vars (safe to expose to the browser).
- *
- * Usage in Client Components:
- *   const supabase = createClient();
- *   const { data } = await supabase.from('offers').select('*');
+ * Falls back to placeholder values during SSR/build time — actual network
+ * calls only happen in the browser where real env vars are available.
  */
 export function createClient() {
   return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL    ?? 'https://placeholder.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key'
   );
 }

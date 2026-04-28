@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       role: userRole,
       first_name: firstName || null,
       last_name: lastName || null,
-      display_name: fullName || user.email?.split('@')[0] ?? '',
+      display_name: fullName || (user.email?.split('@')[0] ?? ''),
     });
 
     // 2. Create student sub-profile
