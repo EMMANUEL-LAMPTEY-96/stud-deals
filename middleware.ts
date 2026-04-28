@@ -81,7 +81,7 @@ export async function middleware(request: NextRequest) {
       .single();
 
     const role = profile?.role ?? 'student';
-    const dashboardPath = role === 'vendor' ? '/vendor/dashboard'
+    const dashboardPath = role === 'vendor' ? '/vendor'
                         : role === 'admin'  ? '/admin/dashboard'
                         : '/dashboard';
 
@@ -103,7 +103,7 @@ export async function middleware(request: NextRequest) {
 
     // Vendor trying to access student routes
     if (role === 'vendor' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
-      return NextResponse.redirect(new URL('/vendor/dashboard', request.url));
+      return NextResponse.redirect(new URL('/vendor', request.url));
     }
 
     // Student trying to access vendor routes
