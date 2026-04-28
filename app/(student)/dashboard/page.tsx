@@ -148,32 +148,22 @@ export default function StudentDashboard() {
     fetchUser();
   }, []);
 
-  // ── Fetch offers ──────────────────────────────────────────────────────────
+  // ── Fetch offers (via API route — bypasses RLS so all auth users can browse)
   const fetchOffers = useCallback(async () => {
     setLoadingOffers(true);
 
-    let query = supabase
-      .from('offers')
-      .select(`
-        *,
-        vendor:vendor_profiles (id, business_name, logo_url, city, address_line1)
-      `)
-      .eq('status', 'active')
-      .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
-      .order('created_at', { ascending: false });
+    const params = new URLSearchParams();
+    if (selectedCategory !== 'all') params.set('category', selectedCategory);
+    if (searchQuery.trim()) params.set('search', searchQuery.trim());
 
-    if (selectedCategory !== 'all') {
-      query = query.eq('category', selectedCategory);
-    }
-
-    if (searchQuery.trim()) {
-      query = query.ilike('title', `%${searchQuery.trim()}%`);
-    }
-
-    const { data, error } = await query.limit(30);
-
-    if (!error) {
-      setOffers((data as OfferWithVendor[]) ?? []);
+    try {
+      const res = await fetch(`/api/offers?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        setOffers((json.offers as OfferWithVendor[]) ?? []);
+      }
+    } catch {
+      // silently fail — empty state shown
     }
 
     setLoadingOffers(false);
@@ -233,7 +223,7 @@ export default function StudentDashboard() {
     <>
       <Navbar />
 
-      <div className="min-h-screen bg-surface-50">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
           {/* ── HEADER ─────────────────────────────────────────────────── */}

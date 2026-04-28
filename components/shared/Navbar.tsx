@@ -62,12 +62,32 @@ export default function Navbar() {
         .eq('id', authUser.id)
         .single();
 
-      if (!profile) { setLoading(false); return; }
+      // If no profile row yet (callback not run / first load), build a minimal
+      // one from auth metadata so the authenticated navbar still renders.
+      const resolvedProfile: Profile = profile ?? {
+        id: authUser.id,
+        role: (authUser.user_metadata?.role as Profile['role']) ?? 'student',
+        first_name: null,
+        last_name: null,
+        display_name:
+          (authUser.user_metadata?.full_name as string) ??
+          authUser.email?.split('@')[0] ??
+          'Account',
+        avatar_url: null,
+        phone: null,
+        city: null,
+        state: null,
+        country: 'United Kingdom',
+        is_active: true,
+        last_seen_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
       let studentProfile = null;
       let businessName = null;
 
-      if (profile.role === 'student') {
+      if (resolvedProfile.role === 'student') {
         const { data } = await supabase
           .from('student_profiles')
           .select('verification_status')
@@ -76,7 +96,7 @@ export default function Navbar() {
         studentProfile = data;
       }
 
-      if (profile.role === 'vendor') {
+      if (resolvedProfile.role === 'vendor') {
         const { data } = await supabase
           .from('vendor_profiles')
           .select('business_name')
@@ -85,7 +105,7 @@ export default function Navbar() {
         businessName = data?.business_name ?? null;
       }
 
-      setUser({ profile, studentProfile, businessName });
+      setUser({ profile: resolvedProfile, studentProfile, businessName });
 
       // Fetch unread notification count
       const { count } = await supabase
