@@ -28,6 +28,7 @@ import {
   Tag,
   ChevronDown,
   Sparkles,
+  Stamp,
 } from 'lucide-react';
 
 interface NavUser {
@@ -203,9 +204,9 @@ export default function Navbar() {
   const role = user?.profile.role;
 
   const studentLinks = [
-    { href: '/dashboard', label: 'Discover', icon: <Sparkles size={15} /> },
-    { href: '/my-vouchers', label: 'My Vouchers', icon: <Tag size={15} /> },
-    { href: '/saved', label: 'Saved', icon: <LayoutDashboard size={15} /> },
+    { href: '/dashboard',   label: 'Discover',     icon: <Sparkles size={15} /> },
+    { href: '/my-loyalty',  label: 'My Loyalty',   icon: <Stamp size={15} /> },
+    { href: '/my-vouchers', label: 'My Vouchers',  icon: <Tag size={15} /> },
   ];
 
   const vendorLinks = [

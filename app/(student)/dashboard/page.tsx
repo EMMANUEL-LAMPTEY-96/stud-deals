@@ -2,19 +2,19 @@
 
 // =============================================================================
 // app/(student)/dashboard/page.tsx — Student Dashboard
-// The primary screen a verified student sees after logging in.
+// The primary screen a student sees after logging in.
 //
 // Features:
-//   - Verification status banner (nudges unverified students)
-//   - Category filter pills (horizontal scroll on mobile)
-//   - Offer grid (responsive: 1→2→3 columns)
-//   - Voucher modal after claiming
-//   - Empty state per category
-//   - Greeting with first name + total savings gamification
+//   - Loyalty cards quick-access strip (show QR, recent stamp progress)
+//   - Verification status banner
+//   - Category filter pills
+//   - Offer grid (partner businesses and their loyalty programs)
+//   - Greeting with first name
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import OfferCard from '@/components/student/OfferCard';
@@ -22,8 +22,8 @@ import VoucherModal from '@/components/student/VoucherModal';
 import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
-  Coffee, ShoppingBag, Laptop, UtensilsCrossed, Dumbbell,
-  Book, Tag, Shirt
+  Coffee, ShoppingBag, Laptop, Dumbbell,
+  Book, Tag, Shirt, QrCode, Stamp, Gift, Store, ChevronRight,
 } from 'lucide-react';
 import type {
   OfferWithVendor, StudentProfile, Profile,
@@ -112,6 +112,102 @@ function VerificationBanner({ status }: { status: string }) {
   );
 }
 
+// ── Loyalty Strip ─────────────────────────────────────────────────────────────
+
+interface LoyaltySnippet {
+  vendor_name: string;
+  logo_url: string | null;
+  stamps_in_cycle: number;
+  required_visits: number;
+  offer_id: string;
+}
+
+function LoyaltyStrip({
+  items,
+  studentProfileId,
+}: {
+  items: LoyaltySnippet[];
+  studentProfileId: string | undefined;
+}) {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-bold text-gray-900">My Loyalty Cards</h2>
+        <Link href="/my-loyalty" className="text-xs text-brand-600 font-semibold flex items-center gap-1 hover:text-brand-700">
+          View all
+          <ChevronRight size={12} />
+        </Link>
+      </div>
+
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+        {/* Show QR card — always first */}
+        <Link
+          href="/my-loyalty"
+          className="flex-shrink-0 w-32 bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-md transition-shadow"
+        >
+          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+            <QrCode size={18} className="text-white" />
+          </div>
+          <p className="text-white text-xs font-bold text-center leading-tight">Show my QR</p>
+        </Link>
+
+        {/* Loyalty progress cards */}
+        {items.map((item) => {
+          const pct = Math.round((item.stamps_in_cycle / item.required_visits) * 100);
+          return (
+            <Link
+              key={item.offer_id}
+              href="/my-loyalty"
+              className="flex-shrink-0 w-36 bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {item.logo_url ? (
+                    <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Store size={13} className="text-gray-400" />
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-gray-800 truncate">{item.vendor_name}</p>
+              </div>
+              {/* Mini stamp dots */}
+              <div className="flex gap-1 flex-wrap mb-2">
+                {Array.from({ length: Math.min(item.required_visits, 8) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                      i < item.stamps_in_cycle ? 'bg-brand-500' : 'bg-gray-100'
+                    }`}
+                  >
+                    {i < item.stamps_in_cycle && <Stamp size={8} className="text-white" />}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">
+                {item.stamps_in_cycle}/{item.required_visits}
+                {item.stamps_in_cycle === item.required_visits && ' 🎉'}
+              </p>
+            </Link>
+          );
+        })}
+
+        {/* Empty state card */}
+        {items.length === 0 && (
+          <Link
+            href="/my-loyalty"
+            className="flex-shrink-0 w-44 bg-white border border-dashed border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 text-center"
+          >
+            <Gift size={18} className="text-gray-300" />
+            <p className="text-xs text-gray-400 leading-tight">
+              Visit a business and earn your first stamp
+            </p>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function StudentDashboard() {
@@ -128,6 +224,7 @@ export default function StudentDashboard() {
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [activeVoucher, setActiveVoucher] = useState<ClaimOfferResponse | null>(null);
   const [city, setCity] = useState<string>('');
+  const [loyaltySnippets, setLoyaltySnippets] = useState<LoyaltySnippet[]>([]);
 
   // ── Fetch user + student profile ──────────────────────────────────────────
   useEffect(() => {
@@ -143,6 +240,46 @@ export default function StudentDashboard() {
       setUser(profileRes.data);
       setStudentProfile(studentRes.data);
       setCity(profileRes.data?.city ?? '');
+
+      // Fetch loyalty snippets for the strip
+      if (studentRes.data?.id) {
+        try {
+          const res = await fetch(`/api/loyalty/stamp?student_id=${studentRes.data.id}`);
+          if (res.ok) {
+            const { stamps } = await res.json();
+            // Group by offer, compute progress
+            const grouped: Record<string, {
+              vendor_name: string; logo_url: string | null;
+              stamps: number; required: number; offer_id: string;
+            }> = {};
+            for (const s of stamps ?? []) {
+              const key = s.offer_id;
+              if (!grouped[key]) {
+                const terms = s.offer?.terms_and_conditions ?? '';
+                const match = terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
+                let req = 5;
+                try { if (match) req = JSON.parse(match[1])?.required_visits ?? 5; } catch { /* ignore */ }
+                grouped[key] = {
+                  vendor_name: s.offer?.vendor?.business_name ?? 'Business',
+                  logo_url: s.offer?.vendor?.logo_url ?? null,
+                  stamps: 0,
+                  required: req,
+                  offer_id: s.offer_id,
+                };
+              }
+              if (['stamp', 'reward_earned'].includes(s.status)) grouped[key].stamps++;
+            }
+            const snippets: LoyaltySnippet[] = Object.values(grouped).map((g) => ({
+              vendor_name: g.vendor_name,
+              logo_url: g.logo_url,
+              stamps_in_cycle: g.stamps % g.required || (g.stamps > 0 ? g.required : 0),
+              required_visits: g.required,
+              offer_id: g.offer_id,
+            }));
+            setLoyaltySnippets(snippets.slice(0, 5));
+          }
+        } catch { /* silently fail */ }
+      }
     };
 
     fetchUser();
@@ -257,6 +394,12 @@ export default function StudentDashboard() {
           {studentProfile && (
             <VerificationBanner status={studentProfile.verification_status} />
           )}
+
+          {/* ── LOYALTY STRIP ──────────────────────────────────────────── */}
+          <LoyaltyStrip
+            items={loyaltySnippets}
+            studentProfileId={studentProfile?.id}
+          />
 
           {/* ── SEARCH BAR ─────────────────────────────────────────────── */}
           <div className="relative mb-4">

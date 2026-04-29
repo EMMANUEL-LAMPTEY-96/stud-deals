@@ -1,19 +1,17 @@
 'use client';
 
 // =============================================================================
-// app/(vendor)/dashboard/page.tsx — Vendor Dashboard
+// app/(vendor)/vendor/page.tsx — Vendor Loyalty Dashboard
 //
-// The B2B command centre. A coffee shop owner opens this and sees:
-//   - 4 KPI metric cards (Views, Redemptions, Conversion Rate, Active Offers)
-//   - Quick-access redemption scanner panel
-//   - Active offers list with per-offer stats
-//   - Recent redemptions activity feed
-//   - "Create offer" CTA
+// The LOYALTY-FIRST command centre for a vendor.
+// Core purpose: scan student QR codes to award stamps.
 //
-// Data strategy:
-//   - Metrics fetched from the v_vendor_performance_summary view (single join)
-//   - Recent redemptions fetched with 24hr window for the activity feed
-//   - All counts are denormalised on the DB side — no slow aggregations here
+// Layout:
+//   - Big "Scan Student" primary CTA (always visible at top)
+//   - 4 KPI cards: Active Members, Stamps Today, Rewards Given, Active Programs
+//   - Active loyalty programs list (with stamp-rate sparklines)
+//   - Recent stamp activity feed (who visited, when, what progress)
+//   - "Create loyalty program" prompt if none exist
 // =============================================================================
 
 import { useState, useEffect } from 'react';
@@ -23,126 +21,118 @@ import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
 import MetricCard from '@/components/vendor/MetricCard';
-import RedemptionScanner from '@/components/vendor/RedemptionScanner';
+import LoyaltyScanner from '@/components/vendor/LoyaltyScanner';
 import {
-  BarChart3, Eye, Tag, Plus, QrCode, TrendingUp,
-  Clock, CheckCircle, AlertCircle, ArrowUpRight,
-  Store, Sparkles, ChevronRight, BarChart2,
+  QrCode, Plus, ChevronRight, Store,
+  Stamp, Gift, Users, TrendingUp, Trophy,
+  AlertCircle, Sparkles, Tag, Clock,
+  CheckCircle,
 } from 'lucide-react';
 import type { VendorProfile, Offer, Redemption } from '@/lib/types/database.types';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
 }
 
-function conversionRate(views: number, redemptions: number): string {
-  if (views === 0) return '—';
-  return `${((redemptions / views) * 100).toFixed(1)}%`;
-}
-
-function timeAgo(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime();
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)  return 'Just now';
+  if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)  return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// ── Offer row in the active offers list ──────────────────────────────────────
-function OfferRow({ offer }: { offer: Offer }) {
-  const convRate = conversionRate(offer.view_count, offer.redemption_count);
+function parseLoyaltyConfig(terms: string | null) {
+  if (!terms) return null;
+  const match = terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
+  if (!match) return null;
+  try { return JSON.parse(match[1]); } catch { return null; }
+}
 
-  const statusConfig: Record<string, { label: string; dot: string }> = {
-    active:   { label: 'Active',   dot: 'bg-vendor-500' },
-    paused:   { label: 'Paused',   dot: 'bg-yellow-400' },
-    draft:    { label: 'Draft',    dot: 'bg-gray-300'   },
-    expired:  { label: 'Expired',  dot: 'bg-red-400'    },
-    depleted: { label: 'Depleted', dot: 'bg-orange-400' },
+// ── Offer row ─────────────────────────────────────────────────────────────────
+function LoyaltyProgramRow({ offer }: { offer: Offer }) {
+  const config = parseLoyaltyConfig(offer.terms_and_conditions ?? null);
+  const required = config?.required_visits ?? 5;
+  const rewardLabel = config?.reward_label ?? 'Reward';
+  const mode = config?.mode ?? 'standard';
+
+  const modeLabel: Record<string, string> = {
+    punch_card: 'Punch Card',
+    first_visit: 'First Visit',
+    milestone: 'Milestone',
+    standard: 'Discount',
   };
-  const sc = statusConfig[offer.status] ?? statusConfig.draft;
+
+  const statusColors: Record<string, string> = {
+    active: 'bg-vendor-500',
+    paused: 'bg-yellow-400',
+    draft: 'bg-gray-300',
+    expired: 'bg-red-400',
+  };
 
   return (
     <Link
       href={`/vendor/offers/${offer.id}`}
       className="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-xl transition-colors group"
     >
-      {/* Discount badge */}
-      <div className="w-12 h-12 rounded-xl bg-brand-100 flex items-center justify-center flex-shrink-0 text-brand-700 text-xs font-black text-center leading-tight px-1">
-        {offer.discount_label}
+      <div className="w-12 h-12 rounded-xl bg-vendor-100 flex items-center justify-center flex-shrink-0">
+        <Gift size={20} className="text-vendor-700" />
       </div>
-
-      {/* Offer info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900 truncate">{offer.title}</p>
+        <p className="text-sm font-bold text-gray-900 truncate">{offer.title}</p>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-          <span className="text-xs text-gray-500">{sc.label}</span>
-          {offer.expires_at && (
+          <span className={`w-1.5 h-1.5 rounded-full ${statusColors[offer.status] ?? 'bg-gray-300'}`} />
+          <span className="text-xs text-gray-500">{modeLabel[mode]}</span>
+          {config && (
             <span className="text-xs text-gray-400">
-              · Expires {new Date(offer.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              · {required} stamps → {rewardLabel}
             </span>
           )}
         </div>
       </div>
-
-      {/* Stats */}
       <div className="hidden sm:flex items-center gap-5 text-right flex-shrink-0">
         <div>
-          <p className="text-sm font-bold text-gray-900">{formatNumber(offer.view_count)}</p>
-          <p className="text-xs text-gray-400">Views</p>
-        </div>
-        <div>
           <p className="text-sm font-bold text-gray-900">{formatNumber(offer.redemption_count)}</p>
-          <p className="text-xs text-gray-400">Redeemed</p>
-        </div>
-        <div>
-          <p className={`text-sm font-bold ${offer.view_count > 0 ? 'text-vendor-600' : 'text-gray-400'}`}>
-            {convRate}
-          </p>
-          <p className="text-xs text-gray-400">Conv.</p>
+          <p className="text-xs text-gray-400">Stamps</p>
         </div>
       </div>
-
-      <ChevronRight size={15} className="text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
+      <ChevronRight size={15} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
     </Link>
   );
 }
 
-// ── Redemption activity item ──────────────────────────────────────────────────
-function ActivityItem({ r }: { r: Redemption & { offer?: { title: string } } }) {
-  const isConfirmed = r.status === 'confirmed';
+// ── Recent stamp item ──────────────────────────────────────────────────────────
+function StampItem({ r }: { r: Redemption & { offer?: { title: string } } }) {
+  const isReward = r.status === 'reward_earned';
   return (
     <div className="flex items-center gap-3 py-3">
       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-        isConfirmed ? 'bg-vendor-100 text-vendor-600' : 'bg-gray-100 text-gray-400'
+        isReward ? 'bg-amber-100 text-amber-600' : 'bg-vendor-100 text-vendor-600'
       }`}>
-        {isConfirmed ? <CheckCircle size={15} /> : <Clock size={15} />}
+        {isReward ? <Trophy size={15} /> : <Stamp size={15} />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-800 font-medium truncate">
-          {r.offer?.title ?? 'Offer claimed'}
+          {r.offer?.title ?? 'Loyalty stamp'}
         </p>
-        <p className="text-xs text-gray-400 mt-0.5 capitalize">
-          {isConfirmed ? 'Redeemed in store' : 'Code claimed · awaiting scan'}
+        <p className="text-xs text-gray-400 mt-0.5">
+          {isReward ? '🎉 Reward unlocked!' : 'Stamp logged'}
         </p>
       </div>
-      <div className="text-right flex-shrink-0">
-        <p className={`text-xs font-semibold ${isConfirmed ? 'text-vendor-600' : 'text-gray-400'}`}>
-          {isConfirmed ? '✓ Confirmed' : '⏳ Pending'}
-        </p>
-        <p className="text-xs text-gray-400 mt-0.5">{timeAgo(r.claimed_at)}</p>
-      </div>
+      <p className="text-xs text-gray-400 flex-shrink-0">
+        {timeAgo(r.confirmed_at ?? r.claimed_at)}
+      </p>
     </div>
   );
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function VendorDashboard() {
   const router = useRouter();
@@ -150,29 +140,27 @@ export default function VendorDashboard() {
 
   const [vendorProfile, setVendorProfile] = useState<VendorProfile | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [recentRedemptions, setRecentRedemptions] = useState<
-    (Redemption & { offer?: { title: string } })[]
-  >([]);
+  const [recentStamps, setRecentStamps] = useState<(Redemption & { offer?: { title: string } })[]>([]);
   const [loading, setLoading] = useState(true);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [todayStamps, setTodayStamps] = useState(0);
+  const [rewardsGiven, setRewardsGiven] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
-      // Fetch vendor profile (denormalised metrics live here)
       const { data: vp } = await supabase
         .from('vendor_profiles')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      // New vendor — no profile row yet. Send them to set up their business profile.
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorProfile(vp);
 
-      // Fetch active + draft offers
+      // Fetch active loyalty programs
       const { data: offerData } = await supabase
         .from('offers')
         .select('*')
@@ -182,26 +170,48 @@ export default function VendorDashboard() {
         .limit(10);
       setOffers(offerData ?? []);
 
-      // Fetch recent redemptions (last 72 hours)
-      const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-      const { data: redemptionData } = await supabase
+      // Fetch recent stamp activity (last 72h)
+      const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+      const { data: stampData } = await supabase
         .from('redemptions')
         .select('*, offer:offers(title)')
         .eq('vendor_id', vp.id)
-        .gte('claimed_at', cutoff)
-        .order('claimed_at', { ascending: false })
+        .in('status', ['stamp', 'reward_earned'])
+        .gte('confirmed_at', cutoff72h)
+        .order('confirmed_at', { ascending: false })
         .limit(20);
-      setRecentRedemptions(redemptionData ?? []);
+      setRecentStamps(stampData ?? []);
+
+      // Today's stamp count
+      const midnight = new Date();
+      midnight.setHours(0, 0, 0, 0);
+      const { count: todayCount } = await supabase
+        .from('redemptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('vendor_id', vp.id)
+        .in('status', ['stamp', 'reward_earned'])
+        .gte('confirmed_at', midnight.toISOString());
+      setTodayStamps(todayCount ?? 0);
+
+      // Total rewards given
+      const { count: rewardCount } = await supabase
+        .from('redemptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('vendor_id', vp.id)
+        .eq('status', 'reward_earned');
+      setRewardsGiven(rewardCount ?? 0);
 
       setLoading(false);
     };
+
     fetchData();
   }, []);
 
   const vp = vendorProfile;
-  const convRate = vp ? conversionRate(vp.total_lifetime_views, vp.total_lifetime_redemptions) : '—';
-  const activeOffersCount = offers.filter((o) => o.status === 'active').length;
-  const pendingCount = recentRedemptions.filter((r) => r.status === 'claimed').length;
+  const activePrograms = offers.filter((o) => o.status === 'active').length;
+  const hasLoyaltyProgram = offers.some(
+    (o) => parseLoyaltyConfig(o.terms_and_conditions ?? null) !== null
+  );
 
   return (
     <>
@@ -219,90 +229,108 @@ export default function VendorDashboard() {
               </h1>
               <p className="text-gray-500 text-sm mt-1 flex items-center gap-1.5">
                 <Store size={13} />
-                {vp?.city ?? 'Local business'} · {vp?.plan_tier ?? 'free'} plan
+                Loyalty Platform · {vp?.city ?? 'Your city'}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {/* Scan code button — prominent */}
               <button
                 onClick={() => setScannerOpen(true)}
-                className="btn-vendor flex-shrink-0"
+                className="btn-vendor flex-shrink-0 text-base px-5 py-3"
               >
-                <QrCode size={16} />
-                Scan voucher
+                <QrCode size={18} />
+                Scan Student Card
               </button>
               <Link href="/vendor/offers/create" className="btn-secondary flex-shrink-0">
                 <Plus size={16} />
-                New offer
+                New Program
               </Link>
             </div>
           </div>
 
-          {/* ── UNVERIFIED BUSINESS WARNING ──────────────────────────────── */}
+          {/* ── UNVERIFIED WARNING ────────────────────────────────────────── */}
           {vp && !vp.is_verified && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 mb-6">
               <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-amber-900">Your business is pending verification</p>
+                <p className="text-sm font-semibold text-amber-900">Business pending verification</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  We&apos;ll review your details within 24 hours. Your offers won&apos;t be visible to students until then.
+                  Your loyalty programs won&apos;t be visible to students until we verify your business details. Usually within 24 hours.
                 </p>
               </div>
             </div>
           )}
 
-          {/* ── KPI METRIC CARDS ─────────────────────────────────────────── */}
+          {/* ── NO LOYALTY PROGRAM NUDGE ─────────────────────────────────── */}
+          {!loading && !hasLoyaltyProgram && (
+            <div className="bg-gradient-to-r from-vendor-600 to-vendor-700 rounded-2xl p-5 flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Gift size={22} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-bold">Create your first loyalty program</p>
+                <p className="text-white/70 text-xs mt-0.5">
+                  Set up a punch card, milestone reward, or first-visit discount to start building student loyalty.
+                </p>
+              </div>
+              <Link
+                href="/vendor/offers/create"
+                className="flex-shrink-0 bg-white text-vendor-700 text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-vendor-50 transition-colors whitespace-nowrap"
+              >
+                Get started →
+              </Link>
+            </div>
+          )}
+
+          {/* ── KPI CARDS ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <MetricCard
-              title="Total Views"
-              value={formatNumber(vp?.total_lifetime_views ?? 0)}
-              subLabel="All-time offer impressions"
-              icon={<Eye size={17} />}
+              title="Active Members"
+              value={formatNumber(vp?.total_lifetime_redemptions ?? 0)}
+              subLabel="Students with stamps"
+              icon={<Users size={17} />}
               accentColor="blue"
               loading={loading}
             />
             <MetricCard
-              title="Redemptions"
-              value={formatNumber(vp?.total_lifetime_redemptions ?? 0)}
-              subLabel="Confirmed in-store visits"
-              icon={<CheckCircle size={17} />}
+              title="Stamps Today"
+              value={todayStamps}
+              subLabel="Scans logged today"
+              icon={<Stamp size={17} />}
               accentColor="green"
               loading={loading}
             />
             <MetricCard
-              title="Conversion Rate"
-              value={convRate}
-              subLabel="Views → confirmed visits"
-              icon={<TrendingUp size={17} />}
-              accentColor="purple"
+              title="Rewards Given"
+              value={rewardsGiven}
+              subLabel="Total free rewards earned"
+              icon={<Gift size={17} />}
+              accentColor="amber"
               loading={loading}
             />
             <MetricCard
-              title="Active Offers"
-              value={activeOffersCount}
-              subLabel={`${pendingCount} pending confirmation`}
+              title="Active Programs"
+              value={activePrograms}
+              subLabel="Live loyalty programs"
               icon={<Tag size={17} />}
-              accentColor="amber"
+              accentColor="purple"
               loading={loading}
             />
           </div>
 
-          {/* ── MAIN GRID: Offers + Activity ─────────────────────────────── */}
+          {/* ── MAIN GRID ────────────────────────────────────────────────── */}
           <div className="grid lg:grid-cols-3 gap-6">
 
-            {/* ── LEFT COL: Active Offers (2/3 width) ──────────────────── */}
+            {/* LEFT: Loyalty programs (2/3 width) */}
             <div className="lg:col-span-2 space-y-4">
-
-              {/* Active offers list */}
               <div className="card overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                   <div className="flex items-center gap-2">
-                    <Tag size={15} className="text-gray-500" />
-                    <h2 className="font-bold text-gray-900">Your Offers</h2>
+                    <Gift size={15} className="text-gray-500" />
+                    <h2 className="font-bold text-gray-900">Loyalty Programs</h2>
                   </div>
                   <Link href="/vendor/offers" className="text-xs text-brand-600 font-semibold hover:text-brand-700 flex items-center gap-1">
                     Manage all
-                    <ArrowUpRight size={12} />
+                    <ChevronRight size={12} />
                   </Link>
                 </div>
 
@@ -323,48 +351,51 @@ export default function VendorDashboard() {
                     <div className="inline-flex w-14 h-14 rounded-2xl bg-gray-100 items-center justify-center mb-4">
                       <Sparkles size={22} className="text-gray-400" />
                     </div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">No offers yet</p>
-                    <p className="text-xs text-gray-400 mb-4">Create your first student discount to start driving foot traffic.</p>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">No programs yet</p>
+                    <p className="text-xs text-gray-400 mb-4">
+                      Create a punch card, milestone reward, or first-visit discount.
+                    </p>
                     <Link href="/vendor/offers/create" className="btn-vendor text-sm px-5 py-2.5 inline-flex">
                       <Plus size={14} />
-                      Create first offer
+                      Create loyalty program
                     </Link>
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-50 px-2">
                     {offers.map((offer) => (
-                      <OfferRow key={offer.id} offer={offer} />
+                      <LoyaltyProgramRow key={offer.id} offer={offer} />
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Analytics CTA for higher plan tiers */}
-              {vp?.plan_tier === 'free' && (
-                <div className="rounded-2xl bg-gradient-to-r from-brand-600 to-brand-700 p-5 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <BarChart3 size={20} className="text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white font-bold text-sm">Unlock full analytics</p>
-                    <p className="text-white/70 text-xs mt-0.5">Peak hours, university breakdown, and Looker Studio export.</p>
-                  </div>
-                  <Link href="/vendor/upgrade" className="flex-shrink-0 bg-white text-brand-700 text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-brand-50 transition-colors whitespace-nowrap">
-                    Upgrade →
-                  </Link>
+              {/* Analytics CTA */}
+              <div className="rounded-2xl bg-gradient-to-r from-brand-600 to-brand-700 p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp size={20} className="text-white" />
                 </div>
-              )}
+                <div className="flex-1">
+                  <p className="text-white font-bold text-sm">See your loyalty analytics</p>
+                  <p className="text-white/70 text-xs mt-0.5">
+                    Peak stamp hours, top students, reward conversion rates.
+                  </p>
+                </div>
+                <Link
+                  href="/vendor/analytics"
+                  className="flex-shrink-0 bg-white text-brand-700 text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-brand-50 transition-colors whitespace-nowrap"
+                >
+                  Analytics →
+                </Link>
+              </div>
             </div>
 
-            {/* ── RIGHT COL: Activity Feed (1/3 width) ─────────────────── */}
+            {/* RIGHT: Recent activity (1/3 width) */}
             <div className="space-y-4">
-
-              {/* Recent activity */}
               <div className="card overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                   <div className="flex items-center gap-2">
-                    <BarChart2 size={15} className="text-gray-500" />
-                    <h2 className="font-bold text-gray-900">Recent Activity</h2>
+                    <Clock size={15} className="text-gray-500" />
+                    <h2 className="font-bold text-gray-900">Recent Stamps</h2>
                   </div>
                   <span className="text-xs text-gray-400">Last 72h</span>
                 </div>
@@ -382,65 +413,52 @@ export default function VendorDashboard() {
                         </div>
                       ))}
                     </div>
-                  ) : recentRedemptions.length === 0 ? (
+                  ) : recentStamps.length === 0 ? (
                     <div className="py-12 text-center">
-                      <Clock size={24} className="text-gray-300 mx-auto mb-2" />
-                      <p className="text-xs text-gray-400">No activity in the last 72 hours.</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Publish an offer to attract students.</p>
+                      <Stamp size={24} className="text-gray-300 mx-auto mb-2" />
+                      <p className="text-xs text-gray-400">No stamps in the last 72 hours.</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Scan a student card to get started.</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-gray-50">
-                      {recentRedemptions.slice(0, 8).map((r) => (
-                        <ActivityItem key={r.id} r={r} />
+                      {recentStamps.slice(0, 8).map((r) => (
+                        <StampItem key={r.id} r={r} />
                       ))}
                     </div>
                   )}
                 </div>
-
-                {recentRedemptions.length > 8 && (
-                  <div className="px-5 py-3 border-t border-gray-100">
-                    <Link href="/vendor/analytics" className="text-xs text-brand-600 font-semibold hover:text-brand-700">
-                      View full history →
-                    </Link>
-                  </div>
-                )}
               </div>
 
-              {/* Quick tip card */}
+              {/* Quick tip */}
               <div className="card p-4 bg-vendor-50 border-vendor-100">
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-xl bg-vendor-200 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp size={15} className="text-vendor-700" />
+                    <CheckCircle size={15} className="text-vendor-700" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-vendor-900 mb-1">📊 Connect to Looker Studio</p>
+                    <p className="text-xs font-bold text-vendor-900 mb-1">Tip: Speed up checkout</p>
                     <p className="text-xs text-vendor-700 leading-relaxed">
-                      Your data is ready. Use Supabase PostgreSQL credentials to build professional ROI dashboards.
+                      Tap &quot;Scan Student Card&quot; before the student arrives. Camera opens faster on repeat use.
                     </p>
-                    <Link href="/vendor/analytics" className="mt-2 text-xs font-bold text-vendor-700 hover:text-vendor-900 underline underline-offset-2 block">
-                      Set up analytics →
-                    </Link>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── REDEMPTION SCANNER MODAL ──────────────────────────────────────── */}
+      {/* ── LOYALTY SCANNER MODAL ─────────────────────────────────────────── */}
       {scannerOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setScannerOpen(false); }}
         >
           <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-            {/* Modal header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
               <div>
-                <h2 className="font-black text-gray-900 text-lg">Confirm Voucher</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Scan or enter the student&apos;s code</p>
+                <h2 className="font-black text-gray-900 text-lg">Scan Student Card</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Scan student QR to log a loyalty stamp</p>
               </div>
               <button
                 onClick={() => setScannerOpen(false)}
@@ -450,7 +468,7 @@ export default function VendorDashboard() {
               </button>
             </div>
             <div className="p-6">
-              <RedemptionScanner />
+              <LoyaltyScanner />
             </div>
           </div>
         </div>
