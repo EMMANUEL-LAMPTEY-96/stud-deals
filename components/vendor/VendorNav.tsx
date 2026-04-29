@@ -8,13 +8,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Tag, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, Tag, BarChart3, Settings, Users } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/vendor',           label: 'Dashboard',  icon: <LayoutDashboard size={15} /> },
-  { href: '/vendor/offers',    label: 'Offers',     icon: <Tag size={15} /> },
-  { href: '/vendor/analytics', label: 'Analytics',  icon: <BarChart3 size={15} /> },
-  { href: '/vendor/profile',   label: 'Settings',   icon: <Settings size={15} /> },
+  { href: '/vendor',             label: 'Dashboard',  icon: <LayoutDashboard size={15} /> },
+  { href: '/vendor/offers',      label: 'Offers',     icon: <Tag size={15} /> },
+  { href: '/vendor/customers',   label: 'Customers',  icon: <Users size={15} /> },
+  { href: '/vendor/analytics',   label: 'Analytics',  icon: <BarChart3 size={15} /> },
+  { href: '/vendor/profile',     label: 'Settings',   icon: <Settings size={15} /> },
 ];
 
 export default function VendorNav() {
