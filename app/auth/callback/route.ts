@@ -59,19 +59,28 @@ export async function GET(request: Request) {
     // 2. Create student sub-profile
     if (userRole === 'student') {
       const UNI_DOMAINS = [
+        // Hungarian university domains
+        '.hu',
+        // International
         '.ac.uk', '.edu', '.edu.au', '.edu.ca', '.ac.nz', '.ac.za',
         '.edu.ng', '.ac.gh', '.edu.gh', '.ac.in', '.edu.sg', '.ac.jp', '.edu.hk',
       ];
       const email = user.email ?? '';
-      const isUniEmail = UNI_DOMAINS.some(d => email.toLowerCase().endsWith(d));
-      const verificationMethod = (meta?.verification_method as string) ?? (isUniEmail ? 'email_domain' : null);
-      const autoVerified = isUniEmail;
+      const domain = email.toLowerCase().split('@')[1] ?? '';
+      // .hu check: must look like a university (has edu/stud/hallgato prefix OR known patterns)
+      const isHuniEmail = domain.endsWith('.hu') && (
+        domain.includes('edu.') || domain.includes('stud.') ||
+        domain.includes('hallgato.') || domain.includes('student.') ||
+        domain.includes('caesar.') || domain.includes('unimail.')
+      );
+      const isOtherUniEmail = UNI_DOMAINS.filter(d => d !== '.hu').some(d => email.toLowerCase().endsWith(d));
+      const isUniEmail = isHuniEmail || isOtherUniEmail;
 
       await admin.from('student_profiles').insert({
         user_id: user.id,
-        verification_status: autoVerified ? 'verified' : 'unverified',
-        verification_method: autoVerified ? 'edu_email' : null,
-        verified_at: autoVerified ? new Date().toISOString() : null,
+        verification_status: isUniEmail ? 'verified' : 'unverified',
+        verification_method: isUniEmail ? 'edu_email' : null,
+        verified_at: isUniEmail ? new Date().toISOString() : null,
         student_email: isUniEmail ? email : null,
       });
     }
