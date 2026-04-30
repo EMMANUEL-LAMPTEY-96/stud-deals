@@ -717,7 +717,7 @@ export default function VendorCustomersPage() {
                   ? 'Try a different name or email'
                   : segment !== 'all'
                   ? 'Switch to "All" to see everyone'
-                  : 'When students earn stamps here, they'll appear in this list'}
+                  : "When students earn stamps here, they'll appear in this list"}
               </p>
             </div>
           ) : (
