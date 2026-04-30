@@ -20,12 +20,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import {
-  GraduationCap, Stamp, Gift, Star, Coffee, Store,
-  ChevronRight, Trophy, RefreshCw, AlertCircle, Sparkles,
+  Stamp, Gift, Star, Coffee, Store,
+  Trophy, RefreshCw, AlertCircle, QrCode,
 } from 'lucide-react';
 import type { StudentProfile, Profile } from '@/lib/types/database.types';
 
@@ -104,7 +103,7 @@ export default function MyLoyaltyPage() {
   const [loyaltyData, setLoyaltyData] = useState<VendorProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'card' | 'stamps' | 'rewards'>('card');
+  const [activeTab, setActiveTab] = useState<'stamps' | 'rewards'>('stamps');
 
   // ── Fetch user ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -202,7 +201,6 @@ export default function MyLoyaltyPage() {
     }
   }, [studentProfile?.id]);
 
-  const shortId = studentProfile?.id?.split('-')[0]?.toUpperCase() ?? '??????';
   const firstName = profile?.first_name ?? profile?.display_name?.split(' ')[0] ?? 'Student';
   const isVerified = studentProfile?.verification_status === 'verified';
   const totalRewards = loyaltyData.reduce((n, v) => n + v.rewards_earned, 0);
@@ -235,7 +233,7 @@ export default function MyLoyaltyPage() {
           <div className="mb-6">
             <h1 className="text-2xl font-black text-gray-900">My Loyalty Cards</h1>
             <p className="text-gray-500 text-sm mt-1">
-              Show your QR code to earn stamps at partner businesses.
+              Scan the QR code at any partner business to earn stamps and unlock rewards.
             </p>
           </div>
 
@@ -244,9 +242,9 @@ export default function MyLoyaltyPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 mb-5">
               <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-bold text-amber-900">Verify your student status first</p>
+                <p className="text-sm font-bold text-amber-900">Verify your student status</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Your QR code is ready, but some vendors may require verified status before stamping.
+                  Verify to unlock all deals and loyalty programmes across the platform.
                 </p>
                 <Link href="/verification" className="mt-2 inline-block text-xs font-bold text-amber-700 underline">
                   Verify now →
@@ -275,7 +273,6 @@ export default function MyLoyaltyPage() {
           {/* ── TABS ───────────────────────────────────────────────────── */}
           <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
             {[
-              { id: 'card' as const, label: 'My QR Card' },
               { id: 'stamps' as const, label: 'Stamp Cards' },
               { id: 'rewards' as const, label: 'Rewards' },
             ].map((tab) => (
@@ -292,85 +289,6 @@ export default function MyLoyaltyPage() {
               </button>
             ))}
           </div>
-
-          {/* ══════════════════════════════════════════════════════════════
-              TAB: MY QR CARD
-          ══════════════════════════════════════════════════════════════ */}
-          {activeTab === 'card' && (
-            <div className="space-y-5 animate-fade-in">
-              {/* QR Card */}
-              <div className="card overflow-hidden">
-                {/* Gradient header */}
-                <div className="bg-gradient-to-br from-brand-600 to-brand-700 p-6 text-white">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                      <GraduationCap size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-white">{firstName}&apos;s Loyalty Card</p>
-                      <p className="text-white/70 text-xs">Student Loyalty Network</p>
-                    </div>
-                  </div>
-
-                  {isVerified && (
-                    <span className="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                      <Sparkles size={11} />
-                      Verified Student
-                    </span>
-                  )}
-                </div>
-
-                {/* QR code */}
-                <div className="p-6 flex flex-col items-center">
-                  {studentProfile?.id ? (
-                    <>
-                      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
-                        <QRCodeSVG
-                          value={studentProfile.id}
-                          size={200}
-                          level="M"
-                          fgColor="#1a1a2e"
-                          bgColor="#ffffff"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400 mb-1">Your unique loyalty ID</p>
-                      <p className="text-base font-black font-mono text-gray-900 tracking-widest">
-                        {shortId}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-3 text-center max-w-xs">
-                        Show this QR code to the vendor at checkout. They scan it to add your stamp.
-                      </p>
-                    </>
-                  ) : (
-                    <div className="py-8 text-center">
-                      <AlertCircle size={32} className="text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400">Complete your profile to get your loyalty card</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Instruction steps */}
-              <div className="card p-5">
-                <h3 className="font-bold text-gray-900 mb-4 text-sm">How to earn stamps</h3>
-                <div className="space-y-3">
-                  {[
-                    { step: '1', text: 'Visit a participating business', icon: <Store size={14} /> },
-                    { step: '2', text: 'Open this app and show your QR code', icon: <QRCodeSVG value="x" size={14} level="L" /> },
-                    { step: '3', text: 'Vendor scans your code at checkout', icon: <Stamp size={14} /> },
-                    { step: '4', text: 'Collect stamps to unlock free rewards', icon: <Gift size={14} /> },
-                  ].map((s) => (
-                    <div key={s.step} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {s.step}
-                      </div>
-                      <p className="text-sm text-gray-700 leading-relaxed">{s.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ══════════════════════════════════════════════════════════════
               TAB: STAMP CARDS
@@ -403,14 +321,8 @@ export default function MyLoyaltyPage() {
                   </div>
                   <h3 className="font-bold text-gray-900 mb-2">No stamps yet</h3>
                   <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                    Visit a participating business and show your QR code to start collecting stamps.
+                    Visit a partner business, tap <strong>Earn Stamp</strong> on the dashboard, and scan their QR code at the counter.
                   </p>
-                  <button
-                    onClick={() => setActiveTab('card')}
-                    className="mt-4 btn-primary text-sm"
-                  >
-                    Show my QR code
-                  </button>
                 </div>
               ) : (
                 loyaltyData.map((vp) => {

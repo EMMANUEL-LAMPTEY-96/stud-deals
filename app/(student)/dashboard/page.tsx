@@ -147,17 +147,6 @@ function LoyaltyStrip({
       </div>
 
       <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
-        {/* Show QR card — always first */}
-        <Link
-          href="/my-loyalty"
-          className="flex-shrink-0 w-32 bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-            <QrCode size={18} className="text-white" />
-          </div>
-          <p className="text-white text-xs font-bold text-center leading-tight">Show my QR</p>
-        </Link>
-
         {/* Loyalty progress cards */}
         {items.map((item) => {
           const pct = Math.round((item.stamps_in_cycle / item.required_visits) * 100);
@@ -200,15 +189,12 @@ function LoyaltyStrip({
 
         {/* Empty state card */}
         {items.length === 0 && (
-          <Link
-            href="/my-loyalty"
-            className="flex-shrink-0 w-44 bg-white border border-dashed border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 text-center"
-          >
+          <div className="flex-shrink-0 w-44 bg-white border border-dashed border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 text-center">
             <Gift size={18} className="text-gray-300" />
             <p className="text-xs text-gray-400 leading-tight">
-              Visit a business and earn your first stamp
+              Tap Earn Stamp and scan a vendor QR to get started
             </p>
-          </Link>
+          </div>
         )}
       </div>
     </div>
