@@ -22,9 +22,9 @@ import Navbar from '@/components/shared/Navbar';
 import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
 import VendorNav from '@/components/vendor/VendorNav';
 import MetricCard from '@/components/vendor/MetricCard';
-import LoyaltyScanner from '@/components/vendor/LoyaltyScanner';
+import VendorQRPanel from '@/components/vendor/VendorQRPanel';
 import {
-  QrCode, Plus, ChevronRight, Store,
+  Plus, ChevronRight, Store,
   Stamp, Gift, Users, TrendingUp, Trophy,
   AlertCircle, Sparkles, Tag, Clock,
   CheckCircle,
@@ -143,7 +143,6 @@ export default function VendorDashboard() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [recentStamps, setRecentStamps] = useState<(Redemption & { offer?: { title: string } })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [scannerOpen, setScannerOpen] = useState(false);
   const [todayStamps, setTodayStamps] = useState(0);
   const [rewardsGiven, setRewardsGiven] = useState(0);
 
@@ -240,14 +239,7 @@ export default function VendorDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setScannerOpen(true)}
-                className="btn-vendor flex-shrink-0 text-base px-5 py-3"
-              >
-                <QrCode size={18} />
-                Scan Student Card
-              </button>
-              <Link href="/vendor/offers/create" className="btn-secondary flex-shrink-0">
+              <Link href="/vendor/offers/create" className="btn-vendor flex-shrink-0">
                 <Plus size={16} />
                 New Program
               </Link>
@@ -436,50 +428,18 @@ export default function VendorDashboard() {
                 </div>
               </div>
 
-              {/* Quick tip */}
-              <div className="card p-4 bg-vendor-50 border-vendor-100">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-vendor-200 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle size={15} className="text-vendor-700" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-vendor-900 mb-1">Tip: Speed up checkout</p>
-                    <p className="text-xs text-vendor-700 leading-relaxed">
-                      Tap &quot;Scan Student Card&quot; before the student arrives. Camera opens faster on repeat use.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* Vendor QR Code — students scan this to earn stamps */}
+              {vp && (
+                <VendorQRPanel
+                  vendorId={vp.id}
+                  businessName={vp.business_name}
+                  city={vp.city ?? undefined}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* ── LOYALTY SCANNER MODAL ─────────────────────────────────────────── */}
-      {scannerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setScannerOpen(false); }}
-        >
-          <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-              <div>
-                <h2 className="font-black text-gray-900 text-lg">Scan Student Card</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Scan student QR to log a loyalty stamp</p>
-              </div>
-              <button
-                onClick={() => setScannerOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6">
-              <LoyaltyScanner />
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -20,6 +20,7 @@ import Navbar from '@/components/shared/Navbar';
 import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
 import OfferCard from '@/components/student/OfferCard';
 import VoucherModal from '@/components/student/VoucherModal';
+import EarnStampScanner from '@/components/student/EarnStampScanner';
 import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
@@ -232,6 +233,7 @@ export default function StudentDashboard() {
   const [city, setCity] = useState<string>('Budapest');
   const [selectedCity, setSelectedCity] = useState<string>('Budapest');
   const [loyaltySnippets, setLoyaltySnippets] = useState<LoyaltySnippet[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // ── Fetch user + student profile ──────────────────────────────────────────
   useEffect(() => {
@@ -366,6 +368,45 @@ export default function StudentDashboard() {
     }
   };
 
+  // Refresh loyalty snippets after a new stamp
+  const refreshLoyalty = async () => {
+    if (!studentProfile?.id) return;
+    try {
+      const res = await fetch(`/api/loyalty/stamp?student_id=${studentProfile.id}`);
+      if (!res.ok) return;
+      const { stamps } = await res.json();
+      const grouped: Record<string, {
+        vendor_name: string; logo_url: string | null;
+        stamps: number; required: number; offer_id: string;
+      }> = {};
+      for (const s of stamps ?? []) {
+        const key = s.offer_id;
+        if (!grouped[key]) {
+          const terms = s.offer?.terms_and_conditions ?? '';
+          const match = terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
+          let req = 5;
+          try { if (match) req = JSON.parse(match[1])?.required_visits ?? 5; } catch { /* ignore */ }
+          grouped[key] = {
+            vendor_name: s.offer?.vendor?.business_name ?? 'Business',
+            logo_url: s.offer?.vendor?.logo_url ?? null,
+            stamps: 0,
+            required: req,
+            offer_id: s.offer_id,
+          };
+        }
+        if (['stamp', 'reward_earned'].includes(s.status)) grouped[key].stamps++;
+      }
+      const snippets: LoyaltySnippet[] = Object.values(grouped).map((g) => ({
+        vendor_name: g.vendor_name,
+        logo_url: g.logo_url,
+        stamps_in_cycle: g.stamps % g.required || (g.stamps > 0 ? g.required : 0),
+        required_visits: g.required,
+        offer_id: g.offer_id,
+      }));
+      setLoyaltySnippets(snippets.slice(0, 5));
+    } catch { /* silently fail */ }
+  };
+
   const firstName = user?.first_name ?? user?.display_name?.split(' ')[0] ?? 'there';
   const isVerified = studentProfile?.verification_status === 'verified';
 
@@ -430,6 +471,23 @@ export default function StudentDashboard() {
           {studentProfile && (
             <VerificationBanner status={studentProfile.verification_status} />
           )}
+
+          {/* ── EARN STAMP CTA ─────────────────────────────────────────── */}
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="w-full mb-5 flex items-center gap-4 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-left group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+              <QrCode size={22} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-black text-base">Earn a Stamp</p>
+              <p className="text-white/70 text-xs mt-0.5">Scan the QR code at the counter</p>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <ArrowRight size={15} className="text-white" />
+            </div>
+          </button>
 
           {/* ── LOYALTY STRIP ──────────────────────────────────────────── */}
           <LoyaltyStrip
@@ -566,6 +624,17 @@ export default function StudentDashboard() {
         <VoucherModal
           voucher={activeVoucher}
           onClose={() => setActiveVoucher(null)}
+        />
+      )}
+
+      {/* ── EARN STAMP SCANNER ─────────────────────────────────────────── */}
+      {scannerOpen && (
+        <EarnStampScanner
+          onClose={() => setScannerOpen(false)}
+          onStampSuccess={() => {
+            setScannerOpen(false);
+            refreshLoyalty();
+          }}
         />
       )}
     </>
