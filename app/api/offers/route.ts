@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
         business_name,
         logo_url,
         city,
-        address_line1
+        address_line1,
+        is_verified
       )
     `)
     .eq('status', 'active')
@@ -59,11 +60,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch offers' }, { status: 500 });
   }
 
-  // Filter to launch cities only, then optionally to the requested city
+  // Filter to approved vendors in launch cities only
   const filtered = (rawData ?? []).filter((o) => {
-    const vendorCity = (o.vendor as { city?: string } | null)?.city ?? '';
+    const vendor = o.vendor as { city?: string; is_verified?: boolean } | null;
+    const vendorCity = vendor?.city ?? '';
     if (!LAUNCH_CITIES.includes(vendorCity)) return false;
     if (city && LAUNCH_CITIES.includes(city) && vendorCity !== city) return false;
+    // Only show offers from approved (verified) vendors
+    if (vendor?.is_verified !== true) return false;
     return true;
   });
 

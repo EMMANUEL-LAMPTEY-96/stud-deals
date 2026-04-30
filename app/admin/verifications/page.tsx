@@ -20,14 +20,15 @@ import { createClient } from '@/lib/supabase/client';
 import {
   CheckCircle, XCircle, Clock, Eye, Shield,
   GraduationCap, User, Mail, Building2, Search,
-  ArrowLeft, Loader2, RefreshCw, Filter, Users, Activity,
+  ArrowLeft, Loader2, RefreshCw, Filter, Users, Activity, Store,
 } from 'lucide-react';
 
 function AdminNav({ active }: { active: string }) {
   const links = [
-    { href: '/admin',               label: 'Overview',      icon: <Activity size={14} /> },
-    { href: '/admin/verifications', label: 'Verifications', icon: <Shield size={14} /> },
-    { href: '/admin/users',         label: 'Users',         icon: <Users size={14} /> },
+    { href: '/admin',               label: 'Overview', icon: <Activity size={14} /> },
+    { href: '/admin/verifications', label: 'Students', icon: <Shield size={14} /> },
+    { href: '/admin/vendors',       label: 'Vendors',  icon: <Store size={14} /> },
+    { href: '/admin/users',         label: 'Users',    icon: <Users size={14} /> },
   ];
   return (
     <div className="bg-white border-b border-gray-100 sticky top-0 z-40">

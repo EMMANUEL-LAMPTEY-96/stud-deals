@@ -47,6 +47,7 @@ export async function GET() {
     activeOffersRes,
     unverifiedRes,
     pendingVerifRes,
+    pendingVendorsRes,
     recentActivityRes,
     dailyStampsRes,
     cityVendorsRes,
@@ -76,10 +77,15 @@ export async function GET() {
     admin.from('student_profiles')
       .select('id', { count: 'exact', head: true })
       .eq('verification_status', 'unverified'),
-    // Pending verification reviews
+    // Pending student verification reviews
     admin.from('student_profiles')
       .select('id', { count: 'exact', head: true })
       .eq('verification_status', 'pending_review'),
+    // Pending vendor approvals: is_verified = false AND verified_at IS NULL
+    admin.from('vendor_profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_verified', false)
+      .is('verified_at', null),
     // Recent activity (stamps + registrations)
     admin.from('redemptions')
       .select(`
@@ -189,6 +195,7 @@ export async function GET() {
       active_offers:         activeOffersRes.count ?? 0,
       unverified_students:   unverifiedRes.count ?? 0,
       pending_verifications: pendingVerifRes.count ?? 0,
+      pending_vendors:       pendingVendorsRes.count ?? 0,
     },
     cities,
     activity,

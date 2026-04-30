@@ -37,6 +37,7 @@ interface Stats {
     active_offers: number;
     unverified_students: number;
     pending_verifications: number;
+    pending_vendors: number;
   };
   cities: { city: string; students: number; vendors: number; stamps: number }[];
   activity: {
@@ -138,9 +139,10 @@ function ActivityRow({ item }: { item: Stats['activity'][0] }) {
 // ── Admin Nav ─────────────────────────────────────────────────────────────────
 function AdminNav({ active }: { active: string }) {
   const links = [
-    { href: '/admin',               label: 'Overview',      icon: <Activity size={14} /> },
-    { href: '/admin/verifications', label: 'Verifications', icon: <Shield size={14} /> },
-    { href: '/admin/users',         label: 'Users',         icon: <Users size={14} /> },
+    { href: '/admin',               label: 'Overview',  icon: <Activity size={14} /> },
+    { href: '/admin/verifications', label: 'Students',  icon: <Shield size={14} /> },
+    { href: '/admin/vendors',       label: 'Vendors',   icon: <Store size={14} /> },
+    { href: '/admin/users',         label: 'Users',     icon: <Users size={14} /> },
   ];
   return (
     <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
@@ -239,7 +241,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Alert strip ── */}
-        {ov && (ov.pending_verifications > 0 || ov.unverified_students > 0) && (
+        {ov && (ov.pending_verifications > 0 || ov.pending_vendors > 0 || ov.unverified_students > 0) && (
           <div className="flex flex-wrap gap-3 mb-6">
             {ov.pending_verifications > 0 && (
               <Link
@@ -248,6 +250,16 @@ export default function AdminDashboard() {
               >
                 <Clock size={14} className="text-amber-600" />
                 {ov.pending_verifications} student{ov.pending_verifications !== 1 ? 's' : ''} awaiting ID review
+                <ArrowRight size={12} />
+              </Link>
+            )}
+            {ov.pending_vendors > 0 && (
+              <Link
+                href="/admin/vendors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-sm font-bold text-orange-800 hover:bg-orange-100 transition-colors"
+              >
+                <Store size={14} className="text-orange-600" />
+                {ov.pending_vendors} vendor{ov.pending_vendors !== 1 ? 's' : ''} awaiting approval
                 <ArrowRight size={12} />
               </Link>
             )}
@@ -268,14 +280,14 @@ export default function AdminDashboard() {
           <>
             {/* ── KPI grid ── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <KPI label="Total students"    value={ov?.students ?? 0}         icon={<GraduationCap size={18} />} bg="bg-purple-50"  color="text-purple-600" />
-              <KPI label="Active vendors"    value={ov?.vendors ?? 0}          icon={<Store size={18} />}         bg="bg-blue-50"   color="text-blue-600"   />
-              <KPI label="Stamps today"      value={ov?.stamps_today ?? 0}     icon={<Stamp size={18} />}         bg="bg-green-50"  color="text-green-600"  />
-              <KPI label="Rewards given"     value={ov?.rewards_total ?? 0}    icon={<Gift size={18} />}          bg="bg-amber-50"  color="text-amber-600"  />
-              <KPI label="Total stamps"      value={ov?.stamps_total ?? 0}     icon={<Star size={18} />}          bg="bg-indigo-50" color="text-indigo-600" />
-              <KPI label="Active offers"     value={ov?.active_offers ?? 0}    icon={<Tag size={18} />}           bg="bg-teal-50"   color="text-teal-600"   />
-              <KPI label="Pending ID review" value={ov?.pending_verifications ?? 0} icon={<Clock size={18} />}   bg="bg-orange-50" color="text-orange-600"  alert />
-              <KPI label="Unverified"        value={ov?.unverified_students ?? 0}  icon={<Shield size={18} />}   bg="bg-red-50"    color="text-red-500"     alert />
+              <KPI label="Total students"      value={ov?.students ?? 0}              icon={<GraduationCap size={18} />} bg="bg-purple-50"  color="text-purple-600" />
+              <KPI label="Active vendors"      value={ov?.vendors ?? 0}               icon={<Store size={18} />}         bg="bg-blue-50"   color="text-blue-600"   />
+              <KPI label="Stamps today"        value={ov?.stamps_today ?? 0}          icon={<Stamp size={18} />}         bg="bg-green-50"  color="text-green-600"  />
+              <KPI label="Rewards given"       value={ov?.rewards_total ?? 0}         icon={<Gift size={18} />}          bg="bg-amber-50"  color="text-amber-600"  />
+              <KPI label="Total stamps"        value={ov?.stamps_total ?? 0}          icon={<Star size={18} />}          bg="bg-indigo-50" color="text-indigo-600" />
+              <KPI label="Active offers"       value={ov?.active_offers ?? 0}         icon={<Tag size={18} />}           bg="bg-teal-50"   color="text-teal-600"   />
+              <KPI label="Pending ID review"   value={ov?.pending_verifications ?? 0} icon={<Clock size={18} />}         bg="bg-orange-50" color="text-orange-600"  alert />
+              <KPI label="Vendor approvals"    value={ov?.pending_vendors ?? 0}       icon={<Store size={18} />}         bg="bg-red-50"    color="text-red-500"     alert />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
@@ -339,11 +351,19 @@ export default function AdminDashboard() {
                   {[
                     {
                       href: '/admin/verifications',
-                      label: 'Review verifications',
+                      label: 'Review student IDs',
                       sub: `${ov?.pending_verifications ?? 0} pending`,
                       icon: <Shield size={14} />,
                       color: 'text-amber-600 bg-amber-50',
                       badge: ov?.pending_verifications ?? 0,
+                    },
+                    {
+                      href: '/admin/vendors',
+                      label: 'Approve vendors',
+                      sub: `${ov?.pending_vendors ?? 0} awaiting review`,
+                      icon: <Store size={14} />,
+                      color: 'text-orange-600 bg-orange-50',
+                      badge: ov?.pending_vendors ?? 0,
                     },
                     {
                       href: '/admin/users',
