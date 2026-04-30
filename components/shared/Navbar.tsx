@@ -207,6 +207,7 @@ export default function Navbar() {
     { href: '/dashboard',   label: 'Discover',     icon: <Sparkles size={15} /> },
     { href: '/my-loyalty',  label: 'My Loyalty',   icon: <Stamp size={15} /> },
     { href: '/my-vouchers', label: 'My Vouchers',  icon: <Tag size={15} /> },
+    { href: '/profile',     label: 'Profile',      icon: <User size={15} /> },
   ];
 
   const vendorLinks = [
