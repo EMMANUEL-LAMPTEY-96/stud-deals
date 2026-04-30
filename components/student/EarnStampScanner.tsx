@@ -20,10 +20,17 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   X, Stamp, Gift, CheckCircle, AlertCircle,
-  Loader2, QrCode, Star, Sparkles,
+  Loader2, QrCode, Star, Sparkles, Zap,
 } from 'lucide-react';
 
 type ScanState = 'scanning' | 'loading' | 'success' | 'error' | 'rate_limited';
+
+interface TierReward {
+  stamps: number;
+  reward_label: string;
+  reward_type: string;
+  reward_value?: number;
+}
 
 interface StampResult {
   vendor_name: string;
@@ -34,6 +41,13 @@ interface StampResult {
   reward_triggered: boolean;
   reward_label: string;
   stamps_total: number;
+  // Advanced
+  is_first_visit?: boolean;
+  double_stamp?: boolean;
+  bonus_stamps?: number;
+  stamps_awarded?: number;
+  tier_rewards?: TierReward[];
+  main_reward_triggered?: boolean;
 }
 
 interface EarnStampScannerProps {
@@ -101,6 +115,13 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
         reward_triggered: data.reward_triggered,
         reward_label:    data.reward_label,
         stamps_total:    data.stamps_total,
+        // Advanced
+        is_first_visit:        data.is_first_visit,
+        double_stamp:          data.double_stamp,
+        bonus_stamps:          data.bonus_stamps,
+        stamps_awarded:        data.stamps_awarded,
+        tier_rewards:          data.tier_rewards,
+        main_reward_triggered: data.main_reward_triggered,
       };
 
       setResult(stampResult);
@@ -236,37 +257,74 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
 
           {/* SUCCESS STATE */}
           {scanState === 'success' && result && (
-            <div className="py-4 flex flex-col items-center text-center gap-4">
-              {/* Reward banner */}
-              {result.reward_triggered && isVerified ? (
-                <div className="w-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-2xl p-4 flex flex-col items-center gap-2 mb-1">
+            <div className="py-4 flex flex-col items-center text-center gap-3">
+
+              {/* Main reward banner — verified */}
+              {result.main_reward_triggered && isVerified ? (
+                <div className="w-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-2xl p-4 flex flex-col items-center gap-2">
                   <Sparkles size={28} className="text-white" />
                   <p className="text-white font-black text-lg">Reward Unlocked! 🎉</p>
                   <p className="text-white/90 text-sm font-semibold">{result.reward_label}</p>
                   <p className="text-white/70 text-xs">Show this to the staff to claim</p>
                 </div>
-              ) : result.reward_triggered && !isVerified ? (
-                <div className="w-full bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-4 flex flex-col items-center gap-2 mb-1">
+              ) : result.main_reward_triggered && !isVerified ? (
+                <div className="w-full bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-4 flex flex-col items-center gap-2">
                   <Gift size={28} className="text-white" />
                   <p className="text-white font-black text-base">You earned a reward! 🎉</p>
                   <p className="text-white/80 text-xs text-center">
                     Verify your student status to claim <strong>{result.reward_label}</strong>
                   </p>
-                  <a
-                    href="/verification"
-                    className="mt-1 bg-white text-brand-700 text-xs font-black px-4 py-2 rounded-xl hover:bg-brand-50 transition-colors"
-                  >
+                  <a href="/verification"
+                    className="mt-1 bg-white text-brand-700 text-xs font-black px-4 py-2 rounded-xl hover:bg-brand-50 transition-colors">
                     Verify now →
                   </a>
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">
-                  <CheckCircle size={30} className="text-green-600" />
+                <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
+                  <CheckCircle size={28} className="text-green-600" />
+                </div>
+              )}
+
+              {/* Tier reward banners */}
+              {result.tier_rewards && result.tier_rewards.length > 0 && result.tier_rewards.map((tier, i) => (
+                <div key={i} className="w-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-3.5 flex items-center gap-3">
+                  <Star size={22} className="text-white flex-shrink-0" />
+                  <div className="text-left">
+                    <p className="text-white font-black text-sm">Milestone Reached! ✨</p>
+                    <p className="text-white/85 text-xs">{tier.reward_label}</p>
+                    {!isVerified && (
+                      <p className="text-white/65 text-[11px] mt-0.5">Verify to claim</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* First visit bonus callout */}
+              {result.is_first_visit && result.bonus_stamps && result.bonus_stamps > 0 && (
+                <div className="w-full bg-orange-50 border border-orange-200 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5">
+                  <Sparkles size={16} className="text-orange-500 flex-shrink-0" />
+                  <p className="text-xs text-orange-800 font-semibold text-left">
+                    First visit bonus! You got +{result.bonus_stamps} extra stamp{result.bonus_stamps !== 1 ? 's' : ''} for joining the loyalty program.
+                  </p>
+                </div>
+              )}
+
+              {/* Double stamp callout */}
+              {result.double_stamp && (
+                <div className="w-full bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 flex items-center gap-2.5">
+                  <Zap size={16} className="text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-amber-800 font-semibold text-left">
+                    Double stamp hour! You earned 2× stamps for visiting during this window.
+                  </p>
                 </div>
               )}
 
               <div>
-                <p className="font-black text-gray-900 text-lg">Stamp Earned!</p>
+                <p className="font-black text-gray-900 text-lg">
+                  {result.stamps_awarded && result.stamps_awarded > 1
+                    ? `${result.stamps_awarded} Stamps Earned!`
+                    : 'Stamp Earned!'}
+                </p>
                 <p className="text-sm text-gray-500 mt-0.5">{result.vendor_name}</p>
               </div>
 
@@ -276,7 +334,7 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
                   {result.offer_title}
                 </p>
                 <div className="flex justify-center flex-wrap gap-2 mb-3">
-                  {Array.from({ length: result.required_visits }).map((_, i) => (
+                  {Array.from({ length: Math.min(result.required_visits, 10) }).map((_, i) => (
                     <div
                       key={i}
                       className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
@@ -291,6 +349,11 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
                       />
                     </div>
                   ))}
+                  {result.required_visits > 10 && (
+                    <p className="w-full text-center text-xs text-gray-400 mt-1">
+                      + {result.required_visits - 10} more slots
+                    </p>
+                  )}
                 </div>
                 <p className="text-xs text-gray-500 text-center">
                   {result.stamps_in_cycle} / {result.required_visits} stamps

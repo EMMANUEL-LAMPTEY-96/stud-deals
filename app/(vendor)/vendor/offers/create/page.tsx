@@ -9,8 +9,14 @@
 //   3. First Visit Bonus  — one-time welcome discount for new students
 //   4. Milestone Reward   — earn a reward after spending £X in total
 //
+// Punch Card mode now includes four advanced loyalty options:
+//   • First Visit Bonus   — extra stamps on the student's very first scan
+//   • Stamp Expiry        — stamps reset after N days of inactivity
+//   • Double Stamp Windows — 2× stamps on chosen days / time ranges
+//   • Tiered Rewards      — intermediate rewards before the main cycle reward
+//
 // Loyalty config is serialised into terms_and_conditions with a hidden JSON
-// prefix so it can be read back by the vendor dashboard.
+// prefix so it can be read back by the vendor dashboard and stamp API.
 // =============================================================================
 
 import { useState, useEffect } from 'react';
@@ -22,14 +28,28 @@ import VendorNav from '@/components/vendor/VendorNav';
 import {
   ArrowLeft, Tag, Eye, CheckCircle, AlertCircle, Loader2,
   Calendar, Users, FileText, Percent, DollarSign, Gift, Coffee,
-  Clock, Repeat, Star, Sparkles, Trophy, Stamp, ShoppingCart,
-  Info, ChevronDown, ChevronUp,
+  Clock, Star, Sparkles, Trophy, Stamp, ShoppingCart,
+  Info, ChevronDown, ChevronUp, Plus, Trash2, Zap, Timer,
+  ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import type { DiscountType, OfferCategory } from '@/lib/types/database.types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type OfferMode = 'standard' | 'punch_card' | 'first_visit' | 'milestone';
+
+interface DoubleStampWindow {
+  days: string[];
+  start: string;
+  end: string;
+}
+
+interface RewardTier {
+  stamps: string;
+  reward_label: string;
+  reward_type: 'free_item' | 'percentage' | 'fixed_amount';
+  reward_value: string;
+}
 
 interface LoyaltyConfig {
   mode: OfferMode;
@@ -38,6 +58,16 @@ interface LoyaltyConfig {
   reward_value?: number;
   reward_label?: string;
   spend_threshold?: number;
+  // Advanced punch card options
+  first_visit_bonus?: number;
+  stamp_expiry_days?: number;
+  double_stamp_windows?: DoubleStampWindow[];
+  tiers?: {
+    stamps: number;
+    reward_label: string;
+    reward_type: string;
+    reward_value?: number;
+  }[];
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -106,6 +136,16 @@ const REWARD_TYPES = [
   { value: 'fixed_amount' as const,label: 'Fixed £ off',      icon: <DollarSign size={14} /> },
 ];
 
+const WEEK_DAYS = [
+  { short: 'Mon', full: 'monday' },
+  { short: 'Tue', full: 'tuesday' },
+  { short: 'Wed', full: 'wednesday' },
+  { short: 'Thu', full: 'thursday' },
+  { short: 'Fri', full: 'friday' },
+  { short: 'Sat', full: 'saturday' },
+  { short: 'Sun', full: 'sunday' },
+];
+
 const CATEGORIES: { value: OfferCategory; label: string; emoji: string }[] = [
   { value: 'food_drink',       label: 'Food & Drink',    emoji: '🍕' },
   { value: 'groceries',        label: 'Groceries',       emoji: '🛒' },
@@ -164,6 +204,57 @@ function InfoBox({ children }: { children: React.ReactNode }) {
     <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3 text-xs text-blue-700">
       <Info size={13} className="flex-shrink-0 mt-0.5" />
       <span>{children}</span>
+    </div>
+  );
+}
+
+// Advanced option toggle card — collapsible sub-feature within punch card
+function AdvancedToggle({
+  icon, title, description, enabled, onToggle, children, accentColor = 'orange',
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  children?: React.ReactNode;
+  accentColor?: 'orange' | 'blue' | 'amber' | 'purple';
+}) {
+  const colors: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', icon: 'text-orange-500' },
+    blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-800',   icon: 'text-blue-500' },
+    amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-800',  icon: 'text-amber-500' },
+    purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800', icon: 'text-purple-500' },
+  };
+  const c = colors[accentColor];
+
+  return (
+    <div className={`rounded-xl border-2 overflow-hidden transition-colors ${
+      enabled ? `${c.border} ${c.bg}` : 'border-gray-200 bg-gray-50'
+    }`}>
+      <button
+        type="button"
+        onClick={() => onToggle(!enabled)}
+        className="w-full flex items-center gap-3 p-4"
+      >
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+          enabled ? c.bg : 'bg-white'
+        } border ${enabled ? c.border : 'border-gray-200'}`}>
+          <div className={enabled ? c.icon : 'text-gray-400'}>{icon}</div>
+        </div>
+        <div className="flex-1 text-left">
+          <p className={`text-sm font-bold ${enabled ? c.text : 'text-gray-600'}`}>{title}</p>
+          <p className="text-xs text-gray-400 mt-0.5 leading-tight">{description}</p>
+        </div>
+        <div className={`flex-shrink-0 ${enabled ? c.icon : 'text-gray-300'}`}>
+          {enabled ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+        </div>
+      </button>
+      {enabled && children && (
+        <div className="px-4 pb-4 space-y-3 border-t border-gray-200/60">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -230,6 +321,29 @@ function OfferPreview({
               ))}
             </div>
             <p className="text-[10px] text-gray-400 mt-1">3/{reqVisits} stamps — {reqVisits - 3} more to go</p>
+            {/* Feature badges */}
+            <div className="flex flex-wrap gap-1 mt-2">
+              {loyaltyConfig.first_visit_bonus && (
+                <span className="text-[9px] bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded-full">
+                  +{loyaltyConfig.first_visit_bonus} first-visit bonus
+                </span>
+              )}
+              {loyaltyConfig.stamp_expiry_days && (
+                <span className="text-[9px] bg-gray-100 text-gray-600 font-bold px-1.5 py-0.5 rounded-full">
+                  {loyaltyConfig.stamp_expiry_days}d expiry
+                </span>
+              )}
+              {loyaltyConfig.double_stamp_windows && loyaltyConfig.double_stamp_windows.length > 0 && (
+                <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.5 rounded-full">
+                  2× stamp hours
+                </span>
+              )}
+              {loyaltyConfig.tiers && loyaltyConfig.tiers.length > 0 && (
+                <span className="text-[9px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded-full">
+                  {loyaltyConfig.tiers.length} tier{loyaltyConfig.tiers.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
           </div>
         )}
 
@@ -299,11 +413,32 @@ export default function CreateOfferPage() {
   const [discountType, setDiscountType]   = useState<DiscountType>('percentage');
   const [discountValue, setDiscountValue] = useState('');
 
-  // Punch card
+  // Punch card — core
   const [pcVisits, setPcVisits]           = useState('5');
   const [pcRewardType, setPcRewardType]   = useState<LoyaltyConfig['reward_type']>('free_item');
   const [pcRewardValue, setPcRewardValue] = useState('');
   const [pcRewardLabel, setPcRewardLabel] = useState('');
+
+  // Punch card — advanced: First Visit Bonus
+  const [pcFirstVisitBonus, setPcFirstVisitBonus]           = useState(false);
+  const [pcFirstVisitBonusCount, setPcFirstVisitBonusCount] = useState('2');
+
+  // Punch card — advanced: Stamp Expiry
+  const [pcStampExpiry, setPcStampExpiry]       = useState(false);
+  const [pcStampExpiryDays, setPcStampExpiryDays] = useState('60');
+
+  // Punch card — advanced: Double Stamp Windows
+  const [pcDoubleStamp, setPcDoubleStamp]             = useState(false);
+  const [pcDoubleStampWindows, setPcDoubleStampWindows] = useState<DoubleStampWindow[]>([
+    { days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], start: '12:00', end: '14:00' },
+  ]);
+
+  // Punch card — advanced: Tiered Rewards
+  const [pcTiered, setPcTiered]   = useState(false);
+  const [pcTiers, setPcTiers]     = useState<RewardTier[]>([
+    { stamps: '3', reward_label: '', reward_type: 'percentage', reward_value: '10' },
+    { stamps: '7', reward_label: '', reward_type: 'free_item',  reward_value: '' },
+  ]);
 
   // First visit
   const [fvType, setFvType]   = useState<DiscountType>('percentage');
@@ -315,9 +450,9 @@ export default function CreateOfferPage() {
   const [msRewardValue, setMsRewardValue] = useState('');
   const [msRewardLabel, setMsRewardLabel] = useState('');
 
-  const [loading, setLoading]           = useState(true);
+  const [loading, setLoading]             = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [error, setError]               = useState('');
+  const [error, setError]                 = useState('');
 
   useEffect(() => {
     (async () => {
@@ -329,6 +464,50 @@ export default function CreateOfferPage() {
       setLoading(false);
     })();
   }, []);
+
+  // ── Double stamp window helpers ───────────────────────────────────────────
+  const toggleWindowDay = (winIdx: number, day: string) => {
+    setPcDoubleStampWindows(prev => prev.map((w, i) => {
+      if (i !== winIdx) return w;
+      const days = w.days.includes(day) ? w.days.filter(d => d !== day) : [...w.days, day];
+      return { ...w, days };
+    }));
+  };
+
+  const updateWindowTime = (winIdx: number, field: 'start' | 'end', value: string) => {
+    setPcDoubleStampWindows(prev => prev.map((w, i) =>
+      i === winIdx ? { ...w, [field]: value } : w
+    ));
+  };
+
+  const addWindow = () => {
+    setPcDoubleStampWindows(prev => [...prev, { days: [], start: '18:00', end: '20:00' }]);
+  };
+
+  const removeWindow = (idx: number) => {
+    setPcDoubleStampWindows(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // ── Tier helpers ─────────────────────────────────────────────────────────
+  const updateTier = (idx: number, field: keyof RewardTier, value: string) => {
+    setPcTiers(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  };
+
+  const addTier = () => {
+    setPcTiers(prev => {
+      const maxStamps = prev.reduce((m, t) => Math.max(m, parseInt(t.stamps) || 0), 0);
+      return [...prev, {
+        stamps: String(maxStamps + 3),
+        reward_label: '',
+        reward_type: 'free_item',
+        reward_value: '',
+      }];
+    });
+  };
+
+  const removeTier = (idx: number) => {
+    setPcTiers(prev => prev.filter((_, i) => i !== idx));
+  };
 
   // ── Auto-generate discount label ──────────────────────────────────────────
   const autoDiscountLabel = (): string => {
@@ -367,7 +546,7 @@ export default function CreateOfferPage() {
     if (mode === 'standard') {
       dbDiscountType  = discountType;
       dbDiscountValue = discountValue ? parseFloat(discountValue) : null;
-      dbMaxPerStudent = 50; // unlimited-ish for standard
+      dbMaxPerStudent = 50;
     }
 
     if (mode === 'punch_card') {
@@ -378,12 +557,34 @@ export default function CreateOfferPage() {
       lc.reward_type     = pcRewardType;
       lc.reward_value    = pcRewardValue ? parseFloat(pcRewardValue) : undefined;
       lc.reward_label    = pcRewardLabel || undefined;
+
+      // Advanced options
+      if (pcFirstVisitBonus) {
+        lc.first_visit_bonus = parseInt(pcFirstVisitBonusCount) || 2;
+      }
+      if (pcStampExpiry) {
+        lc.stamp_expiry_days = parseInt(pcStampExpiryDays) || 60;
+      }
+      if (pcDoubleStamp && pcDoubleStampWindows.length > 0) {
+        lc.double_stamp_windows = pcDoubleStampWindows.filter(w => w.days.length > 0);
+      }
+      if (pcTiered && pcTiers.length > 0) {
+        lc.tiers = pcTiers
+          .filter(t => t.stamps && t.reward_label)
+          .map(t => ({
+            stamps:       parseInt(t.stamps),
+            reward_label: t.reward_label,
+            reward_type:  t.reward_type,
+            reward_value: t.reward_value ? parseFloat(t.reward_value) : undefined,
+          }))
+          .sort((a, b) => a.stamps - b.stamps);
+      }
     }
 
     if (mode === 'first_visit') {
       dbDiscountType  = fvType;
       dbDiscountValue = fvValue ? parseFloat(fvValue) : null;
-      dbMaxPerStudent = 1; // exactly one use per student
+      dbMaxPerStudent = 1;
     }
 
     if (mode === 'milestone') {
@@ -397,7 +598,6 @@ export default function CreateOfferPage() {
       lc.reward_label    = msRewardLabel || undefined;
     }
 
-    // Embed loyalty config as JSON prefix in terms_and_conditions
     const loyaltyPrefix = mode !== 'standard'
       ? `[[LOYALTY:${JSON.stringify(lc)}]]\n`
       : '';
@@ -443,6 +643,23 @@ export default function CreateOfferPage() {
 
   const lbl = discountLabel || autoDiscountLabel();
   const currentMode = OFFER_MODES.find(m => m.value === mode)!;
+
+  // Build preview loyalty config
+  const previewLoyaltyConfig: LoyaltyConfig = {
+    mode,
+    required_visits: parseInt(pcVisits) || 5,
+    spend_threshold: msThreshold ? parseFloat(msThreshold) : undefined,
+    reward_label: pcRewardLabel || msRewardLabel || undefined,
+    first_visit_bonus: pcFirstVisitBonus ? (parseInt(pcFirstVisitBonusCount) || 2) : undefined,
+    stamp_expiry_days: pcStampExpiry ? (parseInt(pcStampExpiryDays) || 60) : undefined,
+    double_stamp_windows: pcDoubleStamp && pcDoubleStampWindows.some(w => w.days.length > 0)
+      ? pcDoubleStampWindows.filter(w => w.days.length > 0) : undefined,
+    tiers: pcTiered && pcTiers.some(t => t.stamps && t.reward_label)
+      ? pcTiers.filter(t => t.stamps && t.reward_label).map(t => ({
+          stamps: parseInt(t.stamps), reward_label: t.reward_label,
+          reward_type: t.reward_type, reward_value: t.reward_value ? parseFloat(t.reward_value) : undefined,
+        })) : undefined,
+  };
 
   if (loading) {
     return (
@@ -581,9 +798,11 @@ export default function CreateOfferPage() {
               {mode === 'punch_card' && (
                 <Section title="Punch card settings" icon={<Stamp size={14} />}>
                   <InfoBox>
-                    Students collect a stamp every time they redeem this offer. After reaching your target visits, they automatically unlock the reward.
+                    Students collect a stamp every time they scan your QR code. After reaching your target visits, they automatically unlock the reward.
                   </InfoBox>
-                  <Field label="Visits required for reward" hint="e.g. 5 means buy 5 times, get 1 reward">
+
+                  {/* Core punch card fields */}
+                  <Field label="Visits required for reward" hint="e.g. 5 means scan 5 times, get 1 reward">
                     <div className="flex items-center gap-3">
                       <input type="number" className={`${INPUT_CLS} w-28`}
                         value={pcVisits} onChange={e => setPcVisits(e.target.value)} min={2} max={20} />
@@ -629,6 +848,256 @@ export default function CreateOfferPage() {
                       placeholder="Free latte of your choice"
                       value={pcRewardLabel} onChange={e => setPcRewardLabel(e.target.value)} maxLength={60} />
                   </Field>
+
+                  {/* ── ADVANCED OPTIONS ─────────────────────────────────── */}
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex-1 h-px bg-gray-100" />
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Advanced options</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <div className="space-y-3">
+
+                      {/* 1. First Visit Bonus */}
+                      <AdvancedToggle
+                        icon={<Sparkles size={15} />}
+                        title="First Visit Bonus"
+                        description="Give extra stamps on a student's very first visit to hook them in"
+                        enabled={pcFirstVisitBonus}
+                        onToggle={setPcFirstVisitBonus}
+                        accentColor="orange"
+                      >
+                        <div className="pt-3">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Extra stamps on first visit</p>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="number"
+                              className={`${INPUT_CLS} w-24`}
+                              value={pcFirstVisitBonusCount}
+                              onChange={e => setPcFirstVisitBonusCount(e.target.value)}
+                              min={1} max={5}
+                            />
+                            <span className="text-sm text-gray-500">bonus stamp{parseInt(pcFirstVisitBonusCount) !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex gap-1.5 mt-2">
+                            {[1, 2, 3].map(n => (
+                              <button key={n} type="button" onClick={() => setPcFirstVisitBonusCount(String(n))}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                  pcFirstVisitBonusCount === String(n) ? 'bg-orange-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-orange-300'
+                                }`}
+                              >+{n}</button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                            New students get {parseInt(pcFirstVisitBonusCount) || 1} stamp{(parseInt(pcFirstVisitBonusCount) || 1) !== 1 ? 's' : ''} on their first scan, making them{' '}
+                            {parseInt(pcFirstVisitBonusCount) || 1} step{(parseInt(pcFirstVisitBonusCount) || 1) !== 1 ? 's' : ''} closer to the reward instantly.
+                          </p>
+                        </div>
+                      </AdvancedToggle>
+
+                      {/* 2. Stamp Expiry */}
+                      <AdvancedToggle
+                        icon={<Timer size={15} />}
+                        title="Stamp Expiry"
+                        description="Reset stamps after a period of inactivity to keep customers coming back regularly"
+                        enabled={pcStampExpiry}
+                        onToggle={setPcStampExpiry}
+                        accentColor="blue"
+                      >
+                        <div className="pt-3">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Expire stamps after inactivity</p>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="number"
+                              className={`${INPUT_CLS} w-24`}
+                              value={pcStampExpiryDays}
+                              onChange={e => setPcStampExpiryDays(e.target.value)}
+                              min={7} max={365}
+                            />
+                            <span className="text-sm text-gray-500">days without a visit</span>
+                          </div>
+                          <div className="flex gap-1.5 mt-2">
+                            {[30, 60, 90].map(n => (
+                              <button key={n} type="button" onClick={() => setPcStampExpiryDays(String(n))}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                                  pcStampExpiryDays === String(n) ? 'bg-blue-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-blue-300'
+                                }`}
+                              >{n} days</button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                            Stamps collected more than {parseInt(pcStampExpiryDays) || 60} days ago will reset if no new visits have been made.
+                          </p>
+                        </div>
+                      </AdvancedToggle>
+
+                      {/* 3. Double Stamp Windows */}
+                      <AdvancedToggle
+                        icon={<Zap size={15} />}
+                        title="Double Stamp Windows"
+                        description="Award 2× stamps during quiet periods to drive traffic when you need it most"
+                        enabled={pcDoubleStamp}
+                        onToggle={setPcDoubleStamp}
+                        accentColor="amber"
+                      >
+                        <div className="pt-3 space-y-4">
+                          {pcDoubleStampWindows.map((win, wIdx) => (
+                            <div key={wIdx} className="bg-white rounded-xl border border-amber-200 p-3.5">
+                              <div className="flex items-center justify-between mb-3">
+                                <p className="text-xs font-bold text-gray-700">Window {wIdx + 1}</p>
+                                {pcDoubleStampWindows.length > 1 && (
+                                  <button type="button" onClick={() => removeWindow(wIdx)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                              {/* Day checkboxes */}
+                              <p className="text-xs text-gray-500 mb-2 font-medium">Days</p>
+                              <div className="flex flex-wrap gap-1.5 mb-3">
+                                {WEEK_DAYS.map(d => (
+                                  <button
+                                    key={d.full}
+                                    type="button"
+                                    onClick={() => toggleWindowDay(wIdx, d.full)}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
+                                      win.days.includes(d.full)
+                                        ? 'bg-amber-500 text-white'
+                                        : 'bg-gray-100 text-gray-500 hover:bg-amber-50'
+                                    }`}
+                                  >
+                                    {d.short}
+                                  </button>
+                                ))}
+                              </div>
+                              {/* Time range */}
+                              <p className="text-xs text-gray-500 mb-2 font-medium">Time range</p>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="time"
+                                  className={`${INPUT_CLS} flex-1`}
+                                  value={win.start}
+                                  onChange={e => updateWindowTime(wIdx, 'start', e.target.value)}
+                                />
+                                <span className="text-gray-400 text-sm font-bold">→</span>
+                                <input
+                                  type="time"
+                                  className={`${INPUT_CLS} flex-1`}
+                                  value={win.end}
+                                  onChange={e => updateWindowTime(wIdx, 'end', e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={addWindow}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-amber-300 rounded-xl text-xs font-bold text-amber-600 hover:bg-amber-50 transition-colors"
+                          >
+                            <Plus size={13} /> Add another window
+                          </button>
+                          <p className="text-xs text-gray-400 leading-relaxed">
+                            Students who scan during these windows earn 2 stamps instead of 1. Great for lunch hours or quiet evenings.
+                          </p>
+                        </div>
+                      </AdvancedToggle>
+
+                      {/* 4. Tiered Rewards */}
+                      <AdvancedToggle
+                        icon={<Star size={15} />}
+                        title="Tiered Rewards"
+                        description="Add intermediate milestones to reward loyalty before the main prize — keeps students engaged longer"
+                        enabled={pcTiered}
+                        onToggle={setPcTiered}
+                        accentColor="purple"
+                      >
+                        <div className="pt-3 space-y-3">
+                          <p className="text-xs text-gray-500 leading-relaxed">
+                            Tiers fire automatically when a student hits the stamp count. These are in addition to the main {parseInt(pcVisits) || 5}-stamp reward above.
+                          </p>
+                          {pcTiers.map((tier, tIdx) => (
+                            <div key={tIdx} className="bg-white rounded-xl border border-purple-200 p-3.5 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-bold text-gray-700">Tier {tIdx + 1}</p>
+                                {pcTiers.length > 1 && (
+                                  <button type="button" onClick={() => removeTier(tIdx)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                              {/* Stamps at this tier */}
+                              <div className="flex items-center gap-3">
+                                <div className="w-20">
+                                  <p className="text-[11px] text-gray-500 mb-1 font-medium">At stamp</p>
+                                  <input type="number"
+                                    className={`${INPUT_CLS} text-center`}
+                                    value={tier.stamps}
+                                    onChange={e => updateTier(tIdx, 'stamps', e.target.value)}
+                                    min={1} max={parseInt(pcVisits) - 1 || 19}
+                                  />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-[11px] text-gray-500 mb-1 font-medium">Reward</p>
+                                  <input type="text"
+                                    className={INPUT_CLS}
+                                    placeholder="e.g. Free upgrade"
+                                    value={tier.reward_label}
+                                    onChange={e => updateTier(tIdx, 'reward_label', e.target.value)}
+                                    maxLength={60}
+                                  />
+                                </div>
+                              </div>
+                              {/* Reward type for this tier */}
+                              <div>
+                                <p className="text-[11px] text-gray-500 mb-1.5 font-medium">Reward type</p>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  {REWARD_TYPES.map(rt => (
+                                    <button key={rt.value} type="button"
+                                      onClick={() => updateTier(tIdx, 'reward_type', rt.value)}
+                                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 text-center transition-all ${
+                                        tier.reward_type === rt.value
+                                          ? 'border-purple-400 bg-purple-50'
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                    >
+                                      <div className={tier.reward_type === rt.value ? 'text-purple-600' : 'text-gray-400'}>{rt.icon}</div>
+                                      <p className={`text-[10px] font-bold leading-tight ${tier.reward_type === rt.value ? 'text-purple-900' : 'text-gray-500'}`}>
+                                        {rt.label}
+                                      </p>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              {/* Reward value if not free item */}
+                              {tier.reward_type !== 'free_item' && (
+                                <div className="relative">
+                                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
+                                    {tier.reward_type === 'percentage' ? '%' : '£'}
+                                  </span>
+                                  <input type="number"
+                                    className={`${INPUT_CLS} pl-8`}
+                                    placeholder={tier.reward_type === 'percentage' ? '10' : '2.50'}
+                                    value={tier.reward_value}
+                                    onChange={e => updateTier(tIdx, 'reward_value', e.target.value)}
+                                    min={0}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={addTier}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-purple-300 rounded-xl text-xs font-bold text-purple-600 hover:bg-purple-50 transition-colors"
+                          >
+                            <Plus size={13} /> Add another tier
+                          </button>
+                        </div>
+                      </AdvancedToggle>
+
+                    </div>
+                  </div>
                 </Section>
               )}
 
@@ -829,12 +1298,7 @@ export default function CreateOfferPage() {
                 description={description}
                 expiresAt={expiresAt}
                 businessName={businessName}
-                loyaltyConfig={{
-                  mode,
-                  required_visits: parseInt(pcVisits) || 5,
-                  spend_threshold: msThreshold ? parseFloat(msThreshold) : undefined,
-                  reward_label: pcRewardLabel || msRewardLabel || undefined,
-                }}
+                loyaltyConfig={previewLoyaltyConfig}
               />
               {/* Mode info badge */}
               <div className={`mt-4 flex items-center gap-2 p-3 rounded-xl ${currentMode.bg}`}>
