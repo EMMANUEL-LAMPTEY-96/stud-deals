@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category');
   const search   = searchParams.get('search');
+  const city     = searchParams.get('city'); // 'Budapest' | 'Szeged' | null (all)
+
+  // Only serve vendors in our launch cities
+  const LAUNCH_CITIES = ['Budapest', 'Szeged'];
 
   // Use admin client to bypass RLS — any authenticated user can browse offers
   const admin = createAdminClient();
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
     .eq('status', 'active')
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order('redemption_count', { ascending: false })
-    .limit(40);
+    .limit(60);
 
   if (category && category !== 'all') {
     query = query.eq('category', category);
@@ -48,12 +52,20 @@ export async function GET(request: NextRequest) {
     query = query.ilike('title', `%${search.trim()}%`);
   }
 
-  const { data, error } = await query;
+  const { data: rawData, error } = await query;
 
   if (error) {
     console.error('offers API error:', error);
     return NextResponse.json({ error: 'Failed to fetch offers' }, { status: 500 });
   }
 
-  return NextResponse.json({ offers: data ?? [] });
+  // Filter to launch cities only, then optionally to the requested city
+  const filtered = (rawData ?? []).filter((o) => {
+    const vendorCity = (o.vendor as { city?: string } | null)?.city ?? '';
+    if (!LAUNCH_CITIES.includes(vendorCity)) return false;
+    if (city && LAUNCH_CITIES.includes(city) && vendorCity !== city) return false;
+    return true;
+  });
+
+  return NextResponse.json({ offers: filtered });
 }

@@ -388,8 +388,12 @@ export default function VendorProfilePage() {
                   <input type="text" className={INPUT_CLS} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Suite 2B" />
                 </Field>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Field label="City">
-                    <input type="text" className={INPUT_CLS} value={city} onChange={(e) => setCity(e.target.value)} placeholder="London" />
+                  <Field label="City" hint="Stud Deals currently operates in Budapest and Szeged only.">
+                    <select className={INPUT_CLS} value={city} onChange={(e) => setCity(e.target.value)}>
+                      <option value="">Select city…</option>
+                      <option value="Budapest">Budapest</option>
+                      <option value="Szeged">Szeged</option>
+                    </select>
                   </Field>
                   <Field label="State / County">
                     <input type="text" className={INPUT_CLS} value={state} onChange={(e) => setState(e.target.value)} placeholder="Greater London" />

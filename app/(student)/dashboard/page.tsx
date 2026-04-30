@@ -23,8 +23,13 @@ import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
   Coffee, ShoppingBag, Laptop, Dumbbell,
-  Book, Tag, Shirt, QrCode, Stamp, Gift, Store, ChevronRight,
+  Book, Tag, Shirt, QrCode, Stamp, Gift, Store, ChevronRight, Building2,
 } from 'lucide-react';
+
+const LAUNCH_CITIES = [
+  { value: 'Budapest', label: 'Budapest' },
+  { value: 'Szeged',   label: 'Szeged' },
+];
 import type {
   OfferWithVendor, StudentProfile, Profile,
   OfferCategory, ClaimOfferResponse
@@ -223,7 +228,8 @@ export default function StudentDashboard() {
   const [loadingOffers, setLoadingOffers] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [activeVoucher, setActiveVoucher] = useState<ClaimOfferResponse | null>(null);
-  const [city, setCity] = useState<string>('');
+  const [city, setCity] = useState<string>('Budapest');
+  const [selectedCity, setSelectedCity] = useState<string>('Budapest');
   const [loyaltySnippets, setLoyaltySnippets] = useState<LoyaltySnippet[]>([]);
 
   // ── Fetch user + student profile ──────────────────────────────────────────
@@ -239,7 +245,12 @@ export default function StudentDashboard() {
 
       setUser(profileRes.data);
       setStudentProfile(studentRes.data);
-      setCity(profileRes.data?.city ?? '');
+      const userCity = profileRes.data?.city ?? '';
+      setCity(userCity);
+      // Use their saved city if it's a launch city, otherwise default to Budapest
+      if (LAUNCH_CITIES.some(c => c.value === userCity)) {
+        setSelectedCity(userCity);
+      }
 
       // Fetch loyalty snippets for the strip
       if (studentRes.data?.id) {
@@ -292,6 +303,7 @@ export default function StudentDashboard() {
     const params = new URLSearchParams();
     if (selectedCategory !== 'all') params.set('category', selectedCategory);
     if (searchQuery.trim()) params.set('search', searchQuery.trim());
+    params.set('city', selectedCity);
 
     try {
       const res = await fetch(`/api/offers?${params.toString()}`);
@@ -304,7 +316,7 @@ export default function StudentDashboard() {
     }
 
     setLoadingOffers(false);
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, selectedCity]);
 
   useEffect(() => {
     fetchOffers();
@@ -370,8 +382,9 @@ export default function StudentDashboard() {
                 <h1 className="text-2xl sm:text-3xl font-black text-gray-900">
                   Hey {firstName}! 👋
                 </h1>
-                <p className="text-gray-500 text-sm mt-1">
-                  {city ? `Exclusive deals near ${city}` : 'Discover deals near your campus'}
+                <p className="text-gray-500 text-sm mt-1 flex items-center gap-1.5">
+                  <Building2 size={13} className="text-brand-400" />
+                  Deals in {selectedCity}
                 </p>
               </div>
 
@@ -388,6 +401,27 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ── CITY SWITCHER ──────────────────────────────────────────── */}
+          <div className="flex items-center gap-2 mb-5">
+            <MapPin size={14} className="text-gray-400 flex-shrink-0" />
+            <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden">
+              {LAUNCH_CITIES.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setSelectedCity(c.value)}
+                  className={`px-5 py-2 text-sm font-bold transition-colors ${
+                    selectedCity === c.value
+                      ? 'bg-brand-600 text-white'
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-gray-400 ml-1">More cities coming soon</span>
           </div>
 
           {/* ── VERIFICATION BANNER ────────────────────────────────────── */}

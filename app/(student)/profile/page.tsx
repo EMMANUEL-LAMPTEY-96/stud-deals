@@ -21,8 +21,10 @@ import {
   User, Mail, Shield, CheckCircle, AlertTriangle, Clock,
   Lock, LogOut, ChevronRight, Loader2, Save, Eye, EyeOff,
   GraduationCap, ArrowRight, Bell, Building2, XCircle,
-  ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight, MapPin,
 } from 'lucide-react';
+
+const LAUNCH_CITIES = ['Budapest', 'Szeged'];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface StudentData {
@@ -212,6 +214,7 @@ export default function StudentProfilePage() {
   const [firstName, setFirstName]         = useState('');
   const [lastName, setLastName]           = useState('');
   const [displayName, setDisplayName]     = useState('');
+  const [userCity, setUserCity]           = useState('Budapest');
   const [shareConsent, setShareConsent]   = useState(false);
 
   // Save state
@@ -235,6 +238,9 @@ export default function StudentProfilePage() {
           setLastName(d.profile?.last_name ?? '');
           setDisplayName(d.profile?.display_name ?? '');
           setShareConsent(d.share_with_vendors);
+          if (d.profile && 'city' in d.profile && LAUNCH_CITIES.includes((d.profile as { city?: string }).city ?? '')) {
+            setUserCity((d.profile as { city?: string }).city ?? 'Budapest');
+          }
         }
       } finally {
         setLoading(false);
@@ -255,6 +261,7 @@ export default function StudentProfilePage() {
           first_name: firstName,
           last_name: lastName,
           display_name: displayName || `${firstName} ${lastName}`.trim(),
+          city: userCity,
           share_with_vendors: shareConsent,
         }),
       });
@@ -354,6 +361,25 @@ export default function StudentProfilePage() {
                 placeholder="How you'd like to be known"
                 className={INPUT}
               />
+            </Field>
+            <Field label="Your city" hint="We currently operate in Budapest and Szeged. Select where you study.">
+              <div className="flex gap-2">
+                {LAUNCH_CITIES.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setUserCity(c)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${
+                      userCity === c
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    <MapPin size={13} />
+                    {c}
+                  </button>
+                ))}
+              </div>
             </Field>
           </Section>
 

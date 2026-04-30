@@ -52,10 +52,13 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
 
+  const LAUNCH_CITIES = ['Budapest', 'Szeged'];
+
   let body: {
     first_name?: string;
     last_name?: string;
     display_name?: string;
+    city?: string;
     share_with_vendors?: boolean;
   };
 
@@ -63,7 +66,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { first_name, last_name, display_name, share_with_vendors } = body;
+  const { first_name, last_name, display_name, city, share_with_vendors } = body;
 
   // Update profiles table
   const profileUpdates: Record<string, string | null> = {};
@@ -72,6 +75,9 @@ export async function POST(request: NextRequest) {
   if (display_name !== undefined) {
     const fallback = first_name ? `${first_name} ${last_name ?? ''}`.trim() : '';
     profileUpdates.display_name = display_name.trim() || fallback;
+  }
+  if (city !== undefined && LAUNCH_CITIES.includes(city)) {
+    profileUpdates.city = city;
   }
 
   if (Object.keys(profileUpdates).length > 0) {
