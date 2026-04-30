@@ -7,12 +7,18 @@
 //   1. Business identity — name, type, description
 //   2. Contact & web    — phone, business email, website URL
 //   3. Location         — address, city, state, postal code, country
-//   4. Media            — logo upload, cover image upload (Supabase Storage)
-//   5. Plan & billing   — current plan info, upgrade CTA
-//   6. Danger zone      — deactivate account
+//   4. Brand media      — logo upload, cover image upload (Supabase Storage)
+//   5. Business hours   — 7-day grid with open/closed toggle + time pickers
+//   6. Photo gallery    — up to 8 photos uploaded to Supabase Storage
+//   7. Plan & billing   — current plan info, upgrade CTA
+//   8. Danger zone      — deactivate account
 //
-// Uses Supabase storage bucket "vendor-assets" for logo/cover uploads.
-// Displays a verification badge if the business is verified.
+// Business hours + gallery stored in vendor_profiles.business_hours (JSONB)
+// and vendor_profiles.gallery_photos (text[]).
+//
+// Schema migration required (run once in Supabase SQL editor):
+//   ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS business_hours jsonb;
+//   ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS gallery_photos  text[];
 // =============================================================================
 
 import { useState, useEffect, useRef } from 'react';
@@ -23,7 +29,8 @@ import VendorNav from '@/components/vendor/VendorNav';
 import {
   Building2, Phone, Globe, MapPin, Camera, CheckCircle,
   AlertCircle, Loader2, Shield, ArrowUpRight, AlertTriangle,
-  Upload, X, Zap, Star, User,
+  Upload, X, Zap, Star, User, Clock, Image as ImageIcon,
+  Plus, Trash2,
 } from 'lucide-react';
 import type { VendorProfile } from '@/lib/types/database.types';
 
@@ -55,6 +62,29 @@ const PLAN_INFO = {
     features: ['Unlimited offers', 'University breakdown', 'Looker Studio export', 'Dedicated account manager'],
     cta: false,
   },
+};
+
+const DAYS_OF_WEEK = [
+  { key: 'monday',    label: 'Monday' },
+  { key: 'tuesday',   label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday',  label: 'Thursday' },
+  { key: 'friday',    label: 'Friday' },
+  { key: 'saturday',  label: 'Saturday' },
+  { key: 'sunday',    label: 'Sunday' },
+];
+
+interface DayHours { open: boolean; from: string; to: string; }
+type BusinessHours = Record<string, DayHours>;
+
+const DEFAULT_HOURS: BusinessHours = {
+  monday:    { open: true,  from: '09:00', to: '18:00' },
+  tuesday:   { open: true,  from: '09:00', to: '18:00' },
+  wednesday: { open: true,  from: '09:00', to: '18:00' },
+  thursday:  { open: true,  from: '09:00', to: '18:00' },
+  friday:    { open: true,  from: '09:00', to: '17:00' },
+  saturday:  { open: false, from: '10:00', to: '16:00' },
+  sunday:    { open: false, from: '10:00', to: '16:00' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -104,10 +134,8 @@ function ImageUploader({
     setUploading(true);
     const ext = file.name.split('.').pop();
     const filePath = `${path}.${ext}`;
-
     const localPreview = URL.createObjectURL(file);
     setPreview(localPreview);
-
     const { error } = await supabase.storage.from(bucket).upload(filePath, file, { upsert: true });
     if (!error) {
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
@@ -151,6 +179,184 @@ function ImageUploader({
   );
 }
 
+// ── Gallery photo uploader ────────────────────────────────────────────────────
+
+function GalleryUploader({
+  photos, vendorId, onPhotosChange,
+}: {
+  photos: string[]; vendorId: string | null; onPhotosChange: (urls: string[]) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClient();
+
+  const MAX_PHOTOS = 8;
+
+  const handleFiles = async (files: FileList) => {
+    if (!vendorId) return;
+    const remaining = MAX_PHOTOS - photos.length;
+    const toUpload = Array.from(files).slice(0, remaining);
+    setUploading(true);
+
+    const newUrls = [...photos];
+    for (let i = 0; i < toUpload.length; i++) {
+      const file = toUpload[i];
+      if (!file.type.startsWith('image/')) continue;
+      setUploadingIdx(i);
+      const ext = file.name.split('.').pop();
+      const slot = newUrls.length;
+      const filePath = `${vendorId}/gallery/${slot}.${ext}`;
+      const { error } = await supabase.storage.from('vendor-assets').upload(filePath, file, { upsert: true });
+      if (!error) {
+        const { data } = supabase.storage.from('vendor-assets').getPublicUrl(filePath);
+        newUrls.push(data.publicUrl);
+      }
+    }
+
+    setUploading(false);
+    setUploadingIdx(null);
+    onPhotosChange(newUrls);
+  };
+
+  const removePhoto = (idx: number) => {
+    const updated = photos.filter((_, i) => i !== idx);
+    onPhotosChange(updated);
+  };
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+        {photos.map((url, idx) => (
+          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100">
+            <img src={url} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button
+                onClick={() => removePhoto(idx)}
+                className="p-1.5 bg-red-500 rounded-lg text-white hover:bg-red-600 transition-colors"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {photos.length < MAX_PHOTOS && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="relative aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:border-brand-300 hover:text-brand-400 transition-colors cursor-pointer"
+          >
+            {uploading ? (
+              <Loader2 size={20} className="animate-spin text-brand-500" />
+            ) : (
+              <>
+                <Plus size={20} />
+                <span className="text-[10px] font-medium">Add photo</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); }}
+      />
+
+      <p className="text-xs text-gray-400 mt-3">
+        Up to {MAX_PHOTOS} photos · {photos.length}/{MAX_PHOTOS} uploaded.
+        Show students what your space looks like — interior, food, atmosphere.
+      </p>
+    </div>
+  );
+}
+
+// ── Business Hours Editor ──────────────────────────────────────────────────────
+
+function HoursEditor({ hours, onChange }: { hours: BusinessHours; onChange: (h: BusinessHours) => void }) {
+  const setDay = (key: string, patch: Partial<DayHours>) => {
+    onChange({ ...hours, [key]: { ...hours[key], ...patch } });
+  };
+
+  const copyToAll = (srcKey: string) => {
+    const src = hours[srcKey];
+    const updated: BusinessHours = {};
+    for (const d of DAYS_OF_WEEK) {
+      updated[d.key] = { ...hours[d.key], from: src.from, to: src.to };
+    }
+    onChange(updated);
+  };
+
+  return (
+    <div className="space-y-2">
+      {DAYS_OF_WEEK.map(({ key, label }) => {
+        const day = hours[key] ?? { open: false, from: '09:00', to: '18:00' };
+        return (
+          <div
+            key={key}
+            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+              day.open ? 'bg-vendor-50 border border-vendor-100' : 'bg-gray-50 border border-gray-100'
+            }`}
+          >
+            {/* Toggle */}
+            <button
+              type="button"
+              onClick={() => setDay(key, { open: !day.open })}
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
+                day.open ? 'bg-vendor-600' : 'bg-gray-300'
+              }`}
+            >
+              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                day.open ? 'translate-x-5' : 'translate-x-0.5'
+              }`} />
+            </button>
+
+            {/* Day label */}
+            <span className={`text-sm font-semibold w-24 flex-shrink-0 ${day.open ? 'text-vendor-800' : 'text-gray-400'}`}>
+              {label}
+            </span>
+
+            {/* Hours */}
+            {day.open ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+                  type="time"
+                  value={day.from}
+                  onChange={(e) => setDay(key, { from: e.target.value })}
+                  className="px-2.5 py-1.5 text-xs font-semibold border border-vendor-200 rounded-lg bg-white focus:outline-none focus:border-vendor-400 text-gray-800"
+                />
+                <span className="text-xs text-gray-400 font-medium">to</span>
+                <input
+                  type="time"
+                  value={day.to}
+                  onChange={(e) => setDay(key, { to: e.target.value })}
+                  className="px-2.5 py-1.5 text-xs font-semibold border border-vendor-200 rounded-lg bg-white focus:outline-none focus:border-vendor-400 text-gray-800"
+                />
+                <button
+                  type="button"
+                  onClick={() => copyToAll(key)}
+                  className="ml-auto text-[10px] text-vendor-600 font-semibold hover:underline whitespace-nowrap"
+                  title="Copy these hours to all days"
+                >
+                  Copy to all
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400 font-medium flex-1">Closed</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function VendorProfilePage() {
@@ -164,7 +370,7 @@ export default function VendorProfilePage() {
   const [flash, setFlash] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [deactivateConfirm, setDeactivateConfirm] = useState(false);
 
-  // Form fields
+  // Core profile fields
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [description, setDescription] = useState('');
@@ -180,6 +386,10 @@ export default function VendorProfilePage() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
+  // Extended fields
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_HOURS);
+  const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -189,7 +399,6 @@ export default function VendorProfilePage() {
       const { data } = await supabase
         .from('vendor_profiles').select('*').eq('user_id', user.id).maybeSingle();
 
-      // New vendor — no profile yet. Pre-fill from auth metadata and show the form in "create" mode
       if (!data) {
         const { data: { user: freshUser } } = await supabase.auth.getUser();
         const meta = freshUser?.user_metadata ?? {};
@@ -215,6 +424,15 @@ export default function VendorProfilePage() {
       setLogoUrl(data.logo_url);
       setCoverUrl(data.cover_image_url);
 
+      // Load extended fields (graceful if columns don't exist yet)
+      const anyData = data as any;
+      if (anyData.business_hours && typeof anyData.business_hours === 'object') {
+        setBusinessHours({ ...DEFAULT_HOURS, ...anyData.business_hours });
+      }
+      if (Array.isArray(anyData.gallery_photos)) {
+        setGalleryPhotos(anyData.gallery_photos);
+      }
+
       setLoading(false);
     })();
   }, []);
@@ -232,7 +450,7 @@ export default function VendorProfilePage() {
     setSaving(true);
 
     const isNew = !vp;
-    const payload = {
+    const payload: any = {
       user_id: userId!,
       business_name: businessName.trim(),
       business_type: businessType || null,
@@ -245,12 +463,13 @@ export default function VendorProfilePage() {
       city: city.trim(),
       state: state.trim() || null,
       postal_code: postalCode.trim() || null,
-      country: country || 'United States',
+      country: country || 'HU',
       logo_url: logoUrl,
       cover_image_url: coverUrl,
+      business_hours: businessHours,
+      gallery_photos: galleryPhotos,
     };
 
-    // Use upsert so this works for both new vendors (INSERT) and existing (UPDATE)
     const { data: savedData, error } = await supabase
       .from('vendor_profiles')
       .upsert(payload, { onConflict: 'user_id' })
@@ -262,7 +481,6 @@ export default function VendorProfilePage() {
     if (savedData) setVp(savedData as VendorProfile);
     showFlash('success', isNew ? 'Business profile created! You can now create offers.' : 'Profile updated successfully.');
 
-    // If this was the first save, redirect to dashboard
     if (isNew) {
       setTimeout(() => router.push('/vendor'), 1500);
     }
@@ -280,7 +498,7 @@ export default function VendorProfilePage() {
     );
   }
 
-  const plan = PLAN_INFO[vp?.plan_tier ?? 'free'] ?? PLAN_INFO.free;
+  const plan = PLAN_INFO[(vp as any)?.plan_tier ?? 'free'] ?? PLAN_INFO.free;
 
   return (
     <>
@@ -296,7 +514,7 @@ export default function VendorProfilePage() {
               <h1 className="text-2xl font-black text-gray-900">Business settings</h1>
               <div className="flex items-center gap-2 mt-1">
                 <p className="text-gray-500 text-sm">{vp?.business_name}</p>
-                {vp?.is_verified ? (
+                {(vp as any)?.is_verified ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-vendor-700 bg-vendor-50 px-2 py-0.5 rounded-full border border-vendor-200">
                     <CheckCircle size={11} />
                     Verified
@@ -362,7 +580,7 @@ export default function VendorProfilePage() {
             <Section title="Contact & web" icon={<Phone size={14} />}>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Business phone">
-                  <input type="tel" className={INPUT_CLS} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+44 7xxx xxxxxx" />
+                  <input type="tel" className={INPUT_CLS} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+36 1 234 5678" />
                 </Field>
                 <Field label="Business email">
                   <input type="email" className={INPUT_CLS} value={businessEmail} onChange={(e) => setBusinessEmail(e.target.value)} placeholder="hello@yourbusiness.com" />
@@ -382,27 +600,28 @@ export default function VendorProfilePage() {
             <Section title="Location" icon={<MapPin size={14} />}>
               <div className="space-y-4">
                 <Field label="Address line 1">
-                  <input type="text" className={INPUT_CLS} value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 High Street" />
+                  <input type="text" className={INPUT_CLS} value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="Váci utca 1" />
                 </Field>
                 <Field label="Address line 2 (optional)">
-                  <input type="text" className={INPUT_CLS} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Suite 2B" />
+                  <input type="text" className={INPUT_CLS} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Ground floor" />
                 </Field>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Field label="City" hint="Stud Deals currently operates in Budapest and Szeged only.">
+                  <Field label="City" hint="Stud Deals currently operates in Budapest and Szeged.">
                     <select className={INPUT_CLS} value={city} onChange={(e) => setCity(e.target.value)}>
                       <option value="">Select city…</option>
                       <option value="Budapest">Budapest</option>
                       <option value="Szeged">Szeged</option>
                     </select>
                   </Field>
-                  <Field label="State / County">
-                    <input type="text" className={INPUT_CLS} value={state} onChange={(e) => setState(e.target.value)} placeholder="Greater London" />
+                  <Field label="District / Area">
+                    <input type="text" className={INPUT_CLS} value={state} onChange={(e) => setState(e.target.value)} placeholder="e.g. District V" />
                   </Field>
                   <Field label="Postal code">
-                    <input type="text" className={INPUT_CLS} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="EC1A 1BB" />
+                    <input type="text" className={INPUT_CLS} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="1051" />
                   </Field>
                   <Field label="Country">
                     <select className={INPUT_CLS} value={country} onChange={(e) => setCountry(e.target.value)}>
+                      <option value="HU">🇭🇺 Hungary</option>
                       <option value="GB">🇬🇧 United Kingdom</option>
                       <option value="US">🇺🇸 United States</option>
                       <option value="GH">🇬🇭 Ghana</option>
@@ -417,7 +636,7 @@ export default function VendorProfilePage() {
               </div>
             </Section>
 
-            {/* 4. Media */}
+            {/* 4. Brand media */}
             <Section title="Brand media" icon={<Camera size={14} />}>
               <div className="grid sm:grid-cols-2 gap-5">
                 <ImageUploader
@@ -439,16 +658,50 @@ export default function VendorProfilePage() {
               </div>
             </Section>
 
-            {/* 5. Plan & billing */}
+            {/* 5. Business hours */}
+            <Section title="Business hours" icon={<Clock size={14} />}>
+              <p className="text-xs text-gray-500 mb-4">
+                Students see your opening hours on your business profile. Toggle each day open/closed and set your hours.
+              </p>
+              <HoursEditor hours={businessHours} onChange={setBusinessHours} />
+              <div className="mt-4 flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <CheckCircle size={13} className="text-blue-500 flex-shrink-0" />
+                <p className="text-xs text-blue-700">
+                  Open today:{' '}
+                  <strong>
+                    {(() => {
+                      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+                      const d = businessHours[today];
+                      if (!d?.open) return 'Closed';
+                      return `${d.from} – ${d.to}`;
+                    })()}
+                  </strong>
+                </p>
+              </div>
+            </Section>
+
+            {/* 6. Photo gallery */}
+            <Section title="Photo gallery" icon={<ImageIcon size={14} />}>
+              <p className="text-xs text-gray-500 mb-4">
+                Showcase your space, food, and atmosphere. Photos are shown on your public business profile to attract students.
+              </p>
+              <GalleryUploader
+                photos={galleryPhotos}
+                vendorId={vp?.id ?? null}
+                onPhotosChange={setGalleryPhotos}
+              />
+            </Section>
+
+            {/* 7. Plan & billing */}
             <Section title="Plan & billing" icon={<Star size={14} />}>
               <div className="flex items-start justify-between gap-4 mb-5">
                 <div>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${plan.color}`}>
                     {plan.label} plan
                   </span>
-                  {vp?.plan_expires_at && (
+                  {(vp as any)?.plan_expires_at && (
                     <p className="text-xs text-gray-400 mt-1.5">
-                      Renews {new Date(vp.plan_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      Renews {new Date((vp as any).plan_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                   )}
                 </div>
@@ -481,7 +734,7 @@ export default function VendorProfilePage() {
               )}
             </Section>
 
-            {/* 6. Danger zone */}
+            {/* 8. Danger zone */}
             <div className="card border-red-200 p-5 sm:p-6">
               <div className="flex items-center gap-2 mb-5 pb-4 border-b border-red-100">
                 <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
@@ -522,6 +775,7 @@ export default function VendorProfilePage() {
                 )}
               </div>
             </div>
+
           </div>
 
           {/* Bottom save */}

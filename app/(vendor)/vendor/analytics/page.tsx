@@ -2,7 +2,8 @@
 
 // =============================================================================
 // app/(vendor)/vendor/analytics/page.tsx — Vendor Analytics
-// Full analytics: KPIs, trend chart, day/hour heatmaps, offer performance table, funnel
+// Full analytics: KPIs, trend chart, day/hour heatmaps, offer performance table,
+// journey funnel, and punch card funnel (stamp distribution per offer).
 // =============================================================================
 
 import { useState, useEffect } from 'react';
@@ -16,13 +17,25 @@ import {
 } from 'recharts';
 import {
   TrendingUp, Users, Eye, Tag, BarChart3, ArrowUpRight,
-  ArrowDownRight, Loader2, Star, Zap, Clock, Award, Target, ShoppingBag,
+  ArrowDownRight, Loader2, Star, Zap, Clock, Award, Target,
+  ShoppingBag, Gift, ChevronDown, ChevronUp, Stamp,
 } from 'lucide-react';
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 function fmtN(n: number) { return n >= 1000 ? `${(n/1000).toFixed(1)}k` : String(n); }
 function fmtP(n: number) { return `${n.toFixed(1)}%`; }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function parseLoyaltyConfig(terms: string | null): any | null {
+  if (!terms) return null;
+  const m = terms.match(/^\[\[LOYALTY:({.*?})\]\]/s);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch { return null; }
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function KPICard({ label, value, delta, deltaOk, icon, color, bg }: {
   label:string; value:string; delta?:string; deltaOk?:boolean;
@@ -66,6 +79,145 @@ function CT({ active, payload, label }: any) {
   );
 }
 
+// ── Punch Card Funnel Section ──────────────────────────────────────────────────
+
+interface PunchCardStats {
+  offerId: string;
+  offerTitle: string;
+  requiredStamps: number;
+  distribution: { stamp: number; count: number }[];
+  totalStudents: number;
+  completedCycles: number;
+  nearCompletion: number; // within 2 stamps
+  avgProgress: number;    // 0–100%
+  completionRate: number; // % who reached reward
+}
+
+function StampBar({ value, max, isNear, isComplete }: { value: number; max: number; isNear: boolean; isComplete: boolean }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  return (
+    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all ${
+          isComplete ? 'bg-green-500' : isNear ? 'bg-amber-400' : 'bg-vendor-400'
+        }`}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+
+function PunchCardFunnel({ stats }: { stats: PunchCardStats }) {
+  const maxCount = Math.max(...stats.distribution.map(d => d.count), 1);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-6 h-6 rounded-lg bg-vendor-100 flex items-center justify-center">
+              <Gift size={13} className="text-vendor-700" />
+            </div>
+            <h2 className="text-sm font-bold text-gray-900 line-clamp-1">{stats.offerTitle}</h2>
+          </div>
+          <p className="text-xs text-gray-400">{stats.requiredStamps}-stamp punch card · {stats.totalStudents} active students</p>
+        </div>
+        <div className="flex gap-3 sm:flex-shrink-0">
+          <div className="text-center">
+            <p className="text-lg font-black text-green-600">{stats.completedCycles}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Rewards earned</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-black text-amber-600">{stats.nearCompletion}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Near reward</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-black text-gray-900">{fmtP(stats.avgProgress)}</p>
+            <p className="text-[10px] text-gray-400 font-medium">Avg progress</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Distribution bar chart */}
+      {stats.distribution.length > 0 ? (
+        <>
+          <div className="mb-4">
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={stats.distribution} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="stamp"
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                  tickFormatter={v => `${v}★`}
+                />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} allowDecimals={false} />
+                <Tooltip
+                  formatter={(v: any) => [`${v} students`, '']}
+                  labelFormatter={l => `At stamp ${l}`}
+                  contentStyle={{ fontSize: 11, borderRadius: 10, border: '1px solid #e5e7eb' }}
+                />
+                <Bar dataKey="count" name="Students" radius={[5,5,0,0]}>
+                  {stats.distribution.map((d, i) => {
+                    const isComplete = d.stamp === 0 && stats.completedCycles > 0;
+                    const isNear = d.stamp >= stats.requiredStamps - 2 && d.stamp < stats.requiredStamps;
+                    return (
+                      <Cell
+                        key={i}
+                        fill={
+                          isNear && d.stamp > 0
+                            ? '#f59e0b'
+                            : d.stamp === 0 && i === 0
+                              ? '#d1fae5'
+                              : '#bbf7d0'
+                        }
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 text-xs mb-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-vendor-300" />
+              <span className="text-gray-500">Progress</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-amber-400" />
+              <span className="text-gray-500">Within 2 stamps of reward</span>
+            </div>
+          </div>
+
+          {/* Progress rows — top 5 students by completion */}
+          {stats.nearCompletion > 0 && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap size={13} className="text-amber-600" />
+                <p className="text-xs font-bold text-amber-700">
+                  {stats.nearCompletion} student{stats.nearCompletion !== 1 ? 's' : ''} within 2 stamps of their reward
+                </p>
+              </div>
+              <p className="text-xs text-amber-600">
+                Consider launching a Boost to nudge them over the line — conversion is highest when students are this close.
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-8 text-gray-400">
+          <Gift size={28} className="mx-auto mb-2 opacity-30" />
+          <p className="text-sm font-medium">No stamp activity yet</p>
+          <p className="text-xs mt-1">Students will appear here once they start collecting stamps.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────────
+
 export default function VendorAnalyticsPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -78,6 +230,8 @@ export default function VendorAnalyticsPage() {
   const [days, setDays] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
   const [kpis, setKpis] = useState<any[]>([]);
+  const [punchStats, setPunchStats] = useState<PunchCardStats[]>([]);
+  const [showPunchFunnel, setShowPunchFunnel] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -137,6 +291,91 @@ export default function VendorAnalyticsPage() {
     const hc = Array(24).fill(0);
     rList.forEach(r => hc[new Date(r.claimed_at).getHours()]++);
     setHours(Array.from({length:15},(_,i)=>({hour:`${i+8}:00`,count:hc[i+8]??0})));
+
+    // Punch card funnel
+    const punchOffers = offerRows.filter(o => {
+      const cfg = parseLoyaltyConfig(o.terms_and_conditions);
+      return cfg && (cfg.mode === 'punch_card' || cfg.mode === 'tiered');
+    });
+
+    if (punchOffers.length > 0) {
+      const statsArr: PunchCardStats[] = [];
+
+      for (const offer of punchOffers) {
+        const cfg = parseLoyaltyConfig(offer.terms_and_conditions);
+        const req: number = cfg?.required_visits ?? 10;
+
+        // Fetch all stamp-type redemptions for this offer
+        const { data: stampRows } = await supabase
+          .from('redemptions')
+          .select('student_profile_id, status, redemption_code, claimed_at')
+          .eq('vendor_id', vid)
+          .eq('offer_id', offer.id)
+          .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed']);
+
+        const rows = stampRows ?? [];
+
+        // Build per-student stamp count (current cycle)
+        const rewardEarned = new Set(
+          rows
+            .filter(r => ['reward_earned', 'confirmed'].includes(r.status))
+            .map(r => r.student_profile_id)
+        );
+
+        // Count stamps per student (only 'stamp' status rows)
+        const stampMap: Record<string, number> = {};
+        rows
+          .filter(r => r.status === 'stamp')
+          .forEach(r => {
+            stampMap[r.student_profile_id] = (stampMap[r.student_profile_id] ?? 0) + 1;
+          });
+
+        const totalStudents = Object.keys(stampMap).length;
+        const completedCycles = rewardEarned.size;
+
+        // Distribution: how many students at each stamp count (0–req)
+        const distMap: Record<number, number> = {};
+        for (let i = 0; i <= req; i++) distMap[i] = 0;
+        Object.values(stampMap).forEach(count => {
+          const bucket = Math.min(count % req === 0 && count > 0 ? req : count % req, req);
+          distMap[bucket] = (distMap[bucket] ?? 0) + 1;
+        });
+
+        const distribution = Object.entries(distMap)
+          .map(([stamp, count]) => ({ stamp: parseInt(stamp), count }))
+          .filter(d => d.count > 0 || d.stamp <= req)
+          .sort((a, b) => a.stamp - b.stamp);
+
+        const nearCompletion = Object.values(stampMap).filter(c => {
+          const inCycle = c % req;
+          return inCycle >= req - 2 && inCycle > 0;
+        }).length;
+
+        const avgProgress = totalStudents > 0
+          ? Object.values(stampMap).reduce((s, c) => s + ((c % req) / req) * 100, 0) / totalStudents
+          : 0;
+
+        const completionRate = totalStudents > 0
+          ? (completedCycles / totalStudents) * 100
+          : 0;
+
+        statsArr.push({
+          offerId: offer.id,
+          offerTitle: offer.title,
+          requiredStamps: req,
+          distribution,
+          totalStudents,
+          completedCycles,
+          nearCompletion,
+          avgProgress,
+          completionRate,
+        });
+      }
+
+      setPunchStats(statsArr);
+    } else {
+      setPunchStats([]);
+    }
   };
 
   if (loading) return (
@@ -230,6 +469,39 @@ export default function VendorAnalyticsPage() {
             </Card>
           </div>
 
+          {/* Punch Card Funnel */}
+          {punchStats.length > 0 && (
+            <div className="mt-5">
+              <button
+                onClick={() => setShowPunchFunnel(v => !v)}
+                className="w-full flex items-center justify-between p-5 bg-white rounded-2xl border border-gray-100 shadow-sm mb-1"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-vendor-100 flex items-center justify-center">
+                    <Gift size={16} className="text-vendor-700" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-gray-900">Punch card funnel</p>
+                    <p className="text-xs text-gray-400">
+                      {punchStats.length} loyalty offer{punchStats.length !== 1 ? 's' : ''} ·{' '}
+                      {punchStats.reduce((s, p) => s + p.nearCompletion, 0)} students near their reward
+                    </p>
+                  </div>
+                </div>
+                {showPunchFunnel
+                  ? <ChevronUp size={16} className="text-gray-400" />
+                  : <ChevronDown size={16} className="text-gray-400" />
+                }
+              </button>
+
+              {showPunchFunnel && (
+                <div className="space-y-4">
+                  {punchStats.map(ps => <PunchCardFunnel key={ps.offerId} stats={ps} />)}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Offer performance table */}
           <div className="mt-5">
             <Card title="Offer performance" sub="All offers ranked by redemptions">
@@ -292,7 +564,7 @@ export default function VendorAnalyticsPage() {
             </Card>
           </div>
 
-          {/* Funnel */}
+          {/* Journey Funnel */}
           {offers.length>0 && (
             <div className="mt-5">
               <Card title="Student journey funnel" sub="How students move from discovering to redeeming">
