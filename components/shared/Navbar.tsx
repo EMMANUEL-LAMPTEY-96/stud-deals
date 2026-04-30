@@ -29,6 +29,7 @@ import {
   ChevronDown,
   Sparkles,
   Stamp,
+  Shield,
 } from 'lucide-react';
 
 interface NavUser {
@@ -308,6 +309,12 @@ export default function Navbar() {
                     <User size={15} className="text-gray-400" />
                     Profile settings
                   </Link>
+                  {role === 'admin' && (
+                    <Link href="/admin" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors" onClick={() => setProfileMenuOpen(false)}>
+                      <Shield size={15} className="text-purple-500" />
+                      Admin dashboard
+                    </Link>
+                  )}
                   <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                     <LogOut size={15} />
                     Sign out
