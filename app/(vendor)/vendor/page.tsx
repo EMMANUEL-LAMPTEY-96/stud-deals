@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
+import OnboardingChecklist from '@/components/vendor/OnboardingChecklist';
 import VendorNav from '@/components/vendor/VendorNav';
 import MetricCard from '@/components/vendor/MetricCard';
 import VendorQRPanel from '@/components/vendor/VendorQRPanel';
@@ -245,6 +246,9 @@ export default function VendorDashboard() {
               </Link>
             </div>
           </div>
+
+          {/* ── ONBOARDING CHECKLIST ─────────────────────────────────────── */}
+          {vp && <OnboardingChecklist vendorId={vp.id} />}
 
           {/* ── UNVERIFIED WARNING ────────────────────────────────────────── */}
           {vp && !vp.is_verified && (
