@@ -406,7 +406,7 @@ export default function VendorCustomersPage() {
         .select('role')
         .eq('id', user.id)
         .maybeSingle();
-      if (profile?.role !== 'vendor') { router.push('/dashboard'); return; }
+      if (profile?.role !== 'vendor' && profile?.role !== 'admin') { router.push('/dashboard'); return; }
     };
     check();
   }, []);

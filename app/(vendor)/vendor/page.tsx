@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
+import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
 import VendorNav from '@/components/vendor/VendorNav';
 import MetricCard from '@/components/vendor/MetricCard';
 import LoyaltyScanner from '@/components/vendor/LoyaltyScanner';
@@ -151,14 +152,19 @@ export default function VendorDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
+      // Check role — admin can preview vendor pages
+      const { data: profileData } = await supabase
+        .from('profiles').select('role').eq('id', user.id).maybeSingle();
+      const isAdmin = profileData?.role === 'admin';
+
       const { data: vp } = await supabase
         .from('vendor_profiles')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!vp) { router.push('/vendor/profile'); return; }
-      setVendorProfile(vp);
+      if (!vp && !isAdmin) { router.push('/vendor/profile'); return; }
+      if (vp) setVendorProfile(vp);
 
       // Fetch active loyalty programs
       const { data: offerData } = await supabase
@@ -215,6 +221,7 @@ export default function VendorDashboard() {
 
   return (
     <>
+      <AdminPreviewBanner />
       <Navbar />
       <VendorNav />
 

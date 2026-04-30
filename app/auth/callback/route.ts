@@ -93,7 +93,7 @@ export async function GET(request: Request) {
   }
 
   const role = existingProfile?.role ?? (user.user_metadata?.role as string) ?? 'student';
-  const dashboardPath = role === 'vendor' ? '/vendor' : '/dashboard';
+  const dashboardPath = role === 'vendor' ? '/vendor' : role === 'admin' ? '/admin' : '/dashboard';
 
   return NextResponse.redirect(`${origin}${dashboardPath}`);
 }

@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
+import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
 import OfferCard from '@/components/student/OfferCard';
 import VoucherModal from '@/components/student/VoucherModal';
 import {
@@ -370,6 +371,7 @@ export default function StudentDashboard() {
 
   return (
     <>
+      <AdminPreviewBanner />
       <Navbar />
 
       <div className="min-h-screen bg-gray-50">
