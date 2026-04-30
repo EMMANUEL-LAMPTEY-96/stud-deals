@@ -242,9 +242,9 @@ export default function MyLoyaltyPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 mb-5">
               <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-bold text-amber-900">Verify your student status</p>
+                <p className="text-sm font-bold text-amber-900">Verify to claim your rewards</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Verify to unlock all deals and loyalty programmes across the platform.
+                  You can earn stamps right now — verify your student status to claim rewards and vouchers.
                 </p>
                 <Link href="/verification" className="mt-2 inline-block text-xs font-bold text-amber-700 underline">
                   Verify now →

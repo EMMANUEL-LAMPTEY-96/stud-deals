@@ -39,11 +39,12 @@ interface StampResult {
 interface EarnStampScannerProps {
   onClose: () => void;
   onStampSuccess?: (result: StampResult) => void;
+  isVerified?: boolean;
 }
 
 const SCANNER_ID = 'earn-stamp-qr-reader';
 
-export default function EarnStampScanner({ onClose, onStampSuccess }: EarnStampScannerProps) {
+export default function EarnStampScanner({ onClose, onStampSuccess, isVerified = true }: EarnStampScannerProps) {
   const [scanState, setScanState] = useState<ScanState>('scanning');
   const [errorMsg, setErrorMsg] = useState('');
   const [result, setResult] = useState<StampResult | null>(null);
@@ -237,12 +238,26 @@ export default function EarnStampScanner({ onClose, onStampSuccess }: EarnStampS
           {scanState === 'success' && result && (
             <div className="py-4 flex flex-col items-center text-center gap-4">
               {/* Reward banner */}
-              {result.reward_triggered ? (
+              {result.reward_triggered && isVerified ? (
                 <div className="w-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-2xl p-4 flex flex-col items-center gap-2 mb-1">
                   <Sparkles size={28} className="text-white" />
                   <p className="text-white font-black text-lg">Reward Unlocked! 🎉</p>
                   <p className="text-white/90 text-sm font-semibold">{result.reward_label}</p>
                   <p className="text-white/70 text-xs">Show this to the staff to claim</p>
+                </div>
+              ) : result.reward_triggered && !isVerified ? (
+                <div className="w-full bg-gradient-to-r from-brand-600 to-brand-700 rounded-2xl p-4 flex flex-col items-center gap-2 mb-1">
+                  <Gift size={28} className="text-white" />
+                  <p className="text-white font-black text-base">You earned a reward! 🎉</p>
+                  <p className="text-white/80 text-xs text-center">
+                    Verify your student status to claim <strong>{result.reward_label}</strong>
+                  </p>
+                  <a
+                    href="/verification"
+                    className="mt-1 bg-white text-brand-700 text-xs font-black px-4 py-2 rounded-xl hover:bg-brand-50 transition-colors"
+                  >
+                    Verify now →
+                  </a>
                 </div>
               ) : (
                 <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center">

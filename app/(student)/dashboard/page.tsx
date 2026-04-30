@@ -63,8 +63,8 @@ function VerificationBanner({ status }: { status: string }) {
     unverified: {
       bg: 'bg-gradient-to-r from-brand-600 to-brand-700',
       icon: <GraduationCap size={20} className="text-white" />,
-      title: 'Verify your student status to unlock deals',
-      description: 'Takes 60 seconds with your .edu email.',
+      title: 'Verify to claim rewards and unlock vouchers',
+      description: 'You can already earn stamps — verify in 60 seconds to claim your rewards.',
       cta: 'Verify now',
       href: '/verification',
     },
@@ -72,7 +72,7 @@ function VerificationBanner({ status }: { status: string }) {
       bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
       icon: <AlertTriangle size={20} className="text-white" />,
       title: 'Check your university email',
-      description: "We sent a verification link. Click it to unlock all deals.",
+      description: "We sent a verification link — click it to claim rewards and unlock all vouchers.",
       cta: 'Resend email',
       href: '/verification',
     },
@@ -617,6 +617,7 @@ export default function StudentDashboard() {
       {scannerOpen && (
         <EarnStampScanner
           onClose={() => setScannerOpen(false)}
+          isVerified={isVerified}
           onStampSuccess={() => {
             setScannerOpen(false);
             refreshLoyalty();
