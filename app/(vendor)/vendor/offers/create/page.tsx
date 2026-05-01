@@ -85,7 +85,7 @@ const OFFER_MODES: {
   {
     value:   'standard',
     label:   'Standard Discount',
-    tagline: 'One-off % off, fixed £, BOGO or free item',
+    tagline: 'One-off % off, fixed Ft, BOGO or free item',
     icon:    <Percent size={22} />,
     color:   'text-brand-600',
     border:  'border-brand-400',
@@ -114,7 +114,7 @@ const OFFER_MODES: {
   {
     value:   'milestone',
     label:   'Spend Milestone',
-    tagline: 'Spend £X in total → unlock a big reward',
+    tagline: 'Spend X Ft in total → unlock a big reward',
     icon:    <Trophy size={22} />,
     color:   'text-amber-600',
     border:  'border-amber-400',
@@ -125,7 +125,7 @@ const OFFER_MODES: {
 
 const STANDARD_DISCOUNT_TYPES: { value: DiscountType; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: 'percentage',  label: '% Off',      icon: <Percent size={15} />,    desc: 'e.g. 20% off the total bill' },
-  { value: 'fixed_amount',label: 'Fixed £',     icon: <DollarSign size={15} />, desc: 'e.g. £2 off any purchase' },
+  { value: 'fixed_amount',label: 'Fix Ft',       icon: <DollarSign size={15} />, desc: 'pl. 500 Ft kedvezmény' },
   { value: 'buy_x_get_y', label: 'Buy X Get Y', icon: <Gift size={15} />,       desc: 'e.g. Buy 1 get 1 free' },
   { value: 'free_item',   label: 'Free Item',   icon: <Coffee size={15} />,     desc: 'e.g. Free cookie with any drink' },
 ];
@@ -133,7 +133,7 @@ const STANDARD_DISCOUNT_TYPES: { value: DiscountType; label: string; icon: React
 const REWARD_TYPES = [
   { value: 'free_item' as const,   label: 'Free item',        icon: <Gift size={14} /> },
   { value: 'percentage' as const,  label: '% off next visit', icon: <Percent size={14} /> },
-  { value: 'fixed_amount' as const,label: 'Fixed £ off',      icon: <DollarSign size={14} /> },
+  { value: 'fixed_amount' as const,label: 'Fix Ft off',       icon: <DollarSign size={14} /> },
 ];
 
 const WEEK_DAYS = [
@@ -271,7 +271,7 @@ function OfferPreview({
 }) {
   const cat = CATEGORIES.find(c => c.value === category);
   const expLabel = expiresAt
-    ? `Expires ${new Date(expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+    ? `Expires ${new Date(expiresAt).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short' })}`
     : 'No expiry';
 
   const modeConfig = OFFER_MODES.find(m => m.value === mode)!;
@@ -352,7 +352,7 @@ function OfferPreview({
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-gray-500">Spend progress</span>
-              <span className="text-xs font-bold text-amber-600">£24 / £{loyaltyConfig.spend_threshold}</span>
+              <span className="text-xs font-bold text-amber-600">8 760 Ft / {loyaltyConfig.spend_threshold} Ft</span>
             </div>
             <div className="h-2 bg-amber-100 rounded-full overflow-hidden">
               <div
@@ -515,7 +515,7 @@ export default function CreateOfferPage() {
       const v = parseFloat(discountValue);
       if (!v) return '';
       if (discountType === 'percentage') return `${v}% OFF`;
-      if (discountType === 'fixed_amount') return `£${v} OFF`;
+      if (discountType === 'fixed_amount') return `${v} Ft OFF`;
       if (discountType === 'buy_x_get_y') return 'BOGO';
       if (discountType === 'free_item') return 'FREE';
     }
@@ -524,13 +524,13 @@ export default function CreateOfferPage() {
       const v = parseFloat(fvValue);
       if (!v) return 'WELCOME';
       if (fvType === 'percentage') return `${v}% OFF`;
-      if (fvType === 'fixed_amount') return `£${v} OFF`;
+      if (fvType === 'fixed_amount') return `${v} Ft OFF`;
       return 'FREE';
     }
     if (mode === 'milestone') {
       const t = parseFloat(msThreshold);
       if (!t) return 'MILESTONE';
-      return `£${t} GOAL`;
+      return `${t} Ft CÉL`;
     }
     return '';
   };
@@ -741,7 +741,7 @@ export default function CreateOfferPage() {
                   <input type="text" className={INPUT_CLS} placeholder={
                     mode === 'punch_card'  ? 'Buy 5 coffees, get your 6th free' :
                     mode === 'first_visit' ? 'Welcome bonus — 25% off your first visit' :
-                    mode === 'milestone'   ? 'Spend £50 and earn a £10 reward' :
+                    mode === 'milestone'   ? 'Spend 5 000 Ft and earn a 1 000 Ft reward' :
                     '30% off all meals for students'
                   } value={title} onChange={e => setTitle(e.target.value)} maxLength={100} />
                   <p className="text-xs text-gray-400 text-right">{title.length}/100</p>
@@ -774,13 +774,13 @@ export default function CreateOfferPage() {
                     </div>
                   </Field>
                   {(discountType === 'percentage' || discountType === 'fixed_amount') && (
-                    <Field label={discountType === 'percentage' ? 'Percentage off' : 'Amount off (£)'}>
+                    <Field label={discountType === 'percentage' ? 'Percentage off' : 'Amount off (Ft)'}>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm pointer-events-none">
-                          {discountType === 'percentage' ? '%' : '£'}
+                          {discountType === 'percentage' ? '%' : 'Ft'}
                         </span>
-                        <input type="number" className={`${INPUT_CLS} pl-8`}
-                          placeholder={discountType === 'percentage' ? '20' : '2.50'}
+                        <input type="number" className={`${INPUT_CLS} pl-10`}
+                          placeholder={discountType === 'percentage' ? '20' : '500'}
                           value={discountValue} onChange={e => setDiscountValue(e.target.value)}
                           min={0} step={discountType === 'fixed_amount' ? 0.01 : 1} />
                       </div>
@@ -833,10 +833,10 @@ export default function CreateOfferPage() {
                     </div>
                   </Field>
                   {pcRewardType !== 'free_item' && (
-                    <Field label={pcRewardType === 'percentage' ? 'Reward % off' : 'Reward £ off'}>
+                    <Field label={pcRewardType === 'percentage' ? 'Reward % off' : 'Reward Ft off'}>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
-                          {pcRewardType === 'percentage' ? '%' : '£'}
+                          {pcRewardType === 'percentage' ? '%' : 'Ft'}
                         </span>
                         <input type="number" className={`${INPUT_CLS} pl-8`} placeholder="10"
                           value={pcRewardValue} onChange={e => setPcRewardValue(e.target.value)} min={0} />
@@ -1073,7 +1073,7 @@ export default function CreateOfferPage() {
                               {tier.reward_type !== 'free_item' && (
                                 <div className="relative">
                                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
-                                    {tier.reward_type === 'percentage' ? '%' : '£'}
+                                    {tier.reward_type === 'percentage' ? '%' : 'Ft'}
                                   </span>
                                   <input type="number"
                                     className={`${INPUT_CLS} pl-8`}
@@ -1125,10 +1125,10 @@ export default function CreateOfferPage() {
                     </div>
                   </Field>
                   {(fvType === 'percentage' || fvType === 'fixed_amount') && (
-                    <Field label={fvType === 'percentage' ? 'Discount %' : 'Discount £'}>
+                    <Field label={fvType === 'percentage' ? 'Discount %' : 'Discount Ft'}>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
-                          {fvType === 'percentage' ? '%' : '£'}
+                          {fvType === 'percentage' ? '%' : 'Ft'}
                         </span>
                         <input type="number" className={`${INPUT_CLS} pl-8`} placeholder="25"
                           value={fvValue} onChange={e => setFvValue(e.target.value)} min={0} />
@@ -1148,19 +1148,19 @@ export default function CreateOfferPage() {
                   <InfoBox>
                     Students track their cumulative spend at your business. Once they hit the target, they unlock the reward. Great for building loyal regulars.
                   </InfoBox>
-                  <Field label="Spend target (£)" required hint="Students need to spend this much in total to earn the reward">
+                  <Field label="Spend target (Ft)" required hint="Students need to spend this much in total to earn the reward">
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">£</span>
-                      <input type="number" className={`${INPUT_CLS} pl-8`} placeholder="50"
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">Ft</span>
+                      <input type="number" className={`${INPUT_CLS} pl-10`} placeholder="5000"
                         value={msThreshold} onChange={e => setMsThreshold(e.target.value)} min={1} />
                     </div>
                     <div className="flex gap-1.5 mt-2 flex-wrap">
-                      {[20, 30, 50, 100].map(n => (
+                      {[2000, 5000, 10000, 20000].map(n => (
                         <button key={n} type="button" onClick={() => setMsThreshold(String(n))}
                           className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
                             msThreshold === String(n) ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-amber-50'
                           }`}
-                        >£{n}</button>
+                        >{n.toLocaleString('hu-HU')} Ft</button>
                       ))}
                     </div>
                   </Field>
@@ -1179,10 +1179,10 @@ export default function CreateOfferPage() {
                     </div>
                   </Field>
                   {msRewardType !== 'free_item' && (
-                    <Field label={msRewardType === 'percentage' ? 'Reward % off' : 'Reward £ off'}>
+                    <Field label={msRewardType === 'percentage' ? 'Reward % off' : 'Reward Ft off'}>
                       <div className="relative">
                         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">
-                          {msRewardType === 'percentage' ? '%' : '£'}
+                          {msRewardType === 'percentage' ? '%' : 'Ft'}
                         </span>
                         <input type="number" className={`${INPUT_CLS} pl-8`} placeholder="10"
                           value={msRewardValue} onChange={e => setMsRewardValue(e.target.value)} min={0} />
@@ -1191,7 +1191,7 @@ export default function CreateOfferPage() {
                   )}
                   <Field label="Reward description" hint="What the student actually gets">
                     <input type="text" className={INPUT_CLS}
-                      placeholder="£10 voucher for your next visit"
+                      placeholder="1 000 Ft utalvány következő látogatásra"
                       value={msRewardLabel} onChange={e => setMsRewardLabel(e.target.value)} maxLength={60} />
                   </Field>
                 </Section>

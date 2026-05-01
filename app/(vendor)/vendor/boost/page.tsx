@@ -213,7 +213,7 @@ function HistoryRow({ boost }: { boost: ActiveBoost }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-800 line-clamp-1">{boost.title}</p>
         <p className="text-xs text-gray-400">
-          {new Date(boost.expires_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}
+          {new Date(boost.expires_at).toLocaleDateString('hu-HU', { day:'numeric', month:'short', year:'numeric' })}
         </p>
       </div>
       <div className="flex items-center gap-6 flex-shrink-0">
@@ -531,7 +531,7 @@ export default function BoostPage() {
                 </div>
                 <p className="text-xs text-gray-400 mt-3">
                   Boost expires: <span className="font-semibold text-gray-600">
-                    {new Date(Date.now() + durationHours * 3600000).toLocaleString('en-GB', {
+                    {new Date(Date.now() + durationHours * 3600000).toLocaleString('hu-HU', {
                       weekday: 'short', hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short',
                     })}
                   </span>
@@ -600,7 +600,7 @@ export default function BoostPage() {
                   <div className="flex items-center gap-1.5 mt-3">
                     <Clock size={11} className="text-gray-400" />
                     <p className="text-xs text-gray-500">
-                      Expires {new Date(Date.now() + durationHours * 3600000).toLocaleString('en-GB', {
+                      Expires {new Date(Date.now() + durationHours * 3600000).toLocaleString('hu-HU', {
                         hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short',
                       })}
                     </p>

@@ -63,7 +63,7 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; te
 
 const DISCOUNT_TYPES: { value: DiscountType; label: string; icon: React.ReactNode }[] = [
   { value: 'percentage',  label: '% Off',      icon: <Percent size={14} /> },
-  { value: 'fixed_amount',label: 'Fixed £',     icon: <DollarSign size={14} /> },
+  { value: 'fixed_amount',label: 'Fix Ft',       icon: <DollarSign size={14} /> },
   { value: 'buy_x_get_y', label: 'Buy X Get Y', icon: <Gift size={14} /> },
   { value: 'free_item',   label: 'Free Item',   icon: <Coffee size={14} /> },
 ];
@@ -417,7 +417,7 @@ export default function OfferDetailPage() {
                       {(eDiscountType === 'percentage' || eDiscountType === 'fixed_amount') && (
                         <div className="space-y-1.5">
                           <label className="text-sm font-semibold text-gray-700">
-                            {eDiscountType === 'percentage' ? 'Percentage' : 'Amount (£)'}
+                            {eDiscountType === 'percentage' ? 'Percentage' : 'Amount (Ft)'}
                           </label>
                           <input type="number" className={INPUT_CLS} value={eDiscountValue} onChange={(e) => setEDiscountValue(e.target.value)} />
                         </div>
@@ -489,10 +489,10 @@ export default function OfferDetailPage() {
                   // VIEW mode
                   <dl className="space-y-4">
                     {[
-                      { label: 'Discount', value: `${offer.discount_label} · ${offer.discount_type.replace('_', ' ')}${offer.discount_value ? ` (${offer.discount_value}${offer.discount_type === 'percentage' ? '%' : ' GBP'})` : ''}` },
+                      { label: 'Discount', value: `${offer.discount_label} · ${offer.discount_type.replace('_', ' ')}${offer.discount_value ? ` (${offer.discount_value}${offer.discount_type === 'percentage' ? '%' : ' Ft'})` : ''}` },
                       { label: 'Category', value: CATEGORIES.find((c) => c.value === offer.category)?.label ?? offer.category },
-                      { label: 'Starts', value: new Date(offer.starts_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) },
-                      { label: 'Expires', value: offer.expires_at ? new Date(offer.expires_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : 'No expiry' },
+                      { label: 'Starts', value: new Date(offer.starts_at).toLocaleString('hu-HU', { dateStyle: 'medium', timeStyle: 'short' }) },
+                      { label: 'Expires', value: offer.expires_at ? new Date(offer.expires_at).toLocaleString('hu-HU', { dateStyle: 'medium', timeStyle: 'short' }) : 'No expiry' },
                       { label: 'Per-student limit', value: `${offer.max_uses_per_student} use${offer.max_uses_per_student !== 1 ? 's' : ''}` },
                       { label: 'Total cap', value: offer.max_total_redemptions ? `${offer.redemption_count} / ${offer.max_total_redemptions}` : 'Unlimited' },
                     ].map((item) => (

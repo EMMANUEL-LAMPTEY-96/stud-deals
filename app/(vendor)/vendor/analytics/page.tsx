@@ -284,10 +284,10 @@ export default function VendorAnalyticsPage() {
     const tMap: Record<string,number> = {};
     for (let i=13;i>=0;i--) {
       const dt = new Date(Date.now()-i*86400000);
-      tMap[dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'})] = 0;
+      tMap[dt.toLocaleDateString('hu-HU',{day:'numeric',month:'short'})] = 0;
     }
     rList.forEach(r => {
-      const k = new Date(r.claimed_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+      const k = new Date(r.claimed_at).toLocaleDateString('hu-HU',{day:'numeric',month:'short'});
       if (k in tMap) tMap[k]++;
     });
     setTrend(Object.entries(tMap).map(([date,redemptions])=>({date,redemptions})));
@@ -469,8 +469,8 @@ export default function VendorAnalyticsPage() {
         ...rows.map(r => {
           const dt = new Date(r.claimed_at);
           return [
-            dt.toLocaleDateString('en-GB'),
-            dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            dt.toLocaleDateString('hu-HU'),
+            dt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }),
             r.status,
             `"${(offerMap[r.offer_id] ?? 'Unknown offer').replace(/"/g,'""')}"`,
             r.student_profile_id?.slice(0,8) ?? '–',
@@ -842,7 +842,7 @@ export default function VendorAnalyticsPage() {
                   <h2 className="text-sm font-bold text-gray-900">This month at a glance</h2>
                 </div>
                 <p className="text-xs text-gray-400 mb-5">
-                  {new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })}
+                  {new Date().toLocaleString('hu-HU', { month: 'long', year: 'numeric' })}
                 </p>
                 <div className="space-y-3">
                   {[

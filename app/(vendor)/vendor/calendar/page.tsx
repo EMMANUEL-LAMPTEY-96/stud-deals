@@ -112,7 +112,7 @@ function DayPanel({
   onClose: () => void;
 }) {
   const isFuture = date > new Date();
-  const label = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const label = date.toLocaleDateString('hu-HU', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-5">
@@ -160,7 +160,7 @@ function DayPanel({
                     </span>
                     {o.expires_at && (
                       <span className="text-[10px] text-gray-500">
-                        ends {new Date(o.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        ends {new Date(o.expires_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short' })}
                       </span>
                     )}
                   </div>
@@ -419,8 +419,8 @@ export default function CalendarPage() {
                                   {cfg.label}
                                 </span>
                                 <span className="text-[10px] text-gray-400">
-                                  {start.toLocaleDateString('en-GB', { day:'numeric', month:'short' })}
-                                  {end ? ` → ${end.toLocaleDateString('en-GB', { day:'numeric', month:'short' })}` : ' (no expiry)'}
+                                  {start.toLocaleDateString('hu-HU', { day:'numeric', month:'short' })}
+                                  {end ? ` → ${end.toLocaleDateString('hu-HU', { day:'numeric', month:'short' })}` : ' (no expiry)'}
                                 </span>
                               </div>
                             </div>

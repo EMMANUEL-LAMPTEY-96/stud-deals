@@ -83,7 +83,7 @@ function timeAgo(iso: string) {
   if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 // ── Review Card ───────────────────────────────────────────────────────────────

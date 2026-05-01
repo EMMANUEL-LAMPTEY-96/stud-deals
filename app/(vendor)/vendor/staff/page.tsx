@@ -78,7 +78,7 @@ function StaffRow({
           </span>
         </div>
         <p className="text-xs text-gray-400 mt-0.5">
-          Scanner · Added {new Date(member.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+          Scanner · Added {new Date(member.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short' })}
         </p>
       </div>
 

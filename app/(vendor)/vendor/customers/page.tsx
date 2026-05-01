@@ -49,7 +49,7 @@ type Segment = 'all' | 'loyal' | 'lapsed';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtDate(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-GB', {
+  return new Date(iso).toLocaleDateString('hu-HU', {
     day: 'numeric', month: 'short', year: 'numeric',
   });
 }
@@ -474,7 +474,7 @@ export default function VendorCustomersPage() {
         c.institution_name ?? '',
         String(c.stamp_count),
         String(c.rewards_earned),
-        c.last_visit_at ? new Date(c.last_visit_at).toLocaleDateString('en-GB') : '',
+        c.last_visit_at ? new Date(c.last_visit_at).toLocaleDateString('hu-HU') : '',
         c.verification_status,
       ]),
     ];
