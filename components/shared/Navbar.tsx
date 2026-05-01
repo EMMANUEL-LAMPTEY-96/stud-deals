@@ -276,8 +276,8 @@ export default function Navbar() {
 
               {/* Dropdown */}
               {profileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-1.5 z-50 animate-fade-in"
-                  style={{ width: role === 'vendor' ? '232px' : '208px' }}>
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-1.5 z-50 animate-fade-in overflow-y-auto max-h-[90vh]"
+                  style={{ width: role === 'vendor' ? '252px' : '208px' }}>
 
                   {/* Identity header */}
                   <div className="px-4 py-2.5 border-b border-gray-100">
