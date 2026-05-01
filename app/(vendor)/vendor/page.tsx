@@ -29,7 +29,7 @@ import {
   Plus, ChevronRight, Store,
   Stamp, Gift, Users, TrendingUp, Trophy,
   AlertCircle, Sparkles, Tag, Clock,
-  CheckCircle, Printer, LayoutTemplate,
+  CheckCircle,
 } from 'lucide-react';
 import type { VendorProfile, Offer, Redemption } from '@/lib/types/database.types';
 
@@ -322,46 +322,6 @@ export default function VendorDashboard() {
               accentColor="purple"
               loading={loading}
             />
-          </div>
-
-          {/* ── QUICK ACTIONS ────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <Link href="/vendor/offers/create" className="flex items-center gap-2.5 bg-white border border-gray-100 rounded-2xl px-4 py-3.5 hover:border-vendor-300 hover:bg-vendor-50 transition-colors group shadow-sm">
-              <div className="w-8 h-8 rounded-xl bg-vendor-100 flex items-center justify-center flex-shrink-0 group-hover:bg-vendor-200 transition-colors">
-                <Plus size={15} className="text-vendor-700" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-800">New Offer</p>
-                <p className="text-[10px] text-gray-400">Create program</p>
-              </div>
-            </Link>
-            <Link href="/vendor/offers/templates" className="flex items-center gap-2.5 bg-white border border-gray-100 rounded-2xl px-4 py-3.5 hover:border-blue-300 hover:bg-blue-50 transition-colors group shadow-sm">
-              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                <LayoutTemplate size={15} className="text-blue-700" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-800">Templates</p>
-                <p className="text-[10px] text-gray-400">Ready-made offers</p>
-              </div>
-            </Link>
-            <Link href="/vendor/print-qr" className="flex items-center gap-2.5 bg-white border border-gray-100 rounded-2xl px-4 py-3.5 hover:border-emerald-300 hover:bg-emerald-50 transition-colors group shadow-sm">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition-colors">
-                <Printer size={15} className="text-emerald-700" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-800">Print QR</p>
-                <p className="text-[10px] text-gray-400">Counter poster</p>
-              </div>
-            </Link>
-            <Link href="/vendor/boost" className="flex items-center gap-2.5 bg-white border border-gray-100 rounded-2xl px-4 py-3.5 hover:border-amber-300 hover:bg-amber-50 transition-colors group shadow-sm">
-              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-200 transition-colors">
-                <Sparkles size={15} className="text-amber-700" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-gray-800">Boost</p>
-                <p className="text-[10px] text-gray-400">Flash campaign</p>
-              </div>
-            </Link>
           </div>
 
           {/* ── MAIN GRID ────────────────────────────────────────────────── */}

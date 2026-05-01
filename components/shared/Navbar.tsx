@@ -28,8 +28,13 @@ import {
   Tag,
   ChevronDown,
   Sparkles,
-  Stamp,
-  Shield,
+  Zap,
+  Calendar,
+  UserCheck,
+  Printer,
+  LayoutTemplate,
+  Star,
+  HelpCircle,
 } from 'lucide-react';
 
 interface NavUser {
@@ -64,32 +69,12 @@ export default function Navbar() {
         .eq('id', authUser.id)
         .single();
 
-      // If no profile row yet (callback not run / first load), build a minimal
-      // one from auth metadata so the authenticated navbar still renders.
-      const resolvedProfile: Profile = profile ?? {
-        id: authUser.id,
-        role: (authUser.user_metadata?.role as Profile['role']) ?? 'student',
-        first_name: null,
-        last_name: null,
-        display_name:
-          (authUser.user_metadata?.full_name as string) ??
-          authUser.email?.split('@')[0] ??
-          'Account',
-        avatar_url: null,
-        phone: null,
-        city: null,
-        state: null,
-        country: 'United Kingdom',
-        is_active: true,
-        last_seen_at: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      if (!profile) { setLoading(false); return; }
 
       let studentProfile = null;
       let businessName = null;
 
-      if (resolvedProfile.role === 'student') {
+      if (profile.role === 'student') {
         const { data } = await supabase
           .from('student_profiles')
           .select('verification_status')
@@ -98,7 +83,7 @@ export default function Navbar() {
         studentProfile = data;
       }
 
-      if (resolvedProfile.role === 'vendor') {
+      if (profile.role === 'vendor') {
         const { data } = await supabase
           .from('vendor_profiles')
           .select('business_name')
@@ -107,7 +92,7 @@ export default function Navbar() {
         businessName = data?.business_name ?? null;
       }
 
-      setUser({ profile: resolvedProfile, studentProfile, businessName });
+      setUser({ profile, studentProfile, businessName });
 
       // Fetch unread notification count
       const { count } = await supabase
@@ -194,7 +179,7 @@ export default function Navbar() {
             <Link href="/for-vendors" className="block py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>For businesses</Link>
             <hr className="border-gray-100" />
             <Link href="/login" className="block w-full btn-secondary text-center" onClick={() => setMobileOpen(false)}>Log in</Link>
-            <Link href="/sign-up/student" className="block w-full btn-primary text-center" onClick={() => setMobileOpen(false)}>Get student deals</Link>
+            <Link href="/register/student" className="block w-full btn-primary text-center" onClick={() => setMobileOpen(false)}>Get student deals</Link>
           </div>
         )}
       </nav>
@@ -205,16 +190,15 @@ export default function Navbar() {
   const role = user?.profile.role;
 
   const studentLinks = [
-    { href: '/dashboard',   label: 'Discover',     icon: <Sparkles size={15} /> },
-    { href: '/my-loyalty',  label: 'My Loyalty',   icon: <Stamp size={15} /> },
-    { href: '/my-vouchers', label: 'My Vouchers',  icon: <Tag size={15} /> },
-    { href: '/profile',     label: 'Profile',      icon: <User size={15} /> },
+    { href: '/dashboard', label: 'Discover', icon: <Sparkles size={15} /> },
+    { href: '/my-vouchers', label: 'My Vouchers', icon: <Tag size={15} /> },
+    { href: '/saved', label: 'Saved', icon: <LayoutDashboard size={15} /> },
   ];
 
   const vendorLinks = [
-    { href: '/vendor',          label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
-    { href: '/vendor/offers',   label: 'My Offers', icon: <Tag size={15} /> },
-    { href: '/vendor/analytics',label: 'Analytics', icon: <Store size={15} /> },
+    { href: '/vendor/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
+    { href: '/vendor/offers', label: 'My Offers', icon: <Tag size={15} /> },
+    { href: '/vendor/redeem', label: 'Scan Code', icon: <Store size={15} /> },
   ];
 
   const navLinks = role === 'vendor' ? vendorLinks : studentLinks;
@@ -228,7 +212,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={role === 'vendor' ? '/vendor' : '/dashboard'} className="flex items-center gap-2.5 group flex-shrink-0">
+          <Link href={role === 'vendor' ? '/vendor/dashboard' : '/dashboard'} className="flex items-center gap-2.5 group flex-shrink-0">
             <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${logoGradient} flex items-center justify-center shadow-sm`}>
               {role === 'vendor'
                 ? <Store className="text-white" size={17} />
@@ -291,10 +275,15 @@ export default function Navbar() {
 
               {/* Dropdown */}
               {profileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 animate-fade-in">
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-lg border border-gray-100 py-1.5 z-50 animate-fade-in"
+                  style={{ width: role === 'vendor' ? '232px' : '208px' }}>
+
+                  {/* Identity header */}
                   <div className="px-4 py-2.5 border-b border-gray-100">
-                    <p className="text-xs text-gray-500">Signed in as</p>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{user?.profile.first_name} {user?.profile.last_name}</p>
+                    <p className="text-xs text-gray-400">Signed in as</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {user?.profile.first_name} {user?.profile.last_name}
+                    </p>
                     {role === 'student' && user?.studentProfile && (
                       <span className={`mt-1 text-xs px-2 py-0.5 rounded-full inline-block ${
                         user.studentProfile.verification_status === 'verified'
@@ -305,17 +294,81 @@ export default function Navbar() {
                       </span>
                     )}
                   </div>
-                  <Link href={role === 'vendor' ? '/vendor/profile' : '/profile'} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors" onClick={() => setProfileMenuOpen(false)}>
+
+                  {/* ── Vendor-only tool sections ── */}
+                  {role === 'vendor' && (
+                    <>
+                      <div className="px-3 pt-2.5 pb-1">
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">Manage</p>
+                        <Link href="/vendor/boost" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <Zap size={12} className="text-amber-700" />
+                          </div>
+                          Boost &amp; flash deals
+                        </Link>
+                        <Link href="/vendor/calendar" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <Calendar size={12} className="text-blue-700" />
+                          </div>
+                          Campaign calendar
+                        </Link>
+                        <Link href="/vendor/staff" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-pink-100 flex items-center justify-center flex-shrink-0">
+                            <UserCheck size={12} className="text-pink-700" />
+                          </div>
+                          Staff PINs
+                        </Link>
+                        <Link href="/vendor/reviews" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
+                            <Star size={12} className="text-green-700" />
+                          </div>
+                          Student reviews
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-gray-100 mx-2 my-1" />
+
+                      <div className="px-3 pb-1">
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">Quick tools</p>
+                        <Link href="/vendor/print-qr" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <Printer size={12} className="text-emerald-700" />
+                          </div>
+                          Print QR poster
+                        </Link>
+                        <Link href="/vendor/offers/templates" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-violet-100 flex items-center justify-center flex-shrink-0">
+                            <LayoutTemplate size={12} className="text-violet-700" />
+                          </div>
+                          Offer templates
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-gray-100 mx-2 my-1" />
+                    </>
+                  )}
+
+                  {/* Profile settings */}
+                  <Link
+                    href={role === 'vendor' ? '/vendor/profile' : '/profile'}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
                     <User size={15} className="text-gray-400" />
                     Profile settings
                   </Link>
-                  {role === 'admin' && (
-                    <Link href="/admin" className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors" onClick={() => setProfileMenuOpen(false)}>
-                      <Shield size={15} className="text-purple-500" />
-                      Admin dashboard
-                    </Link>
-                  )}
-                  <button onClick={handleSignOut} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+
+                  {/* Sign out */}
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
                     <LogOut size={15} />
                     Sign out
                   </button>
