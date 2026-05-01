@@ -199,7 +199,6 @@ export default function Navbar() {
   const vendorLinks = [
     { href: '/vendor/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
     { href: '/vendor/offers', label: 'My Offers', icon: <Tag size={15} /> },
-    { href: '/vendor/redeem', label: 'Scan Code', icon: <Store size={15} /> },
   ];
 
   const navLinks = role === 'vendor' ? vendorLinks : studentLinks;
