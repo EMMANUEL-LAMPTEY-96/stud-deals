@@ -336,7 +336,7 @@ export default function ReviewsPage() {
       .update({ vendor_reply: text, vendor_replied_at: new Date().toISOString() })
       .eq('id', reviewId);
     setToast('Reply posted.');
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 4000);
     if (vendorId) await load(vendorId);
   };
 

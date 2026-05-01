@@ -287,7 +287,7 @@ export default function OffersPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
       const { data: vp } = await supabase
-        .from('vendor_profiles').select('id').eq('user_id', user.id).single();
+        .from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle();
       if (!vp) { router.push('/vendor'); return; }
       setVendorId(vp.id);
 

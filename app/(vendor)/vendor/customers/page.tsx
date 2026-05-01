@@ -390,6 +390,7 @@ export default function VendorCustomersPage() {
 
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('stamps');
   const [segment, setSegment] = useState<Segment>('all');
   const [search, setSearch] = useState('');
@@ -415,10 +416,14 @@ export default function VendorCustomersPage() {
     setLoading(true);
     try {
       const res = await fetch(`/api/vendor/customers?sort=${sort}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCustomers(data.customers ?? []);
+      if (!res.ok) {
+        setFetchError('Failed to load customers. Please refresh the page.');
+        setLoading(false);
+        return;
       }
+      setFetchError(null);
+      const data = await res.json();
+      setCustomers(data.customers ?? []);
     } finally {
       setLoading(false);
     }
@@ -532,6 +537,20 @@ export default function VendorCustomersPage() {
             </button>
           </div>
         </div>
+
+        {/* ── Fetch error banner ── */}
+        {fetchError && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5 text-sm text-red-700">
+            <AlertCircle size={16} className="flex-shrink-0" />
+            <span className="flex-1">{fetchError}</span>
+            <button
+              onClick={() => { setFetchError(null); fetchCustomers(); }}
+              className="font-bold underline hover:no-underline flex-shrink-0"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* ── KPI strip ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

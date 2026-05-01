@@ -22,7 +22,7 @@ import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
 import {
   Printer, QrCode, Download, ChevronLeft, Loader2,
-  Smartphone, Coffee, Star, Zap,
+  Smartphone, Coffee, Star, Zap, AlertCircle,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -52,6 +52,7 @@ export default function PrintQRKitPage() {
   const [styleId, setStyleId] = useState<StyleId>('classic');
   const [tagline, setTagline] = useState('Scan to earn loyalty stamps');
   const [printing, setPrinting] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -61,7 +62,7 @@ export default function PrintQRKitPage() {
         .from('vendor_profiles')
         .select('id, business_name, logo_url, city, business_type')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }
 
       setVendorId(vp.id);
@@ -72,13 +73,17 @@ export default function PrintQRKitPage() {
 
       // Generate QR — points to the vendor's public stamp page
       const stampUrl = `${window.location.origin}/stamp/${vp.id}`;
-      const qr = await QRCode.toDataURL(stampUrl, {
-        width: 400,
-        margin: 2,
-        color: { dark: '#000000', light: '#ffffff' },
-        errorCorrectionLevel: 'H',
-      });
-      setQrDataUrl(qr);
+      try {
+        const qr = await QRCode.toDataURL(stampUrl, {
+          width: 400,
+          margin: 2,
+          color: { dark: '#000000', light: '#ffffff' },
+          errorCorrectionLevel: 'H',
+        });
+        setQrDataUrl(qr);
+      } catch {
+        setQrError('Failed to generate QR code. Please refresh the page.');
+      }
       setLoading(false);
     })();
   }, []);
@@ -225,6 +230,12 @@ export default function PrintQRKitPage() {
             {/* ── Poster Preview ── */}
             <div className="flex flex-col items-center">
               <p className="text-xs text-gray-400 font-medium mb-4 uppercase tracking-wide">Preview</p>
+              {qrError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-700 w-full max-w-sm">
+                  <AlertCircle size={15} className="flex-shrink-0" />
+                  {qrError}
+                </div>
+              )}
 
               {/* The actual printable poster */}
               <div id="print-poster" className="w-full max-w-sm">

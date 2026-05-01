@@ -357,7 +357,7 @@ export default function BoostPage() {
       setTimeout(() => setToast(null), 4000);
     } catch (e: any) {
       setToast({ type: 'err', msg: e.message ?? 'Failed to launch boost.' });
-      setTimeout(() => setToast(null), 5000);
+      setTimeout(() => setToast(null), 4000);
     } finally {
       setLaunching(false);
     }
@@ -370,7 +370,7 @@ export default function BoostPage() {
     await supabase.from('offers').update({ status: 'paused', expires_at: new Date().toISOString() }).eq('id', boostId);
     if (vendorId) await load(vendorId);
     setToast({ type: 'ok', msg: 'Boost ended.' });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 4000);
   };
 
   // ── Stats ──

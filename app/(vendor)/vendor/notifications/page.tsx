@@ -229,7 +229,7 @@ export default function NotificationsPage() {
           title: `🏆 ${m} loyalty stamps awarded!`,
           body: `Your loyalty program has now issued ${ts.toLocaleString()} stamps in total. Students love you.`,
           href: '/vendor/analytics',
-          is_read: ts > m + 10, // auto-read if well past milestone
+          is_read: ts >= m * 2, // auto-read only once you've doubled the milestone
           created_at: now.toISOString(),
           source: 'client',
         });

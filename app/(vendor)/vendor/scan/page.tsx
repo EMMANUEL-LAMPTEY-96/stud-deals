@@ -58,22 +58,42 @@ function timeAgo(iso: string) {
 
 // ── PIN Entry Screen ───────────────────────────────────────────────────────────
 
+const MAX_PIN_ATTEMPTS = 5;
+const LOCKOUT_SECONDS  = 60;
+
 function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void }) {
   const supabase = createClient();
   const [pin, setPin] = useState('');
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState(0);
+
+  // Countdown ticker
+  useEffect(() => {
+    if (!lockedUntil) return;
+    const tick = () => {
+      const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+      if (remaining <= 0) { setLockedUntil(null); setAttempts(0); setCountdown(0); }
+      else setCountdown(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
 
   const digits = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 
   const press = (d: string) => {
+    if (lockedUntil) return; // locked out
     if (d === '⌫') { setPin(p => p.slice(0,-1)); setError(''); return; }
     if (pin.length >= 4) return;
     setPin(p => p + d);
   };
 
   useEffect(() => {
-    if (pin.length === 4) verify(pin);
+    if (pin.length === 4 && !lockedUntil) verify(pin);
   }, [pin]);
 
   const verify = async (entered: string) => {
@@ -107,7 +127,14 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
 
     if (!matched) {
       setPin('');
-      setError('Incorrect PIN. Please try again.');
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      if (newAttempts >= MAX_PIN_ATTEMPTS) {
+        setLockedUntil(Date.now() + LOCKOUT_SECONDS * 1000);
+        setError(`Too many attempts. Locked for ${LOCKOUT_SECONDS} seconds.`);
+      } else {
+        setError(`Incorrect PIN. ${MAX_PIN_ATTEMPTS - newAttempts} attempt${MAX_PIN_ATTEMPTS - newAttempts !== 1 ? 's' : ''} remaining.`);
+      }
       return;
     }
 
@@ -128,12 +155,21 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
           <p className="text-gray-400 text-sm mt-1">Staff Scan Mode</p>
         </div>
 
+        {/* Lockout banner */}
+        {lockedUntil && (
+          <div className="bg-red-900/60 border border-red-700 rounded-xl px-4 py-3 mb-4 text-center">
+            <p className="text-red-300 text-sm font-bold">Too many failed attempts</p>
+            <p className="text-red-400 text-xs mt-0.5">Try again in <span className="font-mono font-bold text-red-200">{countdown}s</span></p>
+          </div>
+        )}
+
         {/* PIN display */}
         <div className="flex items-center justify-center gap-4 mb-6">
           {[0,1,2,3].map(i => (
             <div
               key={i}
               className={`w-14 h-14 rounded-2xl border-2 flex items-center justify-center transition-all ${
+                lockedUntil ? 'bg-red-900/40 border-red-700' :
                 pin.length > i
                   ? 'bg-vendor-600 border-vendor-500'
                   : 'bg-gray-800 border-gray-700'
@@ -196,6 +232,19 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [sessionMinsLeft, setSessionMinsLeft] = useState<number | null>(null);
+
+  // Session expiry countdown — warn when < 30 minutes left
+  useEffect(() => {
+    const tick = () => {
+      const remaining = Math.ceil((session.expiresAt - Date.now()) / 60000);
+      setSessionMinsLeft(remaining <= 0 ? 0 : remaining);
+      if (remaining <= 0) onLogout();
+    };
+    tick();
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, [session.expiresAt]);
 
   const load = useCallback(async () => {
     // Fetch pending rewards — reward_earned + tier_reward
@@ -258,7 +307,7 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
       .eq('id', id);
     setClaiming(null);
     setToast('✅ Reward claimed!');
-    setTimeout(() => setToast(null), 2500);
+    setTimeout(() => setToast(null), 4000);
     await load();
   };
 
@@ -268,6 +317,13 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl">
           {toast}
+        </div>
+      )}
+
+      {/* Session expiry warning */}
+      {sessionMinsLeft !== null && sessionMinsLeft <= 30 && sessionMinsLeft > 0 && (
+        <div className="bg-amber-500 text-white text-xs font-bold text-center py-2 px-4">
+          ⏳ Session expires in {sessionMinsLeft} minute{sessionMinsLeft !== 1 ? 's' : ''} — staff will need to re-enter their PIN
         </div>
       )}
 

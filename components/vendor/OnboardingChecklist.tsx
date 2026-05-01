@@ -48,6 +48,15 @@ export default function OnboardingChecklist({ vendorId }: { vendorId: string }) 
       }
     }
     load();
+
+    // Re-check steps when the vendor returns to this tab (e.g. after completing a step)
+    const onFocus = () => {
+      if (typeof window !== 'undefined' && localStorage.getItem(storageKey) !== '1') {
+        load();
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [vendorId]);
 
   const load = async () => {
@@ -56,7 +65,7 @@ export default function OnboardingChecklist({ vendorId }: { vendorId: string }) 
       .from('vendor_profiles')
       .select('description, city, logo_url, business_name')
       .eq('id', vendorId)
-      .single();
+      .maybeSingle();
 
     const profileDone = !!(vp?.description && vp.city && vp.business_name);
     const logoDone    = !!vp?.logo_url;

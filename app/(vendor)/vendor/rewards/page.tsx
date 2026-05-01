@@ -102,6 +102,7 @@ export default function RewardsPage() {
   const [claiming, setClaiming]     = useState<Set<string>>(new Set());
   const [showClaimed, setShowClaimed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
 
   const loadRewards = useCallback(async (vid: string) => {
     // Step 1: fetch pending rewards (reward_earned + tier_reward not yet confirmed)
@@ -201,6 +202,7 @@ export default function RewardsPage() {
 
   const handleClaim = async (row: RewardRow) => {
     if (!vendorId) return;
+    setClaimError(null);
     setClaiming(prev => new Set(prev).add(row.id));
     const now = new Date().toISOString();
     const { error } = await supabase
@@ -210,6 +212,9 @@ export default function RewardsPage() {
     if (!error) {
       setPending(prev => prev.filter(r => r.id !== row.id));
       setClaimed(prev => [{ ...row, status: 'confirmed', claimed_at: now }, ...prev]);
+    } else {
+      setClaimError('Could not mark as claimed. Please try again.');
+      setTimeout(() => setClaimError(null), 4000);
     }
     setClaiming(prev => { const s = new Set(prev); s.delete(row.id); return s; });
   };
@@ -272,6 +277,14 @@ export default function RewardsPage() {
                   Ask students to show their Stud Deals app, then mark as claimed after handing out the reward.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Claim error toast */}
+          {claimError && (
+            <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-sm text-red-700 animate-fade-in">
+              <AlertCircle size={15} className="flex-shrink-0" />
+              {claimError}
             </div>
           )}
 

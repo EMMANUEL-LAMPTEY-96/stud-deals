@@ -155,7 +155,7 @@ export default function StaffPage() {
 
   const showToast = (type: 'ok' | 'err', msg: string) => {
     setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4000);
   };
 
   const persist = async (updated: StaffMember[]) => {

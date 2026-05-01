@@ -201,7 +201,7 @@ export default function OfferDetailPage() {
 
   const showFlash = (msg: string) => {
     setFlash(msg);
-    setTimeout(() => setFlash(''), 3500);
+    setTimeout(() => setFlash(''), 4000);
   };
 
   // ── Save edit ──────────────────────────────────────────────────────────────

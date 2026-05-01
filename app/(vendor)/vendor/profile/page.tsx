@@ -219,9 +219,28 @@ function GalleryUploader({
     onPhotosChange(newUrls);
   };
 
-  const removePhoto = (idx: number) => {
+  const removePhoto = async (idx: number) => {
+    const url = photos[idx];
     const updated = photos.filter((_, i) => i !== idx);
+    // Optimistically update UI
     onPhotosChange(updated);
+    // Remove from Storage (best-effort — don't block UI on failure)
+    if (vendorId && url) {
+      try {
+        // Extract storage path from the public URL
+        const match = url.match(/vendor-assets\/(.+)$/);
+        if (match) {
+          await supabase.storage.from('vendor-assets').remove([match[1]]);
+        }
+      } catch { /* ignore storage errors */ }
+    }
+    // Immediately persist the updated gallery to DB so removal survives without clicking Save
+    if (vendorId) {
+      await supabase
+        .from('vendor_profiles')
+        .update({ gallery_photos: updated })
+        .eq('id', vendorId);
+    }
   };
 
   return (
