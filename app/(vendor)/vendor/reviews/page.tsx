@@ -272,7 +272,13 @@ export default function ReviewsPage() {
     // Try fetching — if table doesn't exist Supabase returns a specific error
     const { data, error } = await supabase
       .from('vendor_reviews' as any)
-      .select('*, student:student_profiles(display_name)')
+      .select(`
+        *,
+        student:student_profiles(
+          user_id,
+          profile:profiles!student_profiles_user_id_fkey(first_name, last_name, display_name)
+        )
+      `)
       .eq('vendor_id', vid)
       .eq('is_visible', true)
       .order('created_at', { ascending: false });
@@ -287,11 +293,13 @@ export default function ReviewsPage() {
     setTableExists(true);
 
     const mapped: Review[] = (data ?? []).map((r: any) => {
-      const name = r.student?.display_name ?? 'Anonymous';
-      const parts = name.trim().split(' ');
+      const profile = r.student?.profile;
+      const name = profile?.display_name
+        ?? (profile?.first_name ? `${profile.first_name} ${profile.last_name ?? ''}`.trim() : 'Anonymous');
+      const parts = name.trim().split(' ').filter(Boolean);
       const initials = parts.length >= 2
-        ? parts[0][0] + parts[parts.length-1][0]
-        : name.slice(0,2);
+        ? parts[0][0] + parts[parts.length - 1][0]
+        : name.slice(0, 2);
       return {
         id: r.id,
         rating: r.rating,
