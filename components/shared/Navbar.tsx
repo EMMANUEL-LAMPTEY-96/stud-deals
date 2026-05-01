@@ -196,12 +196,8 @@ export default function Navbar() {
     { href: '/saved', label: 'Saved', icon: <LayoutDashboard size={15} /> },
   ];
 
-  const vendorLinks = [
-    { href: '/vendor/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={15} /> },
-    { href: '/vendor/offers', label: 'My Offers', icon: <Tag size={15} /> },
-  ];
-
-  const navLinks = role === 'vendor' ? vendorLinks : studentLinks;
+  // Vendors use VendorNav for all navigation — top navbar shows no extra links
+  const navLinks = role === 'vendor' ? [] : studentLinks;
   const accentClass = role === 'vendor' ? 'text-vendor-600' : 'text-brand-600';
   const logoGradient = role === 'vendor'
     ? 'from-vendor-500 to-vendor-700'
