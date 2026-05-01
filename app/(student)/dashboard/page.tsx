@@ -2,36 +2,30 @@
 
 // =============================================================================
 // app/(student)/dashboard/page.tsx — Student Dashboard
-// The primary screen a student sees after logging in.
+// The primary screen a verified student sees after logging in.
 //
 // Features:
-//   - Loyalty cards quick-access strip (show QR, recent stamp progress)
-//   - Verification status banner
-//   - Category filter pills
-//   - Offer grid (partner businesses and their loyalty programs)
-//   - Greeting with first name
+//   - Verification status banner (nudges unverified students)
+//   - Category filter pills (horizontal scroll on mobile)
+//   - Offer grid (responsive: 1→2→3 columns)
+//   - Voucher modal after claiming
+//   - Empty state per category
+//   - Greeting with first name + total savings gamification
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
-import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
 import OfferCard from '@/components/student/OfferCard';
 import VoucherModal from '@/components/student/VoucherModal';
-import EarnStampScanner from '@/components/student/EarnStampScanner';
+import AchievementBadges from '@/components/student/AchievementBadges';
 import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
-  Coffee, ShoppingBag, Laptop, Dumbbell,
-  Book, Tag, Shirt, QrCode, Stamp, Gift, Store, ChevronRight, Building2,
+  Coffee, ShoppingBag, Laptop, UtensilsCrossed, Dumbbell,
+  Book, Tag, Shirt
 } from 'lucide-react';
-
-const LAUNCH_CITIES = [
-  { value: 'Budapest', label: 'Budapest' },
-  { value: 'Szeged',   label: 'Szeged' },
-];
 import type {
   OfferWithVendor, StudentProfile, Profile,
   OfferCategory, ClaimOfferResponse
@@ -63,8 +57,8 @@ function VerificationBanner({ status }: { status: string }) {
     unverified: {
       bg: 'bg-gradient-to-r from-brand-600 to-brand-700',
       icon: <GraduationCap size={20} className="text-white" />,
-      title: 'Verify to claim rewards and unlock vouchers',
-      description: 'You can already earn stamps — verify in 60 seconds to claim your rewards.',
+      title: 'Verify your student status to unlock deals',
+      description: 'Takes 60 seconds with your .edu email.',
       cta: 'Verify now',
       href: '/verification',
     },
@@ -72,7 +66,7 @@ function VerificationBanner({ status }: { status: string }) {
       bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
       icon: <AlertTriangle size={20} className="text-white" />,
       title: 'Check your university email',
-      description: "We sent a verification link — click it to claim rewards and unlock all vouchers.",
+      description: "We sent a verification link. Click it to unlock all deals.",
       cta: 'Resend email',
       href: '/verification',
     },
@@ -119,88 +113,6 @@ function VerificationBanner({ status }: { status: string }) {
   );
 }
 
-// ── Loyalty Strip ─────────────────────────────────────────────────────────────
-
-interface LoyaltySnippet {
-  vendor_name: string;
-  logo_url: string | null;
-  stamps_in_cycle: number;
-  required_visits: number;
-  offer_id: string;
-}
-
-function LoyaltyStrip({
-  items,
-  studentProfileId,
-}: {
-  items: LoyaltySnippet[];
-  studentProfileId: string | undefined;
-}) {
-  return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-gray-900">My Loyalty Cards</h2>
-        <Link href="/my-loyalty" className="text-xs text-brand-600 font-semibold flex items-center gap-1 hover:text-brand-700">
-          View all
-          <ChevronRight size={12} />
-        </Link>
-      </div>
-
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
-        {/* Loyalty progress cards */}
-        {items.map((item) => {
-          const pct = Math.round((item.stamps_in_cycle / item.required_visits) * 100);
-          return (
-            <Link
-              key={item.offer_id}
-              href="/my-loyalty"
-              className="flex-shrink-0 w-36 bg-white border border-gray-100 rounded-2xl p-3 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {item.logo_url ? (
-                    <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <Store size={13} className="text-gray-400" />
-                  )}
-                </div>
-                <p className="text-xs font-semibold text-gray-800 truncate">{item.vendor_name}</p>
-              </div>
-              {/* Mini stamp dots */}
-              <div className="flex gap-1 flex-wrap mb-2">
-                {Array.from({ length: Math.min(item.required_visits, 8) }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                      i < item.stamps_in_cycle ? 'bg-brand-500' : 'bg-gray-100'
-                    }`}
-                  >
-                    {i < item.stamps_in_cycle && <Stamp size={8} className="text-white" />}
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500">
-                {item.stamps_in_cycle}/{item.required_visits}
-                {item.stamps_in_cycle === item.required_visits && ' 🎉'}
-              </p>
-            </Link>
-          );
-        })}
-
-        {/* Empty state card */}
-        {items.length === 0 && (
-          <div className="flex-shrink-0 w-44 bg-white border border-dashed border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center gap-1.5 text-center">
-            <Gift size={18} className="text-gray-300" />
-            <p className="text-xs text-gray-400 leading-tight">
-              Tap Earn Stamp and scan a vendor QR to get started
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function StudentDashboard() {
@@ -216,10 +128,7 @@ export default function StudentDashboard() {
   const [loadingOffers, setLoadingOffers] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [activeVoucher, setActiveVoucher] = useState<ClaimOfferResponse | null>(null);
-  const [city, setCity] = useState<string>('Budapest');
-  const [selectedCity, setSelectedCity] = useState<string>('Budapest');
-  const [loyaltySnippets, setLoyaltySnippets] = useState<LoyaltySnippet[]>([]);
-  const [scannerOpen, setScannerOpen] = useState(false);
+  const [city, setCity] = useState<string>('');
 
   // ── Fetch user + student profile ──────────────────────────────────────────
   useEffect(() => {
@@ -234,78 +143,42 @@ export default function StudentDashboard() {
 
       setUser(profileRes.data);
       setStudentProfile(studentRes.data);
-      const userCity = profileRes.data?.city ?? '';
-      setCity(userCity);
-      // Use their saved city if it's a launch city, otherwise default to Budapest
-      if (LAUNCH_CITIES.some(c => c.value === userCity)) {
-        setSelectedCity(userCity);
-      }
-
-      // Fetch loyalty snippets for the strip
-      if (studentRes.data?.id) {
-        try {
-          const res = await fetch(`/api/loyalty/stamp?student_id=${studentRes.data.id}`);
-          if (res.ok) {
-            const { stamps } = await res.json();
-            // Group by offer, compute progress
-            const grouped: Record<string, {
-              vendor_name: string; logo_url: string | null;
-              stamps: number; required: number; offer_id: string;
-            }> = {};
-            for (const s of stamps ?? []) {
-              const key = s.offer_id;
-              if (!grouped[key]) {
-                const terms = s.offer?.terms_and_conditions ?? '';
-                const match = terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
-                let req = 5;
-                try { if (match) req = JSON.parse(match[1])?.required_visits ?? 5; } catch { /* ignore */ }
-                grouped[key] = {
-                  vendor_name: s.offer?.vendor?.business_name ?? 'Business',
-                  logo_url: s.offer?.vendor?.logo_url ?? null,
-                  stamps: 0,
-                  required: req,
-                  offer_id: s.offer_id,
-                };
-              }
-              if (['stamp', 'reward_earned'].includes(s.status)) grouped[key].stamps++;
-            }
-            const snippets: LoyaltySnippet[] = Object.values(grouped).map((g) => ({
-              vendor_name: g.vendor_name,
-              logo_url: g.logo_url,
-              stamps_in_cycle: g.stamps % g.required || (g.stamps > 0 ? g.required : 0),
-              required_visits: g.required,
-              offer_id: g.offer_id,
-            }));
-            setLoyaltySnippets(snippets.slice(0, 5));
-          }
-        } catch { /* silently fail */ }
-      }
+      setCity(profileRes.data?.city ?? '');
     };
 
     fetchUser();
   }, []);
 
-  // ── Fetch offers (via API route — bypasses RLS so all auth users can browse)
+  // ── Fetch offers ──────────────────────────────────────────────────────────
   const fetchOffers = useCallback(async () => {
     setLoadingOffers(true);
 
-    const params = new URLSearchParams();
-    if (selectedCategory !== 'all') params.set('category', selectedCategory);
-    if (searchQuery.trim()) params.set('search', searchQuery.trim());
-    params.set('city', selectedCity);
+    let query = supabase
+      .from('offers')
+      .select(`
+        *,
+        vendor:vendor_profiles (id, business_name, logo_url, city, address_line1)
+      `)
+      .eq('status', 'active')
+      .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+      .order('created_at', { ascending: false });
 
-    try {
-      const res = await fetch(`/api/offers?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        setOffers((json.offers as OfferWithVendor[]) ?? []);
-      }
-    } catch {
-      // silently fail — empty state shown
+    if (selectedCategory !== 'all') {
+      query = query.eq('category', selectedCategory);
+    }
+
+    if (searchQuery.trim()) {
+      query = query.ilike('title', `%${searchQuery.trim()}%`);
+    }
+
+    const { data, error } = await query.limit(30);
+
+    if (!error) {
+      setOffers((data as OfferWithVendor[]) ?? []);
     }
 
     setLoadingOffers(false);
-  }, [selectedCategory, searchQuery, selectedCity]);
+  }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
     fetchOffers();
@@ -354,54 +227,14 @@ export default function StudentDashboard() {
     }
   };
 
-  // Refresh loyalty snippets after a new stamp
-  const refreshLoyalty = async () => {
-    if (!studentProfile?.id) return;
-    try {
-      const res = await fetch(`/api/loyalty/stamp?student_id=${studentProfile.id}`);
-      if (!res.ok) return;
-      const { stamps } = await res.json();
-      const grouped: Record<string, {
-        vendor_name: string; logo_url: string | null;
-        stamps: number; required: number; offer_id: string;
-      }> = {};
-      for (const s of stamps ?? []) {
-        const key = s.offer_id;
-        if (!grouped[key]) {
-          const terms = s.offer?.terms_and_conditions ?? '';
-          const match = terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
-          let req = 5;
-          try { if (match) req = JSON.parse(match[1])?.required_visits ?? 5; } catch { /* ignore */ }
-          grouped[key] = {
-            vendor_name: s.offer?.vendor?.business_name ?? 'Business',
-            logo_url: s.offer?.vendor?.logo_url ?? null,
-            stamps: 0,
-            required: req,
-            offer_id: s.offer_id,
-          };
-        }
-        if (['stamp', 'reward_earned'].includes(s.status)) grouped[key].stamps++;
-      }
-      const snippets: LoyaltySnippet[] = Object.values(grouped).map((g) => ({
-        vendor_name: g.vendor_name,
-        logo_url: g.logo_url,
-        stamps_in_cycle: g.stamps % g.required || (g.stamps > 0 ? g.required : 0),
-        required_visits: g.required,
-        offer_id: g.offer_id,
-      }));
-      setLoyaltySnippets(snippets.slice(0, 5));
-    } catch { /* silently fail */ }
-  };
-
   const firstName = user?.first_name ?? user?.display_name?.split(' ')[0] ?? 'there';
   const isVerified = studentProfile?.verification_status === 'verified';
 
   return (
     <>
-      <AdminPreviewBanner />
       <Navbar />
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-surface-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
           {/* ── HEADER ─────────────────────────────────────────────────── */}
@@ -411,9 +244,8 @@ export default function StudentDashboard() {
                 <h1 className="text-2xl sm:text-3xl font-black text-gray-900">
                   Hey {firstName}! 👋
                 </h1>
-                <p className="text-gray-500 text-sm mt-1 flex items-center gap-1.5">
-                  <Building2 size={13} className="text-brand-400" />
-                  Deals in {selectedCity}
+                <p className="text-gray-500 text-sm mt-1">
+                  {city ? `Exclusive deals near ${city}` : 'Discover deals near your campus'}
                 </p>
               </div>
 
@@ -432,54 +264,15 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* ── CITY SWITCHER ──────────────────────────────────────────── */}
-          <div className="flex items-center gap-2 mb-5">
-            <MapPin size={14} className="text-gray-400 flex-shrink-0" />
-            <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden">
-              {LAUNCH_CITIES.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setSelectedCity(c.value)}
-                  className={`px-5 py-2 text-sm font-bold transition-colors ${
-                    selectedCity === c.value
-                      ? 'bg-brand-600 text-white'
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-            <span className="text-xs text-gray-400 ml-1">More cities coming soon</span>
-          </div>
-
           {/* ── VERIFICATION BANNER ────────────────────────────────────── */}
           {studentProfile && (
             <VerificationBanner status={studentProfile.verification_status} />
           )}
 
-          {/* ── EARN STAMP CTA ─────────────────────────────────────────── */}
-          <button
-            onClick={() => setScannerOpen(true)}
-            className="w-full mb-5 flex items-center gap-4 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-left group"
-          >
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-              <QrCode size={22} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-white font-black text-base">Earn a Stamp</p>
-              <p className="text-white/70 text-xs mt-0.5">Scan the QR code at the counter</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-              <ArrowRight size={15} className="text-white" />
-            </div>
-          </button>
-
-          {/* ── LOYALTY STRIP ──────────────────────────────────────────── */}
-          <LoyaltyStrip
-            items={loyaltySnippets}
-            studentProfileId={studentProfile?.id}
-          />
+          {/* ── ACHIEVEMENT BADGES ─────────────────────────────────────── */}
+          {studentProfile?.id && studentProfile.verification_status === 'verified' && (
+            <AchievementBadges studentProfileId={studentProfile.id} />
+          )}
 
           {/* ── SEARCH BAR ─────────────────────────────────────────────── */}
           <div className="relative mb-4">
@@ -610,18 +403,6 @@ export default function StudentDashboard() {
         <VoucherModal
           voucher={activeVoucher}
           onClose={() => setActiveVoucher(null)}
-        />
-      )}
-
-      {/* ── EARN STAMP SCANNER ─────────────────────────────────────────── */}
-      {scannerOpen && (
-        <EarnStampScanner
-          onClose={() => setScannerOpen(false)}
-          isVerified={isVerified}
-          onStampSuccess={() => {
-            setScannerOpen(false);
-            refreshLoyalty();
-          }}
         />
       )}
     </>
