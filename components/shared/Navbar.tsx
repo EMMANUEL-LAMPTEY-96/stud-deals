@@ -35,6 +35,7 @@ import {
   LayoutTemplate,
   Star,
   HelpCircle,
+  QrCode,
 } from 'lucide-react';
 
 interface NavUser {
@@ -347,6 +348,14 @@ export default function Navbar() {
                             <LayoutTemplate size={12} className="text-violet-700" />
                           </div>
                           Offer templates
+                        </Link>
+                        <Link href="/vendor/scan" onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <div className="w-6 h-6 rounded-md bg-teal-100 flex items-center justify-center flex-shrink-0">
+                            <QrCode size={12} className="text-teal-700" />
+                          </div>
+                          <span className="flex-1">Counter mode</span>
+                          <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full leading-tight">Staff</span>
                         </Link>
                       </div>
 
