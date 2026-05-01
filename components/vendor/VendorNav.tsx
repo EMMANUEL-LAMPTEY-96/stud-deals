@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard, Tag, BarChart3, Settings, Users, Gift,
-  Zap, Calendar, UserCheck, Bell,
+  Zap, Calendar, UserCheck, Bell, Star,
 } from 'lucide-react';
 
 export default function VendorNav() {
@@ -60,6 +60,7 @@ export default function VendorNav() {
     { href: '/vendor/boost',     label: 'Boost',     icon: <Zap size={15} /> },
     { href: '/vendor/calendar',  label: 'Calendar',  icon: <Calendar size={15} /> },
     { href: '/vendor/analytics', label: 'Analytics', icon: <BarChart3 size={15} /> },
+    { href: '/vendor/reviews',   label: 'Reviews',   icon: <Star size={15} /> },
     { href: '/vendor/profile',   label: 'Settings',  icon: <Settings size={15} /> },
   ];
 

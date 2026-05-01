@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import AdminPreviewBanner from '@/components/shared/AdminPreviewBanner';
 import OnboardingChecklist from '@/components/vendor/OnboardingChecklist';
+import RoiWidget from '@/components/vendor/RoiWidget';
 import VendorNav from '@/components/vendor/VendorNav';
 import MetricCard from '@/components/vendor/MetricCard';
 import VendorQRPanel from '@/components/vendor/VendorQRPanel';
@@ -283,6 +284,9 @@ export default function VendorDashboard() {
               </Link>
             </div>
           )}
+
+          {/* ── ROI WIDGET ───────────────────────────────────────────────── */}
+          {vp && <RoiWidget vendorId={vp.id} />}
 
           {/* ── KPI CARDS ────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

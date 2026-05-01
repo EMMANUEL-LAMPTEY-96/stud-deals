@@ -19,6 +19,7 @@ import {
   TrendingUp, Users, Eye, Tag, BarChart3, ArrowUpRight,
   ArrowDownRight, Loader2, Star, Zap, Clock, Award, Target,
   ShoppingBag, Gift, ChevronDown, ChevronUp, Stamp,
+  Download, Trophy, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -232,6 +233,15 @@ export default function VendorAnalyticsPage() {
   const [kpis, setKpis] = useState<any[]>([]);
   const [punchStats, setPunchStats] = useState<PunchCardStats[]>([]);
   const [showPunchFunnel, setShowPunchFunnel] = useState(true);
+  const [benchmark, setBenchmark] = useState<{
+    avgCvr: number; avgRedemptions: number; peerCount: number;
+    thisCvr: number; thisRedemptions: number; businessType: string; city: string;
+  } | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [monthReport, setMonthReport] = useState<{
+    newMembers: number; stampsIssued: number; rewardsGiven: number;
+    topOffer: string; busiestDay: string;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -375,6 +385,108 @@ export default function VendorAnalyticsPage() {
       setPunchStats(statsArr);
     } else {
       setPunchStats([]);
+    }
+
+    // ── Peer Benchmark ──────────────────────────────────────────────────────────
+    const { data: thisVP } = await supabase
+      .from('vendor_profiles')
+      .select('business_type, city, total_lifetime_views, total_lifetime_redemptions')
+      .eq('id', vid)
+      .single();
+
+    if (thisVP?.business_type && thisVP?.city) {
+      const { data: peers } = await supabase
+        .from('vendor_profiles')
+        .select('total_lifetime_views, total_lifetime_redemptions')
+        .eq('business_type', thisVP.business_type)
+        .eq('city', thisVP.city)
+        .neq('id', vid)
+        .gt('total_lifetime_views', 0);
+
+      const peerRows = peers ?? [];
+      const peerCount = peerRows.length;
+
+      const avgCvr = peerCount > 0
+        ? peerRows.reduce((s, p) => s + (p.total_lifetime_views > 0 ? (p.total_lifetime_redemptions / p.total_lifetime_views) * 100 : 0), 0) / peerCount
+        : 0;
+      const avgRedemptions = peerCount > 0
+        ? peerRows.reduce((s, p) => s + p.total_lifetime_redemptions, 0) / peerCount
+        : 0;
+
+      const thisCvr = (thisVP.total_lifetime_views ?? 0) > 0
+        ? ((thisVP.total_lifetime_redemptions ?? 0) / (thisVP.total_lifetime_views ?? 1)) * 100
+        : 0;
+      const thisRedemptions = thisVP.total_lifetime_redemptions ?? 0;
+
+      setBenchmark({ avgCvr, avgRedemptions, peerCount, thisCvr, thisRedemptions, businessType: thisVP.business_type, city: thisVP.city });
+    }
+
+    // ── Monthly Report ──────────────────────────────────────────────────────────
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+    const { data: monthReds } = await supabase
+      .from('redemptions')
+      .select('student_profile_id, status, claimed_at, offer_id')
+      .eq('vendor_id', vid)
+      .gte('claimed_at', monthStart.toISOString());
+
+    const mRows = monthReds ?? [];
+    const newMemberSet = new Set(mRows.map(r => r.student_profile_id));
+    const mStamps = mRows.filter(r => r.status === 'stamp').length;
+    const mRewards = mRows.filter(r => r.status === 'confirmed').length;
+    const mDayCounts: Record<number,number> = {};
+    mRows.forEach(r => { const d = new Date(r.claimed_at).getDay(); mDayCounts[d] = (mDayCounts[d]??0)+1; });
+    const busiestDayIdx = Object.entries(mDayCounts).sort((a,b)=>Number(b[1])-Number(a[1]))[0]?.[0];
+    const busiestDayName = busiestDayIdx !== undefined ? DAY_NAMES[Number(busiestDayIdx)] : '–';
+
+    // Top offer by offer_id count in month
+    const mOfferCount: Record<string,number> = {};
+    mRows.forEach(r => { if (r.offer_id) mOfferCount[r.offer_id] = (mOfferCount[r.offer_id]??0)+1; });
+    const topOfferId = Object.entries(mOfferCount).sort((a,b)=>b[1]-a[1])[0]?.[0];
+    const topOfferTitle = offerRows.find(o => o.id === topOfferId)?.title ?? '–';
+
+    setMonthReport({ newMembers: newMemberSet.size, stampsIssued: mStamps, rewardsGiven: mRewards, topOffer: topOfferTitle, busiestDay: busiestDayName });
+  };
+
+  const handleExport = async () => {
+    if (!vendorId) return;
+    setExporting(true);
+    try {
+      const { data: reds } = await supabase
+        .from('redemptions')
+        .select('claimed_at, status, student_profile_id, offer_id')
+        .eq('vendor_id', vendorId)
+        .order('claimed_at', { ascending: false });
+
+      const rows = reds ?? [];
+
+      // Build offer title lookup
+      const offerMap: Record<string,string> = {};
+      offers.forEach(o => { offerMap[o.id] = o.title; });
+
+      const header = ['Date', 'Time', 'Status', 'Offer', 'Student ID'];
+      const csv = [
+        header.join(','),
+        ...rows.map(r => {
+          const dt = new Date(r.claimed_at);
+          return [
+            dt.toLocaleDateString('en-GB'),
+            dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            r.status,
+            `"${(offerMap[r.offer_id] ?? 'Unknown offer').replace(/"/g,'""')}"`,
+            r.student_profile_id?.slice(0,8) ?? '–',
+          ].join(',');
+        }),
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `${businessName.replace(/\s+/g,'-')}-redemptions-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -619,6 +731,163 @@ export default function VendorAnalyticsPage() {
               <ShoppingBag size={20} className="mb-3 opacity-80"/>
               <p className="text-sm font-bold mb-1">Tip: Loyalty offers</p>
               <p className="text-xs text-white/70 leading-relaxed">Vendors using Punch Cards see 2.4× higher repeat visits. Try creating one in "Create offer."</p>
+            </div>
+          </div>
+
+          {/* ── Peer Benchmark ──────────────────────────────────────────── */}
+          {benchmark && benchmark.peerCount > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Trophy size={16} className="text-amber-500" />
+                <h2 className="text-sm font-bold text-gray-900">How you compare — anonymous benchmark</h2>
+              </div>
+              <p className="text-xs text-gray-400 mb-6">
+                vs. {benchmark.peerCount} similar {benchmark.businessType} venue{benchmark.peerCount !== 1 ? 's' : ''} in {benchmark.city} · All data anonymised
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-5">
+                {/* Conversion rate comparison */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-600">Conversion rate (all-time)</p>
+                    {benchmark.thisCvr >= benchmark.avgCvr
+                      ? <span className="flex items-center gap-1 text-xs font-bold text-green-600"><CheckCircle2 size={12}/> Above avg</span>
+                      : <span className="flex items-center gap-1 text-xs font-bold text-amber-500"><AlertCircle size={12}/> Below avg</span>
+                    }
+                  </div>
+                  {/* You */}
+                  <div className="mb-2">
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+                      <span className="font-bold text-vendor-700">You</span>
+                      <span className="font-bold text-vendor-700">{benchmark.thisCvr.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-vendor-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(benchmark.thisCvr / Math.max(benchmark.avgCvr * 2, 1) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  {/* Peers avg */}
+                  <div>
+                    <div className="flex justify-between text-[11px] text-gray-400 mb-1">
+                      <span>Peer average</span>
+                      <span>{benchmark.avgCvr.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gray-300 rounded-full transition-all"
+                        style={{ width: `${Math.min(benchmark.avgCvr / Math.max(benchmark.avgCvr * 2, 1) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">
+                    {benchmark.thisCvr >= benchmark.avgCvr
+                      ? `You're converting ${(benchmark.thisCvr - benchmark.avgCvr).toFixed(1)}pp better than peers. Keep it up!`
+                      : `Close the ${(benchmark.avgCvr - benchmark.thisCvr).toFixed(1)}pp gap by adding a loyalty offer or running a boost.`}
+                  </p>
+                </div>
+
+                {/* Redemptions comparison */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-gray-600">Total redemptions (all-time)</p>
+                    {benchmark.thisRedemptions >= benchmark.avgRedemptions
+                      ? <span className="flex items-center gap-1 text-xs font-bold text-green-600"><CheckCircle2 size={12}/> Above avg</span>
+                      : <span className="flex items-center gap-1 text-xs font-bold text-amber-500"><AlertCircle size={12}/> Below avg</span>
+                    }
+                  </div>
+                  <div className="mb-2">
+                    <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+                      <span className="font-bold text-vendor-700">You</span>
+                      <span className="font-bold text-vendor-700">{fmtN(benchmark.thisRedemptions)}</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-vendor-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(benchmark.thisRedemptions / Math.max(benchmark.avgRedemptions * 2, 1) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[11px] text-gray-400 mb-1">
+                      <span>Peer average</span>
+                      <span>{fmtN(Math.round(benchmark.avgRedemptions))}</span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gray-300 rounded-full transition-all"
+                        style={{ width: `${Math.min(benchmark.avgRedemptions / Math.max(benchmark.avgRedemptions * 2, 1) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">
+                    {benchmark.thisRedemptions >= benchmark.avgRedemptions
+                      ? 'You have more redemptions than the average peer. Great visibility!'
+                      : 'Add more offers or run a boost campaign to close the gap with peers.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Monthly Report + Export ──────────────────────────────────── */}
+          <div className="mt-5 mb-8 grid sm:grid-cols-2 gap-5">
+
+            {/* Monthly summary */}
+            {monthReport && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 size={16} className="text-vendor-600" />
+                  <h2 className="text-sm font-bold text-gray-900">This month at a glance</h2>
+                </div>
+                <p className="text-xs text-gray-400 mb-5">
+                  {new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })}
+                </p>
+                <div className="space-y-3">
+                  {[
+                    { label: 'New loyalty members', value: String(monthReport.newMembers), icon: <Users size={14} className="text-blue-500" /> },
+                    { label: 'Stamps issued', value: String(monthReport.stampsIssued), icon: <Stamp size={14} className="text-vendor-500" /> },
+                    { label: 'Rewards confirmed', value: String(monthReport.rewardsGiven), icon: <Award size={14} className="text-green-500" /> },
+                    { label: 'Top offer', value: monthReport.topOffer.slice(0,28) + (monthReport.topOffer.length > 28 ? '…' : ''), icon: <Star size={14} className="text-amber-500" /> },
+                    { label: 'Busiest day', value: monthReport.busiestDay, icon: <Clock size={14} className="text-purple-500" /> },
+                  ].map(({ label, value, icon }) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">{icon}{label}</div>
+                      <span className="text-xs font-bold text-gray-900">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Export */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                <Download size={16} className="text-gray-600" />
+                <h2 className="text-sm font-bold text-gray-900">Export data</h2>
+              </div>
+              <p className="text-xs text-gray-400 mb-6">Download your full redemption history as a CSV. Includes date, time, offer name, and anonymised student ID.</p>
+              <div className="mt-auto space-y-3">
+                <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-500 space-y-1">
+                  <p className="font-semibold text-gray-700 mb-2">Included columns:</p>
+                  {['Date', 'Time', 'Status (stamp / confirmed)', 'Offer name', 'Anon. Student ID'].map(c => (
+                    <div key={c} className="flex items-center gap-1.5">
+                      <CheckCircle2 size={11} className="text-green-500 flex-shrink-0" />{c}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="w-full flex items-center justify-center gap-2 bg-vendor-600 hover:bg-vendor-700 text-white text-sm font-bold px-4 py-3 rounded-xl transition-colors disabled:opacity-60"
+                >
+                  {exporting
+                    ? <><Loader2 size={15} className="animate-spin"/>Preparing CSV…</>
+                    : <><Download size={15}/>Download redemptions CSV</>
+                  }
+                </button>
+              </div>
             </div>
           </div>
 
