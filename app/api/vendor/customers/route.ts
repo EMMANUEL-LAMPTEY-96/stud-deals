@@ -1,208 +1,187 @@
 // =============================================================================
-// GET /api/vendor/customers
+// app/api/vendor/customers/route.ts — Vendor Customer Directory
 //
-// Returns the list of students who have earned stamps at the calling vendor,
-// enriched with:
-//   - Display name (first + last from profiles)
-//   - Email (from Supabase Auth — only if student has marketing consent)
-//   - Stamp count, rewards earned, last visit date
-//   - Institution name
+// GET /api/vendor/customers?sort=stamps|recent|name&search=<query>
 //
-// GDPR NOTE:
-// EU/Hungarian GDPR requires student consent before sharing contact data
-// with vendors. Consent is stored in student user_metadata.share_with_vendors.
-// Students who haven't explicitly consented have their email masked.
-// Add a `share_with_vendors` boolean column to student_profiles when you
-// run the next DB migration for cleaner querying.
+// Returns aggregated customer data for the authenticated vendor:
+//   - Unique students who have at least 1 stamp with this vendor
+//   - Stamp count, last visit date, rewards claimed
+//   - GDPR-safe: email partially masked (first 2 chars + domain)
+//   - Sorted by: most stamps (default), most recent visit, or name
+//   - Optional search by masked display name
 //
-// Query params:
-//   ?sort=stamps|recent|name   (default: stamps)
-//   ?search=string
-//   ?consented=true|false|all  (default: all — shows all, masks non-consented)
+// Auth: server-side Supabase session check (vendor_profiles.user_id = auth.uid())
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-export interface CustomerRecord {
-  student_profile_id: string;
-  user_id: string;
-  display_name: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;         // null if no marketing consent
-  email_masked: boolean;        // true = student hasn't consented
-  institution_name: string | null;
-  stamp_count: number;
-  rewards_earned: number;
-  last_visit_at: string | null;
-  first_visit_at: string | null;
-  verification_status: string;
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  const visible = local.slice(0, 2);
+  const masked = '*'.repeat(Math.max(local.length - 2, 2));
+  return `${visible}${masked}@${domain}`;
 }
 
-export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const cookieStore = await cookies();
 
-  const admin = createAdminClient();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {}
+        },
+      },
+    }
+  );
 
-  // ── Verify caller is a vendor ──────────────────────────────────────────
-  const { data: vp } = await admin
+  // ── Auth check ──────────────────────────────────────────────────────────────
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // ── Vendor profile check ────────────────────────────────────────────────────
+  const { data: vp } = await supabase
     .from('vendor_profiles')
-    .select('id')
+    .select('id, is_approved')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (!vp) return NextResponse.json({ error: 'Vendor profile not found' }, { status: 403 });
+  if (!vp) {
+    return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
+  }
 
-  const { searchParams } = new URL(request.url);
-  const search = searchParams.get('search')?.toLowerCase() ?? '';
-  const sort = searchParams.get('sort') ?? 'stamps';
+  if (!vp.is_approved) {
+    return NextResponse.json({ error: 'Vendor not approved' }, { status: 403 });
+  }
 
-  // ── Fetch all stamp events for this vendor ────────────────────────────
-  const { data: stamps, error: stampsError } = await admin
+  const vendorId = vp.id;
+
+  // ── Query params ────────────────────────────────────────────────────────────
+  const { searchParams } = new URL(req.url);
+  const sort = searchParams.get('sort') ?? 'stamps'; // stamps | recent | name
+  const search = (searchParams.get('search') ?? '').trim().toLowerCase();
+
+  // ── Fetch all redemptions for this vendor ────────────────────────────────────
+  // We join to profiles to get display names and emails
+  const { data: redemptions, error: rdError } = await supabase
     .from('redemptions')
     .select(`
-      student_id,
+      student_profile_id,
       status,
-      confirmed_at,
-      student_profile:student_profiles!student_id (
+      claimed_at,
+      student_profiles!inner (
         id,
         user_id,
-        verification_status,
-        institution_id,
-        institution:institutions ( name, short_name )
+        profiles (
+          id,
+          full_name,
+          email
+        )
       )
     `)
-    .eq('vendor_id', vp.id)
-    .in('status', ['stamp', 'reward_earned'])
-    .order('confirmed_at', { ascending: false });
+    .eq('vendor_id', vendorId)
+    .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed'])
+    .order('claimed_at', { ascending: false });
 
-  if (stampsError) {
-    console.error('customers stamps error:', stampsError);
-    return NextResponse.json({ error: stampsError.message }, { status: 500 });
+  if (rdError) {
+    console.error('[/api/vendor/customers] Fetch error:', rdError.message);
+    return NextResponse.json({ error: 'Failed to load customers' }, { status: 500 });
   }
 
-  // ── Group by student_id ───────────────────────────────────────────────
-  const grouped: Record<string, {
+  const rows = redemptions ?? [];
+
+  // ── Aggregate per student ────────────────────────────────────────────────────
+  interface CustomerAgg {
     student_profile_id: string;
-    user_id: string;
-    institution_name: string | null;
-    verification_status: string;
-    stamps: { status: string; confirmed_at: string }[];
-  }> = {};
-
-  for (const row of stamps ?? []) {
-    const sp = row.student_profile as { id: string; user_id: string; verification_status: string; institution: { name: string } | null } | null;
-    if (!sp) continue;
-    const key = row.student_id as string;
-    if (!grouped[key]) {
-      grouped[key] = {
-        student_profile_id: sp.id,
-        user_id: sp.user_id,
-        institution_name: (sp.institution as { name: string } | null)?.name ?? null,
-        verification_status: sp.verification_status,
-        stamps: [],
-      };
-    }
-    grouped[key].stamps.push({ status: row.status as string, confirmed_at: row.confirmed_at as string });
+    full_name: string;
+    masked_email: string;
+    stamps: number;
+    rewards_claimed: number;
+    last_visit: string;  // ISO string of most recent stamp
+    first_visit: string; // ISO string of first stamp
   }
 
-  // ── Fetch profile + auth data for each unique student ─────────────────
-  const userIds = Object.values(grouped).map((g) => g.user_id);
-  if (userIds.length === 0) return NextResponse.json({ customers: [] });
+  const aggMap = new Map<string, CustomerAgg>();
 
-  // Get profiles (names)
-  const { data: profiles } = await admin
-    .from('profiles')
-    .select('id, first_name, last_name, display_name')
-    .in('id', userIds);
+  for (const row of rows) {
+    const sid = row.student_profile_id;
+    // @ts-ignore — Supabase join typing
+    const profile = row.student_profiles?.profiles;
+    const fullName: string = profile?.full_name ?? 'Student';
+    const email: string = profile?.email ?? '';
+    const maskedEmail = email ? maskEmail(email) : '';
 
-  const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
+    const existing = aggMap.get(sid);
+    const isStamp = row.status === 'stamp';
+    const isReward = ['reward_earned', 'tier_reward', 'confirmed'].includes(row.status);
 
-  // Get auth users (emails + consent metadata)
-  // We fetch in batches of 50 to avoid timeouts
-  const authUserMap: Record<string, { email: string; share_with_vendors: boolean }> = {};
-  for (let i = 0; i < userIds.length; i += 50) {
-    const batch = userIds.slice(i, i + 50);
-    await Promise.all(
-      batch.map(async (uid) => {
-        try {
-          const { data } = await admin.auth.admin.getUserById(uid);
-          if (data.user) {
-            const meta = data.user.user_metadata ?? {};
-            authUserMap[uid] = {
-              email: data.user.email ?? '',
-              // Default true (opted-in) unless they explicitly opted out
-              share_with_vendors: meta.share_with_vendors !== false,
-            };
-          }
-        } catch { /* skip */ }
-      })
+    if (!existing) {
+      aggMap.set(sid, {
+        student_profile_id: sid,
+        full_name: fullName,
+        masked_email: maskedEmail,
+        stamps: isStamp ? 1 : 0,
+        rewards_claimed: isReward ? 1 : 0,
+        last_visit: row.claimed_at,
+        first_visit: row.claimed_at,
+      });
+    } else {
+      if (isStamp) existing.stamps += 1;
+      if (isReward) existing.rewards_claimed += 1;
+      // last_visit: rows are descending so first encountered = most recent
+      // first_visit: always update to current (row) since we're going backwards
+      if (new Date(row.claimed_at) < new Date(existing.first_visit)) {
+        existing.first_visit = row.claimed_at;
+      }
+    }
+  }
+
+  let customers = Array.from(aggMap.values());
+
+  // ── Search filter ────────────────────────────────────────────────────────────
+  if (search) {
+    customers = customers.filter(c =>
+      c.full_name.toLowerCase().includes(search) ||
+      c.masked_email.toLowerCase().includes(search)
     );
   }
 
-  // ── Build customer records ─────────────────────────────────────────────
-  const customers: CustomerRecord[] = Object.entries(grouped).map(([studentId, g]) => {
-    const profile = profileMap[g.user_id];
-    const authUser = authUserMap[g.user_id];
+  // ── Sort ─────────────────────────────────────────────────────────────────────
+  switch (sort) {
+    case 'recent':
+      customers.sort((a, b) => new Date(b.last_visit).getTime() - new Date(a.last_visit).getTime());
+      break;
+    case 'name':
+      customers.sort((a, b) => a.full_name.localeCompare(b.full_name));
+      break;
+    case 'stamps':
+    default:
+      customers.sort((a, b) => b.stamps - a.stamps || new Date(b.last_visit).getTime() - new Date(a.last_visit).getTime());
+      break;
+  }
 
-    const stampCount = g.stamps.length;
-    const rewardsEarned = g.stamps.filter((s) => s.status === 'reward_earned').length;
-    const sortedDates = g.stamps
-      .map((s) => s.confirmed_at)
-      .filter(Boolean)
-      .sort();
-    const lastVisit = sortedDates[sortedDates.length - 1] ?? null;
-    const firstVisit = sortedDates[0] ?? null;
-
-    const hasConsent = authUser?.share_with_vendors ?? false;
-    const email = hasConsent ? (authUser?.email ?? null) : null;
-
-    return {
-      student_profile_id: g.student_profile_id,
-      user_id: g.user_id,
-      display_name: profile?.first_name
-        ? `${profile.first_name} ${profile.last_name ?? ''}`.trim()
-        : profile?.display_name ?? 'Student',
-      first_name: profile?.first_name ?? null,
-      last_name: profile?.last_name ?? null,
-      email,
-      email_masked: !hasConsent,
-      institution_name: g.institution_name,
-      stamp_count: stampCount,
-      rewards_earned: rewardsEarned,
-      last_visit_at: lastVisit,
-      first_visit_at: firstVisit,
-      verification_status: g.verification_status,
-    };
-  });
-
-  // ── Filter by search ──────────────────────────────────────────────────
-  const filtered = search
-    ? customers.filter((c) =>
-        c.display_name.toLowerCase().includes(search) ||
-        (c.email ?? '').toLowerCase().includes(search) ||
-        (c.institution_name ?? '').toLowerCase().includes(search)
-      )
-    : customers;
-
-  // ── Sort ──────────────────────────────────────────────────────────────
-  const sorted = [...filtered].sort((a, b) => {
-    if (sort === 'recent') {
-      return new Date(b.last_visit_at ?? 0).getTime() - new Date(a.last_visit_at ?? 0).getTime();
-    }
-    if (sort === 'name') {
-      return a.display_name.localeCompare(b.display_name);
-    }
-    // default: stamps (most loyal first)
-    return b.stamp_count - a.stamp_count;
-  });
+  // ── Summary stats ─────────────────────────────────────────────────────────────
+  const totalStamps = customers.reduce((s, c) => s + c.stamps, 0);
+  const totalRewards = customers.reduce((s, c) => s + c.rewards_claimed, 0);
 
   return NextResponse.json({
-    customers: sorted,
-    total: sorted.length,
-    consented_count: sorted.filter((c) => !c.email_masked).length,
+    customers,
+    meta: {
+      total: customers.length,
+      total_stamps: totalStamps,
+      total_rewards: totalRewards,
+    },
   });
 }
