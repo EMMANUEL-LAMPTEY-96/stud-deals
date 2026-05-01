@@ -3,15 +3,19 @@
 // =============================================================================
 // components/vendor/VendorQRPanel.tsx
 //
-// Displays the vendor's unique loyalty QR code for students to scan.
-// The QR encodes a JSON payload: { type: "stud_stamp", vendor_id: "<uuid>", name: "<business>" }
+// Compact QR code panel displayed on the vendor dashboard sidebar and the
+// staff scan screen. Students point their phone camera at this QR to earn a
+// stamp via the /stamp/[vendorId] route.
 //
-// Shown prominently on the vendor dashboard. Can be printed or downloaded.
+// Props:
+//   vendorId     — the vendor_profiles.id (UUID)
+//   businessName — shown as alt text and in the copy toast
+//   city         — optional sub-label
 // =============================================================================
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { QrCode, Copy, ExternalLink, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, CheckCircle, Store } from 'lucide-react';
 
 interface VendorQRPanelProps {
   vendorId: string;
@@ -20,124 +24,112 @@ interface VendorQRPanelProps {
 }
 
 export default function VendorQRPanel({ vendorId, businessName, city }: VendorQRPanelProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [dataUrl, setDataUrl] = useState<string>('');
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [stampUrl, setStampUrl] = useState<string>('');
+  const [generating, setGenerating] = useState(true);
+  const [qrError, setQrError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  // QR payload — vendor_id is all the student scanner needs
-  const qrPayload = JSON.stringify({
-    type: 'stud_stamp',
-    vendor_id: vendorId,
-    name: businessName,
-  });
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    QRCode.toCanvas(canvasRef.current, qrPayload, {
-      width: 240,
-      margin: 2,
-      color: {
-        dark: '#1a1a2e',
-        light: '#ffffff',
-      },
-      errorCorrectionLevel: 'H',
-    });
+    if (!vendorId) return;
+    const url = `${window.location.origin}/stamp/${vendorId}`;
+    setStampUrl(url);
 
-    // Also generate data URL for download
-    QRCode.toDataURL(qrPayload, {
-      width: 600,
-      margin: 3,
-      color: {
-        dark: '#1a1a2e',
-        light: '#ffffff',
-      },
-      errorCorrectionLevel: 'H',
-    }).then(setDataUrl);
-  }, [qrPayload]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const dataUrl = await QRCode.toDataURL(url, {
+          width: 256,
+          margin: 2,
+          color: { dark: '#111827', light: '#ffffff' },
+          errorCorrectionLevel: 'H',
+        });
+        if (!cancelled) {
+          setQrDataUrl(dataUrl);
+          setQrError(null);
+        }
+      } catch {
+        if (!cancelled) setQrError('Could not generate QR code. Refresh to retry.');
+      } finally {
+        if (!cancelled) setGenerating(false);
+      }
+    })();
 
-  const handleDownload = () => {
-    if (!dataUrl) return;
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `${businessName.replace(/\s+/g, '-').toLowerCase()}-loyalty-qr.png`;
-    a.click();
-  };
+    return () => { cancelled = true; };
+  }, [vendorId]);
 
-  const handlePrint = () => {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`
-      <html>
-        <head>
-          <title>${businessName} — Loyalty QR Code</title>
-          <style>
-            body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui, sans-serif; background: white; }
-            .container { text-align: center; padding: 40px; }
-            img { width: 320px; height: 320px; display: block; margin: 0 auto 20px; }
-            h1 { font-size: 24px; font-weight: 900; color: #1a1a2e; margin: 0 0 8px; }
-            p { font-size: 14px; color: #666; margin: 4px 0; }
-            .cta { margin-top: 16px; font-size: 18px; font-weight: 700; color: #7C3AED; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <img src="${dataUrl}" alt="QR Code" />
-            <h1>${businessName}</h1>
-            <p>${city ?? ''}</p>
-            <p class="cta">Scan to earn your loyalty stamp!</p>
-            <p style="font-size:12px;color:#999;margin-top:12px">Open the Stud Deals app and tap "Earn Stamp"</p>
-          </div>
-        </body>
-      </html>
-    `);
-    win.document.close();
-    win.print();
+  // Cleanup copy timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    if (!stampUrl) return;
+    try {
+      await navigator.clipboard.writeText(stampUrl);
+      setCopied(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard not available — silently ignore
+    }
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <QrCode size={16} className="text-vendor-600" />
-        <h2 className="font-bold text-gray-900 text-sm">Your Loyalty QR Code</h2>
+    <div className="flex flex-col items-center gap-4">
+      {/* QR code area */}
+      <div className="relative w-36 h-36 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
+        {generating ? (
+          <Loader2 size={22} className="animate-spin text-gray-300" />
+        ) : qrError ? (
+          <div className="flex flex-col items-center gap-1.5 px-3 text-center">
+            <AlertCircle size={18} className="text-red-400" />
+            <p className="text-[10px] text-red-500 leading-tight">{qrError}</p>
+          </div>
+        ) : qrDataUrl ? (
+          <img
+            src={qrDataUrl}
+            alt={`Scan to earn stamps at ${businessName}`}
+            className="w-full h-full object-contain"
+          />
+        ) : null}
       </div>
 
-      {/* QR code */}
-      <div className="flex flex-col items-center">
-        <div className="bg-white p-3 rounded-2xl border-2 border-gray-100 shadow-inner mb-3">
-          <canvas ref={canvasRef} className="block rounded-lg" />
-        </div>
+      {/* Business label */}
+      <div className="text-center">
+        <p className="text-sm font-bold text-gray-900 leading-tight">{businessName}</p>
+        {city && <p className="text-xs text-gray-400 mt-0.5">{city}</p>}
+        <p className="text-[11px] text-vendor-600 font-semibold mt-1.5 flex items-center gap-1 justify-center">
+          <QrCode size={11} />
+          Students scan to earn stamps
+        </p>
+      </div>
 
-        <p className="text-xs text-center text-gray-500 mb-1 font-semibold">{businessName}</p>
-        {city && <p className="text-xs text-center text-gray-400 mb-4">{city}</p>}
-
-        {/* Instructions */}
-        <div className="w-full bg-vendor-50 rounded-xl p-3 mb-4 text-center">
-          <p className="text-xs font-bold text-vendor-800 mb-1">Display this at your counter</p>
-          <p className="text-xs text-vendor-600">Students open the Stud Deals app → tap <strong>Earn Stamp</strong> → scan this code</p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 w-full">
-          <button
-            onClick={handleDownload}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 w-full">
+        <button
+          onClick={handleCopy}
+          disabled={!stampUrl}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+        >
+          {copied
+            ? <><CheckCircle size={12} className="text-green-500" /> Copied!</>
+            : <><Copy size={12} /> Copy link</>}
+        </button>
+        {stampUrl && (
+          <a
+            href={stampUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            <Download size={13} /> Download
-          </button>
-          <button
-            onClick={handlePrint}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <Printer size={13} /> Print
-          </button>
-        </div>
-
-        {/* Trust indicator */}
-        <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-400">
-          <CheckCircle size={11} className="text-green-500" />
-          <span>Each student can stamp once every 8 hours</span>
-        </div>
+            <ExternalLink size={12} />
+            Test link
+          </a>
+        )}
       </div>
     </div>
   );

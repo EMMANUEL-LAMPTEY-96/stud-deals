@@ -62,68 +62,82 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
   const [loading, setLoading] = useState(true);
   const [avgSpend, setAvgSpend] = useState(1500); // HUF default
 
-  useEffect(() => { load(); }, [vendorId, avgSpend]);
+  useEffect(() => {
+    if (!vendorId) return;
+    let cancelled = false;
 
-  const load = async () => {
-    setLoading(true);
+    const load = async () => {
+      setLoading(true);
+      try {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0,0,0,0);
+        // All-time stamps
+        const { data: allStamps } = await supabase
+          .from('redemptions')
+          .select('student_profile_id, claimed_at, status')
+          .eq('vendor_id', vendorId)
+          .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed']);
 
-    // All-time stamps
-    const { data: allStamps } = await supabase
-      .from('redemptions')
-      .select('student_profile_id, claimed_at, status')
-      .eq('vendor_id', vendorId)
-      .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed']);
+        if (cancelled) return;
 
-    const rows = allStamps ?? [];
+        const rows = allStamps ?? [];
 
-    // Unique loyalty members
-    const uniqueStudents = new Set(rows.map(r => r.student_profile_id));
-    const loyaltyMembers = uniqueStudents.size;
+        // Unique loyalty members
+        const uniqueStudents = new Set(rows.map(r => r.student_profile_id));
+        const loyaltyMembers = uniqueStudents.size;
 
-    // Stamps this month
-    const stampsThisMonth = rows.filter(r =>
-      r.status === 'stamp' &&
-      new Date(r.claimed_at) >= monthStart
-    ).length;
+        // Stamps this month
+        const stampsThisMonth = rows.filter(r =>
+          r.status === 'stamp' &&
+          new Date(r.claimed_at) >= monthStart
+        ).length;
 
-    // Confirmed rewards
-    const rewardsGiven = rows.filter(r => r.status === 'confirmed').length;
+        // Confirmed rewards
+        const rewardsGiven = rows.filter(r => r.status === 'confirmed').length;
 
-    // Return visit rate: students who stamped more than once
-    const stampCount: Record<string, number> = {};
-    rows.filter(r => r.status === 'stamp').forEach(r => {
-      stampCount[r.student_profile_id] = (stampCount[r.student_profile_id] ?? 0) + 1;
-    });
-    const returners = Object.values(stampCount).filter(c => c > 1).length;
-    const returnVisitRate = loyaltyMembers > 0 ? (returners / loyaltyMembers) * 100 : 0;
+        // Return visit rate: students who stamped more than once
+        const stampCount: Record<string, number> = {};
+        rows.filter(r => r.status === 'stamp').forEach(r => {
+          stampCount[r.student_profile_id] = (stampCount[r.student_profile_id] ?? 0) + 1;
+        });
+        const returners = Object.values(stampCount).filter(c => c > 1).length;
+        const returnVisitRate = loyaltyMembers > 0 ? (returners / loyaltyMembers) * 100 : 0;
 
-    // ROI estimates
-    const multiplier = 2.4;
-    const baselineVisits = loyaltyMembers; // without loyalty: 1 visit each
-    const loyaltyVisits  = loyaltyMembers * multiplier;
-    const extraVisits    = loyaltyVisits - baselineVisits;
-    const estimatedExtraRevenue = Math.round(extraVisits * avgSpend);
+        // ROI estimates
+        const multiplier = 2.4;
+        const baselineVisits = loyaltyMembers;
+        const loyaltyVisits  = loyaltyMembers * multiplier;
+        const extraVisits    = loyaltyVisits - baselineVisits;
+        const estimatedExtraRevenue = Math.round(extraVisits * avgSpend);
 
-    // Acquisition cost saving: avg cost to acquire a customer via ads ~3000 HUF
-    const acqCostPerCustomer = 3000;
-    const estimatedSavingsOnAcq = loyaltyMembers * acqCostPerCustomer;
+        // Acquisition cost saving: avg cost to acquire a customer via ads ~3000 HUF
+        const acqCostPerCustomer = 3000;
+        const estimatedSavingsOnAcq = loyaltyMembers * acqCostPerCustomer;
 
-    setData({
-      loyaltyMembers,
-      stampsThisMonth,
-      rewardsGiven,
-      repeatVisitMultiplier: multiplier,
-      avgSpendEstimate: avgSpend,
-      estimatedExtraRevenue,
-      estimatedSavingsOnAcq,
-      returnVisitRate,
-    });
-    setLoading(false);
-  };
+        if (!cancelled) {
+          setData({
+            loyaltyMembers,
+            stampsThisMonth,
+            rewardsGiven,
+            repeatVisitMultiplier: multiplier,
+            avgSpendEstimate: avgSpend,
+            estimatedExtraRevenue,
+            estimatedSavingsOnAcq,
+            returnVisitRate,
+          });
+        }
+      } catch {
+        // Silently fail — widget just stays hidden
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [vendorId, avgSpend]);
 
   if (loading || !data || data.loyaltyMembers === 0) return null;
 

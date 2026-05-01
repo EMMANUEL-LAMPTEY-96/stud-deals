@@ -297,6 +297,7 @@ export default function OffersPage() {
         .order('created_at', { ascending: false });
       setAllOffers(data ?? []);
       setLoading(false);
+    } catch { setLoading(false); }
     })();
   }, []);
 
@@ -324,7 +325,7 @@ export default function OffersPage() {
       view_count: 0,
       redemption_count: 0,
       save_count: 0,
-    }).select().single();
+    }).select().maybeSingle();
     if (error) { flash('error', 'Failed to duplicate offer.'); return; }
     if (data) {
       setAllOffers((prev) => [data, ...prev]);

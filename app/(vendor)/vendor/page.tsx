@@ -150,6 +150,7 @@ export default function VendorDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+      try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
 
@@ -167,48 +168,54 @@ export default function VendorDashboard() {
       if (!vp && !isAdmin) { router.push('/vendor/profile'); return; }
       if (vp) setVendorProfile(vp);
 
-      // Fetch active loyalty programs
-      const { data: offerData } = await supabase
-        .from('offers')
-        .select('*')
-        .eq('vendor_id', vp.id)
-        .in('status', ['active', 'draft', 'paused'])
-        .order('created_at', { ascending: false })
-        .limit(10);
-      setOffers(offerData ?? []);
+      // Only fetch vendor-specific data when a vendor profile exists
+      if (vp) {
+        // Fetch active loyalty programs
+        const { data: offerData } = await supabase
+          .from('offers')
+          .select('*')
+          .eq('vendor_id', vp.id)
+          .in('status', ['active', 'draft', 'paused'])
+          .order('created_at', { ascending: false })
+          .limit(10);
+        setOffers(offerData ?? []);
 
-      // Fetch recent stamp activity (last 72h)
-      const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-      const { data: stampData } = await supabase
-        .from('redemptions')
-        .select('*, offer:offers(title)')
-        .eq('vendor_id', vp.id)
-        .in('status', ['stamp', 'reward_earned'])
-        .gte('confirmed_at', cutoff72h)
-        .order('confirmed_at', { ascending: false })
-        .limit(20);
-      setRecentStamps(stampData ?? []);
+        // Fetch recent stamp activity (last 72h)
+        const cutoff72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+        const { data: stampData } = await supabase
+          .from('redemptions')
+          .select('*, offer:offers(title)')
+          .eq('vendor_id', vp.id)
+          .in('status', ['stamp', 'reward_earned'])
+          .gte('confirmed_at', cutoff72h)
+          .order('confirmed_at', { ascending: false })
+          .limit(20);
+        setRecentStamps(stampData ?? []);
 
-      // Today's stamp count
-      const midnight = new Date();
-      midnight.setHours(0, 0, 0, 0);
-      const { count: todayCount } = await supabase
-        .from('redemptions')
-        .select('id', { count: 'exact', head: true })
-        .eq('vendor_id', vp.id)
-        .in('status', ['stamp', 'reward_earned'])
-        .gte('confirmed_at', midnight.toISOString());
-      setTodayStamps(todayCount ?? 0);
+        // Today's stamp count
+        const midnight = new Date();
+        midnight.setHours(0, 0, 0, 0);
+        const { count: todayCount } = await supabase
+          .from('redemptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('vendor_id', vp.id)
+          .in('status', ['stamp', 'reward_earned'])
+          .gte('confirmed_at', midnight.toISOString());
+        setTodayStamps(todayCount ?? 0);
 
-      // Total rewards given
-      const { count: rewardCount } = await supabase
-        .from('redemptions')
-        .select('id', { count: 'exact', head: true })
-        .eq('vendor_id', vp.id)
-        .eq('status', 'reward_earned');
-      setRewardsGiven(rewardCount ?? 0);
+        // Total rewards given — count all reward states including claimed (confirmed)
+        const { count: rewardCount } = await supabase
+          .from('redemptions')
+          .select('id', { count: 'exact', head: true })
+          .eq('vendor_id', vp.id)
+          .in('status', ['reward_earned', 'tier_reward', 'confirmed']);
+        setRewardsGiven(rewardCount ?? 0);
+      }
 
       setLoading(false);
+      } catch {
+        setLoading(false);
+      }
     };
 
     fetchData();

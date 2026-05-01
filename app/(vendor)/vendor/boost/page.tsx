@@ -291,7 +291,7 @@ export default function BoostPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login?role=vendor'); return; }
       const { data: vp } = await supabase
-        .from('vendor_profiles').select('id, business_name').eq('user_id', user.id).single();
+        .from('vendor_profiles').select('id, business_name').eq('user_id', user.id).maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorId(vp.id);
       setBN(vp.business_name);

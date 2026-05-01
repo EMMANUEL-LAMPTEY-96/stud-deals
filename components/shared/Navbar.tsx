@@ -68,7 +68,7 @@ export default function Navbar() {
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (!profile) { setLoading(false); return; }
 
@@ -80,7 +80,7 @@ export default function Navbar() {
           .from('student_profiles')
           .select('verification_status')
           .eq('user_id', authUser.id)
-          .single();
+          .maybeSingle();
         studentProfile = data;
       }
 
@@ -89,7 +89,7 @@ export default function Navbar() {
           .from('vendor_profiles')
           .select('business_name')
           .eq('user_id', authUser.id)
-          .single();
+          .maybeSingle();
         businessName = data?.business_name ?? null;
       }
 

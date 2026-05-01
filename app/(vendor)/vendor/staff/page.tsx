@@ -142,7 +142,7 @@ export default function StaffPage() {
         .from('vendor_profiles')
         .select('id, business_name, staff_pins')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }
 
       setVendorId(vp.id);
@@ -150,6 +150,7 @@ export default function StaffPage() {
       const pins = (vp as any).staff_pins;
       setStaff(Array.isArray(pins) ? pins : []);
       setLoading(false);
+    } catch { setLoading(false); }
     })();
   }, []);
 

@@ -167,7 +167,7 @@ export default function OfferDetailPage() {
       if (!user) { router.push('/sign-in'); return; }
 
       const { data: offerData } = await supabase
-        .from('offers').select('*').eq('id', offerId).single();
+        .from('offers').select('*').eq('id', offerId).maybeSingle();
       if (!offerData) { router.push('/vendor/offers'); return; }
       setOffer(offerData);
       populateEditForm(offerData);
@@ -181,6 +181,7 @@ export default function OfferDetailPage() {
       setRedemptions(redemptionData ?? []);
 
       setLoading(false);
+    } catch { setLoading(false); }
     })();
   }, [offerId]);
 
@@ -229,7 +230,7 @@ export default function OfferDetailPage() {
     if (updateError) { setError(updateError.message); return; }
 
     // Re-fetch offer
-    const { data: fresh } = await supabase.from('offers').select('*').eq('id', offer.id).single();
+    const { data: fresh } = await supabase.from('offers').select('*').eq('id', offer.id).maybeSingle();
     if (fresh) setOffer(fresh);
     setEditMode(false);
     showFlash('Offer updated successfully.');

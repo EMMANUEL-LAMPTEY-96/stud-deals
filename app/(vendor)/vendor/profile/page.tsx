@@ -493,7 +493,7 @@ export default function VendorProfilePage() {
       .from('vendor_profiles')
       .upsert(payload, { onConflict: 'user_id' })
       .select()
-      .single();
+      .maybeSingle();
 
     setSaving(false);
     if (error) { showFlash('error', error.message); return; }

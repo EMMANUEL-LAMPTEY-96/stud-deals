@@ -203,7 +203,7 @@ export default function CalendarPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login?role=vendor'); return; }
       const { data: vp } = await supabase
-        .from('vendor_profiles').select('id').eq('user_id', user.id).single();
+        .from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }
 
       const { data } = await supabase
@@ -211,7 +211,8 @@ export default function CalendarPage() {
         .select('id, title, discount_label, status, starts_at, expires_at, terms_and_conditions')
         .eq('vendor_id', vp.id)
         .neq('status', 'deleted')
-        .order('starts_at', { ascending: true });
+        .order('starts_at', { ascending: true })
+        .limit(500); // guard against unbounded fetch on high-volume accounts
 
       const classified = (data ?? []).map(o => ({
         ...o,
@@ -220,6 +221,7 @@ export default function CalendarPage() {
 
       setOffers(classified);
       setLoading(false);
+    } catch { setLoading(false); }
     })();
   }, []);
 

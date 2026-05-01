@@ -247,7 +247,7 @@ export default function VendorAnalyticsPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login?role=vendor'); return; }
-      const { data: vp } = await supabase.from('vendor_profiles').select('id,business_name').eq('user_id', user.id).single();
+      const { data: vp } = await supabase.from('vendor_profiles').select('id,business_name').eq('user_id', user.id).maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorId(vp.id); setBN(vp.business_name);
       await load(vp.id, 30);
@@ -347,8 +347,12 @@ export default function VendorAnalyticsPage() {
         const distMap: Record<number, number> = {};
         for (let i = 0; i <= req; i++) distMap[i] = 0;
         Object.values(stampMap).forEach(count => {
-          const bucket = Math.min(count % req === 0 && count > 0 ? req : count % req, req);
-          distMap[bucket] = (distMap[bucket] ?? 0) + 1;
+          // Position within current cycle: count % req gives stamps earned this cycle.
+          // Special case: if count is exactly a multiple of req (cycle just completed),
+          // show them at position req (full) rather than 0 (start of next cycle).
+          const posInCycle = count % req;
+          const bucket = posInCycle === 0 && count > 0 ? req : posInCycle;
+          distMap[Math.min(bucket, req)] = (distMap[Math.min(bucket, req)] ?? 0) + 1;
         });
 
         const distribution = Object.entries(distMap)
@@ -392,7 +396,7 @@ export default function VendorAnalyticsPage() {
       .from('vendor_profiles')
       .select('business_type, city, total_lifetime_views, total_lifetime_redemptions')
       .eq('id', vid)
-      .single();
+      .maybeSingle();
 
     if (thisVP?.business_type && thisVP?.city) {
       const { data: peers } = await supabase
@@ -400,25 +404,27 @@ export default function VendorAnalyticsPage() {
         .select('total_lifetime_views, total_lifetime_redemptions')
         .eq('business_type', thisVP.business_type)
         .eq('city', thisVP.city)
-        .neq('id', vid)
+        .neq('id', vid)          // exclude self so self doesn't skew its own average
         .gt('total_lifetime_views', 0);
 
       const peerRows = peers ?? [];
       const peerCount = peerRows.length;
 
-      const avgCvr = peerCount > 0
-        ? peerRows.reduce((s, p) => s + (p.total_lifetime_views > 0 ? (p.total_lifetime_redemptions / p.total_lifetime_views) * 100 : 0), 0) / peerCount
-        : 0;
-      const avgRedemptions = peerCount > 0
-        ? peerRows.reduce((s, p) => s + p.total_lifetime_redemptions, 0) / peerCount
-        : 0;
+      // Only set benchmark when there are real peers to compare against
+      if (peerCount >= 2) {
+        const avgCvr =
+          peerRows.reduce((s, p) => s + (p.total_lifetime_views > 0 ? (p.total_lifetime_redemptions / p.total_lifetime_views) * 100 : 0), 0) / peerCount;
+        const avgRedemptions =
+          peerRows.reduce((s, p) => s + p.total_lifetime_redemptions, 0) / peerCount;
 
-      const thisCvr = (thisVP.total_lifetime_views ?? 0) > 0
-        ? ((thisVP.total_lifetime_redemptions ?? 0) / (thisVP.total_lifetime_views ?? 1)) * 100
-        : 0;
-      const thisRedemptions = thisVP.total_lifetime_redemptions ?? 0;
+        const thisCvr = (thisVP.total_lifetime_views ?? 0) > 0
+          ? ((thisVP.total_lifetime_redemptions ?? 0) / (thisVP.total_lifetime_views ?? 1)) * 100
+          : 0;
+        const thisRedemptions = thisVP.total_lifetime_redemptions ?? 0;
 
-      setBenchmark({ avgCvr, avgRedemptions, peerCount, thisCvr, thisRedemptions, businessType: thisVP.business_type, city: thisVP.city });
+        setBenchmark({ avgCvr, avgRedemptions, peerCount, thisCvr, thisRedemptions, businessType: thisVP.business_type, city: thisVP.city });
+      }
+      // If < 2 peers, leave benchmark null — UI already hides it when benchmark is null
     }
 
     // ── Monthly Report ──────────────────────────────────────────────────────────
