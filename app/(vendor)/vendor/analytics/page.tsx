@@ -33,7 +33,7 @@ function parseLoyaltyConfig(terms: string | null): any | null {
   if (!terms) return null;
   const m = terms.match(/^\[\[LOYALTY:({.*?})\]\]/s);
   if (!m) return null;
-  try { return JSON.parse(m[1]); } catch { return null; }
+  try { return JSON.parse(m[1]); } catch (_) { return null; }
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────

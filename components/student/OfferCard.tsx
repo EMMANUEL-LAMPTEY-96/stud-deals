@@ -76,7 +76,7 @@ export default function OfferCard({ offer, isSaved = false, onSaveToggle }: Offe
       });
       if (!res.ok) setSaved(!newState); // Revert on failure
       else onSaveToggle?.(offer.id, newState);
-    } catch {
+    } catch (_) {
       setSaved(!newState);
     } finally {
       setSaving(false);

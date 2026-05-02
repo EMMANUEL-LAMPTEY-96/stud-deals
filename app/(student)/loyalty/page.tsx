@@ -382,7 +382,7 @@ export default function LoyaltyPage() {
           setCards(loyaltyCards);
           setLoading(false);
         }
-      } catch {
+      } catch (_) {
         if (!cancelled) {
           setError('Something went wrong. Please try again.');
           setLoading(false);

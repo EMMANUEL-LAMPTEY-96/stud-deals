@@ -164,7 +164,7 @@ export default function MyLoyaltyPage() {
         if (g.terms) {
           const match = g.terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
           if (match) {
-            try { config = JSON.parse(match[1]); } catch { /* ignore */ }
+            try { config = JSON.parse(match[1]); } catch (_) { /* ignore */ }
           }
         }
 

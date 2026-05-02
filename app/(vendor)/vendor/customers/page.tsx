@@ -248,7 +248,7 @@ function PromotionModal({
       } else {
         setSent({ count: data.sent_to });
       }
-    } catch {
+    } catch (_) {
       setError('Network error. Please try again.');
     } finally {
       setSending(false);

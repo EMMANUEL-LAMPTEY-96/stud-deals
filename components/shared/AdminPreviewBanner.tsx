@@ -34,7 +34,7 @@ export default function AdminPreviewBanner() {
         if (!cancelled && profile?.role === 'admin') {
           setIsAdmin(true);
         }
-      } catch {
+      } catch (_) {
         // Silently ignore — banner is non-critical
       }
     };

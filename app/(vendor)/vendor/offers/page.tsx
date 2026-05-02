@@ -297,7 +297,7 @@ export default function OffersPage() {
         .order('created_at', { ascending: false });
       setAllOffers(data ?? []);
       setLoading(false);
-    } catch { setLoading(false); }
+    } catch (_) { setLoading(false); }
     })();
   }, []);
 

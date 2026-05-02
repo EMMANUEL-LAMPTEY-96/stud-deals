@@ -135,7 +135,7 @@ export default function VerificationPage() {
           setMatchedInstitution(null);
           setEmailError(data.message ?? 'Please use your official university email.');
         }
-      } catch { /* silent */ } finally {
+      } catch (_) { /* silent */ } finally {
         setEmailChecking(false);
       }
     }, 600);

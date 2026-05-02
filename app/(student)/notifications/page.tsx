@@ -231,7 +231,7 @@ export default function NotificationsPage() {
       } else {
         setNotifs(rows);
       }
-    } catch {
+    } catch (_) {
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);

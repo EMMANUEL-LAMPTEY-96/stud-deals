@@ -221,7 +221,7 @@ export default function CalendarPage() {
 
       setOffers(classified);
       setLoading(false);
-    } catch { setLoading(false); }
+    } catch (_) { setLoading(false); }
     })();
   }, []);
 

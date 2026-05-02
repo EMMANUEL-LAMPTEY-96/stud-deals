@@ -253,7 +253,7 @@ export default function StampPage() {
 
         setActiveOffer(offer);
         setPageState('ready');
-      } catch {
+      } catch (_) {
         if (!cancelled) {
           setPageState('error');
           setErrorMsg('Something went wrong loading this page. Please try again.');
@@ -311,7 +311,7 @@ export default function StampPage() {
       // Success
       setStampResult(json);
       setPageState(json.reward_triggered ? 'reward' : 'success');
-    } catch {
+    } catch (_) {
       setPageState('error');
       setErrorMsg('Network error. Please check your connection and try again.');
     }

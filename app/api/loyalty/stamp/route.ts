@@ -64,7 +64,7 @@ function parseLoyaltyConfig(termsAndConditions: string | null): LoyaltyConfig | 
   if (!match) return null;
   try {
     return JSON.parse(match[1]) as LoyaltyConfig;
-  } catch {
+  } catch (_) {
     return null;
   }
 }
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
   let body: { vendor_id?: string };
   try {
     body = await request.json();
-  } catch {
+  } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 

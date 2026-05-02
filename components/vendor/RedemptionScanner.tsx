@@ -86,10 +86,10 @@ export default function RedemptionScanner() {
               stopCamera();
               handleConfirmCode(payload);
             }
-          } catch { /* silent */ }
+          } catch (_) { /* silent */ }
         }, 500);
       }
-    } catch {
+    } catch (_) {
       setResult({ state: 'error', errorMessage: 'Camera access denied. Please use manual code entry.' });
       setMode('manual');
     }
@@ -135,7 +135,7 @@ export default function RedemptionScanner() {
       }
 
       setResult({ state: 'success', data });
-    } catch {
+    } catch (_) {
       setResult({ state: 'error', errorMessage: 'Network error. Check your connection and try again.' });
     }
   };

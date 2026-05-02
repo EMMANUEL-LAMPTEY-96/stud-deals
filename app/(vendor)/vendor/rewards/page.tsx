@@ -57,7 +57,7 @@ function parseLoyaltyConfig(tc: string | null): LoyaltyConfig | null {
   if (!tc) return null;
   const m = tc.match(/^\[\[LOYALTY:(.*?)\]\]/);
   if (!m) return null;
-  try { return JSON.parse(m[1]); } catch { return null; }
+  try { return JSON.parse(m[1]); } catch (_) { return null; }
 }
 
 function extractRewardLabel(tc: string | null, isTier: boolean, redemptionCode: string): string {

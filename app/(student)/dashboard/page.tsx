@@ -222,7 +222,7 @@ export default function StudentDashboard() {
       }
 
       setActiveVoucher(data);
-    } catch {
+    } catch (_) {
       alert('Network error. Please check your connection and try again.');
     } finally {
       setClaimingId(null);

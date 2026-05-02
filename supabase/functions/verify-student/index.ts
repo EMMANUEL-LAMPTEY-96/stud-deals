@@ -65,7 +65,7 @@ serve(async (req: Request) => {
   let body: Record<string, unknown>;
   try {
     body = await req.json();
-  } catch {
+  } catch (_) {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 

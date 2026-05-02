@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     share_with_vendors?: boolean;
   };
 
-  try { body = await request.json(); } catch {
+  try { body = await request.json(); } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 

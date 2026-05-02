@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   let body: { student_profile_id: string; action: 'approve' | 'reject'; notes?: string };
-  try { body = await request.json(); } catch {
+  try { body = await request.json(); } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 

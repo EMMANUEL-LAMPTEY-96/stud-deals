@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: { otp_code: string };
-  try { body = await request.json(); } catch {
+  try { body = await request.json(); } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   try {
     if (sp.verification_notes) stored = JSON.parse(sp.verification_notes);
-  } catch {
+  } catch (_) {
     return NextResponse.json({ error: 'Verification session expired. Please start again.' }, { status: 400 });
   }
 

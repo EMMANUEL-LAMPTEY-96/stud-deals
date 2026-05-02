@@ -62,7 +62,7 @@ export default function VoucherModal({ voucher, onClose }: VoucherModalProps) {
       await navigator.clipboard.writeText(voucher.redemption_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (_) {
       // Fallback: select the text
     }
   };
