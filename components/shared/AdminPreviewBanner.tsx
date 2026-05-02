@@ -3,55 +3,60 @@
 // =============================================================================
 // components/shared/AdminPreviewBanner.tsx
 //
-// A slim top banner shown only when an admin account is viewing student
-// or vendor pages. Reminds the admin they are in preview mode and gives
-// a one-click return to the admin dashboard.
+// Shown at the very top of the vendor dashboard when an admin account is
+// viewing the page. Reminds admins they're in preview mode and links back
+// to the admin panel.
 // =============================================================================
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Shield, ArrowLeft, X } from 'lucide-react';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
 export default function AdminPreviewBanner() {
   const [isAdmin, setIsAdmin] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const supabase = createClient();
 
   useEffect(() => {
+    let cancelled = false;
+
     const check = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      setIsAdmin(profile?.role === 'admin');
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!cancelled && profile?.role === 'admin') {
+          setIsAdmin(true);
+        }
+      } catch {
+        // Silently ignore — banner is non-critical
+      }
     };
+
     check();
+    return () => { cancelled = true; };
   }, []);
 
-  if (!isAdmin || dismissed) return null;
+  if (!isAdmin) return null;
 
   return (
-    <div className="bg-purple-600 text-white text-xs font-semibold flex items-center justify-between px-4 py-2 z-50">
+    <div className="sticky top-0 z-50 w-full bg-amber-500 text-white px-4 py-2.5 flex items-center justify-between text-sm font-semibold shadow-md">
       <div className="flex items-center gap-2">
-        <Shield size={12} />
-        Admin preview mode — you are viewing this as an admin, not a real user
+        <ShieldAlert size={16} />
+        <span>Admin preview — you are viewing the vendor dashboard</span>
       </div>
-      <div className="flex items-center gap-3">
-        <Link
-          href="/admin"
-          className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors"
-        >
-          <ArrowLeft size={11} />
-          Back to admin
-        </Link>
-        <button onClick={() => setDismissed(true)} className="hover:text-white/70 transition-colors">
-          <X size={14} />
-        </button>
-      </div>
+      <Link
+        href="/admin"
+        className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-lg text-xs font-bold"
+      >
+        <ArrowLeft size={13} /> Back to admin
+      </Link>
     </div>
   );
 }
