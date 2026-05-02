@@ -199,7 +199,7 @@ export default function CalendarPage() {
   const [year,  setYear]  = useState(today.getFullYear());
 
   useEffect(() => {
-    (async () => {
+    (async () => { try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login?role=vendor'); return; }
       const { data: vp } = await supabase
