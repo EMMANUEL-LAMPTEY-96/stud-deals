@@ -283,7 +283,7 @@ export default function OffersPage() {
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    (async () => {
+    (async () => { try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
       const { data: vp } = await supabase

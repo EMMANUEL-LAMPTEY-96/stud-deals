@@ -162,7 +162,7 @@ export default function OfferDetailPage() {
   const [eTerms, setETerms] = useState('');
 
   useEffect(() => {
-    (async () => {
+    (async () => { try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
 
