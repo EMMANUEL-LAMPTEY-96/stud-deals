@@ -155,7 +155,7 @@ export function parseQrPayload(payload: string): string | null {
   try {
     const parsed = JSON.parse(payload);
     if (parsed?.c && typeof parsed.c === 'string') return parsed.c;
-  } catch {
+  } catch (_) {
     // Not JSON — treat as raw code
     if (isValidVoucherCodeFormat(payload)) return payload;
   }

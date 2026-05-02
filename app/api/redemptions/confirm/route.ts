@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     let body: ConfirmRedemptionRequest;
     try {
       body = await request.json();
-    } catch {
+    } catch (_) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
     }
 

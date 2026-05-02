@@ -55,7 +55,7 @@ function parseLoyaltyConfig(terms: string | null) {
   if (!terms) return null;
   const match = terms.match(/^\[\[LOYALTY:(.*?)\]\]/);
   if (!match) return null;
-  try { return JSON.parse(match[1]); } catch { return null; }
+  try { return JSON.parse(match[1]); } catch (_) { return null; }
 }
 
 // ── Offer row ─────────────────────────────────────────────────────────────────
@@ -213,7 +213,7 @@ export default function VendorDashboard() {
       }
 
       setLoading(false);
-      } catch {
+      } catch (_) {
         setLoading(false);
       }
     };

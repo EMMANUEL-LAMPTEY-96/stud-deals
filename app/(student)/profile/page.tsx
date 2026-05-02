@@ -272,7 +272,7 @@ export default function StudentProfilePage() {
         const d = await res.json();
         setSaveErr(d.error ?? 'Failed to save.');
       }
-    } catch {
+    } catch (_) {
       setSaveErr('Network error. Please try again.');
     } finally {
       setSaving(false);

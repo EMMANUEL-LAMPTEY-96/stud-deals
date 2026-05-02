@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: { university_email: string };
-  try { body = await request.json(); } catch {
+  try { body = await request.json(); } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!otpError) emailSent = true;
-  } catch { /* fall through */ }
+  } catch (_) { /* fall through */ }
 
   // If Supabase couldn't send the email, we still have the OTP stored in DB.
   // In production you'd integrate Resend/SendGrid here.

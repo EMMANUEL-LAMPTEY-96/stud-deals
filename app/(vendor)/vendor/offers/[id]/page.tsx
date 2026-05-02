@@ -181,7 +181,7 @@ export default function OfferDetailPage() {
       setRedemptions(redemptionData ?? []);
 
       setLoading(false);
-    } catch { setLoading(false); }
+    } catch (_) { setLoading(false); }
     })();
   }, [offerId]);
 

@@ -282,7 +282,7 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
       try {
         const m = (offer.terms_and_conditions ?? '').match(/^\[\[LOYALTY:({.*?})\]\]/s);
         if (m) { const cfg = JSON.parse(m[1]); rewardLabel = cfg.reward_label ?? rewardLabel; }
-      } catch {}
+      } catch (_) {}
       return {
         id: r.id,
         student_name: profMap[(r as any).student_profile_id] ?? 'Student',
@@ -446,7 +446,7 @@ export default function StaffScanPage() {
         const s: StaffSession = JSON.parse(raw);
         if (s.expiresAt > Date.now()) { setSession(s); }
         else { sessionStorage.removeItem(SESSION_KEY); }
-      } catch { sessionStorage.removeItem(SESSION_KEY); }
+      } catch (_) { sessionStorage.removeItem(SESSION_KEY); }
     }
     setReady(true);
   }, []);

@@ -129,7 +129,7 @@ export default function OfferDetailPage() {
       } else {
         setVoucher(data as ClaimOfferResponse);
       }
-    } catch {
+    } catch (_) {
       setClaimError('Network error. Please try again.');
     } finally {
       setClaiming(false);

@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       try {
         const { data } = await admin.auth.admin.getUserById(vp.user_id as string);
         if (data.user?.email) emailMap[vp.user_id as string] = data.user.email;
-      } catch { /* skip */ }
+      } catch (_) { /* skip */ }
     })
   );
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body: { vendor_profile_id: string; action: 'approve' | 'reject'; notes?: string };
-  try { body = await request.json(); } catch {
+  try { body = await request.json(); } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 

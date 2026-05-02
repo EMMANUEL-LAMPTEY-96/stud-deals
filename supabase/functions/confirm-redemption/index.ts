@@ -75,7 +75,7 @@ serve(async (req: Request) => {
   let body: { redemption_code: string; estimated_transaction_value?: number };
   try {
     body = await req.json();
-  } catch {
+  } catch (_) {
     return json({ error: 'Invalid JSON body.' }, 400);
   }
 
@@ -90,7 +90,7 @@ serve(async (req: Request) => {
     try {
       const parsed = JSON.parse(code);
       if (parsed?.c) code = parsed.c;
-    } catch {
+    } catch (_) {
       return json({ error: 'Invalid QR payload.' }, 400);
     }
   }

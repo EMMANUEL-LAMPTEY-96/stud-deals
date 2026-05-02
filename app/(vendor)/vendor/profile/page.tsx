@@ -232,7 +232,7 @@ function GalleryUploader({
         if (match) {
           await supabase.storage.from('vendor-assets').remove([match[1]]);
         }
-      } catch { /* ignore storage errors */ }
+      } catch (_) { /* ignore storage errors */ }
     }
     // Immediately persist the updated gallery to DB so removal survives without clicking Save
     if (vendorId) {

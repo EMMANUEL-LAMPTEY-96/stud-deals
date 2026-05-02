@@ -128,7 +128,7 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
             returnVisitRate,
           });
         }
-      } catch {
+      } catch (_) {
         // Silently fail — widget just stays hidden
       } finally {
         if (!cancelled) setLoading(false);

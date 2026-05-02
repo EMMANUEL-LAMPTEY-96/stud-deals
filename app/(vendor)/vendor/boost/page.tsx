@@ -55,7 +55,7 @@ function parseBoostConfig(terms: string | null): BoostConfig | null {
   if (!terms) return null;
   const m = terms.match(/^\[\[BOOST:({.*?})\]\]/s);
   if (!m) return null;
-  try { return JSON.parse(m[1]); } catch { return null; }
+  try { return JSON.parse(m[1]); } catch (_) { return null; }
 }
 
 function msToCountdown(ms: number): string {

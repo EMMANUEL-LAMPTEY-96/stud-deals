@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch {
+  } catch (_) {
     return NextResponse.json({ error: 'Invalid form data.' }, { status: 400 });
   }
 

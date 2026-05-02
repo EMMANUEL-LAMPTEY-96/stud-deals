@@ -81,7 +81,7 @@ export default function PrintQRKitPage() {
           errorCorrectionLevel: 'H',
         });
         setQrDataUrl(qr);
-      } catch {
+      } catch (_) {
         setQrError('Failed to generate QR code. Please refresh the page.');
       }
       setLoading(false);

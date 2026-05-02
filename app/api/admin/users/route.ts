@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       try {
         const { data } = await admin.auth.admin.getUserById(uid);
         if (data.user?.email) emailMap[uid] = data.user.email;
-      } catch { /* skip */ }
+      } catch (_) { /* skip */ }
     })
   );
 

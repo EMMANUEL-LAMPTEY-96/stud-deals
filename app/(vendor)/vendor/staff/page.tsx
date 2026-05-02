@@ -150,7 +150,7 @@ export default function StaffPage() {
       const pins = (vp as any).staff_pins;
       setStaff(Array.isArray(pins) ? pins : []);
       setLoading(false);
-    } catch { setLoading(false); }
+    } catch (_) { setLoading(false); }
     })();
   }, []);
 

@@ -121,10 +121,10 @@ export default function LoyaltyScanner() {
               stopCamera();
               await processStudentId(payload);
             }
-          } catch { /* silent */ }
+          } catch (_) { /* silent */ }
         }, 500);
       }
-    } catch {
+    } catch (_) {
       setErrorMsg('Camera access denied. Use manual entry instead.');
       setScanState('error');
       setMode('manual');
@@ -162,7 +162,7 @@ export default function LoyaltyScanner() {
 
       setResult(data as StampResult);
       setScanState(data.reward_triggered ? 'reward' : 'stamp_added');
-    } catch {
+    } catch (_) {
       setScanState('error');
       setErrorMsg('Network error. Check your connection.');
     }

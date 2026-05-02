@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {}
+          } catch (_) {}
         },
       },
     }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   let body: PromoteBody;
   try {
     body = await req.json();
-  } catch {
+  } catch (_) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 

@@ -49,7 +49,7 @@ export default function VendorQRPanel({ vendorId, businessName, city }: VendorQR
           setQrDataUrl(dataUrl);
           setQrError(null);
         }
-      } catch {
+      } catch (_) {
         if (!cancelled) setQrError('Could not generate QR code. Refresh to retry.');
       } finally {
         if (!cancelled) setGenerating(false);
@@ -73,7 +73,7 @@ export default function VendorQRPanel({ vendorId, businessName, city }: VendorQR
       setCopied(true);
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (_) {
       // Clipboard not available — silently ignore
     }
   };

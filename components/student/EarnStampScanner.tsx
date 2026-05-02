@@ -71,7 +71,7 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
       try {
         await scannerRef.current.stop();
         scannerRef.current.clear();
-      } catch { /* already stopped */ }
+      } catch (_) { /* already stopped */ }
       scannerRef.current = null;
     }
   }, []);
@@ -127,7 +127,7 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
       setResult(stampResult);
       setScanState('success');
       onStampSuccess?.(stampResult);
-    } catch {
+    } catch (_) {
       setScanState('error');
       setErrorMsg('Network error — please check your connection and try again.');
     }
@@ -158,13 +158,13 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
             if (payload?.type === 'stud_stamp' && payload?.vendor_id) {
               processStamp(payload.vendor_id);
             }
-          } catch {
+          } catch (_) {
             // Not JSON — ignore and keep scanning
           }
         },
         () => { /* scan failure — normal, ignore */ }
       );
-    } catch {
+    } catch (_) {
       setScanState('error');
       setErrorMsg('Could not access camera. Please allow camera access and try again.');
     }
