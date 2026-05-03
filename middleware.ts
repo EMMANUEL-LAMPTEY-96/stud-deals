@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
   ].some((route) => pathname.startsWith(route));
 
   if (!user && isProtectedRoute) {
-    const redirectUrl = new URL('/login', request.url);
+    const redirectUrl = new URL('/sign-in', request.url);
     redirectUrl.searchParams.set('redirect', pathname);   // Remember where they were going
     return NextResponse.redirect(redirectUrl);
   }
@@ -78,11 +78,11 @@ export async function middleware(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     const role = profile?.role ?? 'student';
     const dashboardPath = role === 'vendor' ? '/vendor'
-                        : role === 'admin'  ? '/admin/dashboard'
+                        : role === 'admin'  ? '/admin'
                         : '/dashboard';
 
     return NextResponse.redirect(new URL(dashboardPath, request.url));
@@ -97,7 +97,7 @@ export async function middleware(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     const role = profile?.role ?? 'student';
 
@@ -123,6 +123,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Run middleware on all routes EXCEPT static files and Next.js internals
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
