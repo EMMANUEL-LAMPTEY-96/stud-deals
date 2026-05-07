@@ -59,7 +59,7 @@ export default function HomePage() {
             <Link href="/sign-in" className="text-sm font-semibold text-gray-700 hover:text-brand-600 transition-colors px-3 py-1.5">
               Log in
             </Link>
-            <Link href="/sign-up" className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-sm transition-colors">
+            <Link href="/sign-in" className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-sm transition-colors">
               <Zap size={14} /> Get student deals
             </Link>
           </div>
@@ -89,13 +89,13 @@ export default function HomePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold text-base px-8 py-3 rounded-2xl shadow-lg transition-colors"
               >
                 I&apos;m a Student <ArrowRight size={18} />
               </Link>
               <Link
-                href="/sign-up?role=vendor"
+                href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-2xl border-2 border-white/30 text-white font-bold text-base hover:bg-white/10 transition-all"
               >
                 I&apos;m a Business <Store size={18} />
@@ -184,13 +184,13 @@ export default function HomePage() {
             <p className="text-brand-200 mb-8 text-lg">Join thousands of students and businesses already on the platform.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/sign-up"
+                href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 bg-white text-brand-700 hover:bg-brand-50 font-bold text-base px-8 py-3 rounded-2xl transition-colors"
               >
                 Start Saving — It&apos;s Free
               </Link>
               <Link
-                href="/sign-up?role=vendor"
+                href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-2xl border-2 border-white/40 font-bold text-base hover:bg-white/10 transition-all"
               >
                 List Your Business
