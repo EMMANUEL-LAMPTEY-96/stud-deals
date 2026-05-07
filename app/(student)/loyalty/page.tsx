@@ -406,7 +406,7 @@ export default function LoyaltyPage() {
             </div>
             <h1 className="text-2xl font-black text-gray-900 mb-2">Verify to unlock loyalty</h1>
             <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-              Student verification unlocks loyalty stamps across all STUD-DEALS partner venues. It only takes 60 seconds.
+              Student verification unlocks loyalty stamps across all Unideals partner venues. It only takes 60 seconds.
             </p>
             <Link
               href="/verification"
