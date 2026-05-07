@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   if (!vendorProfile.is_verified) {
     return NextResponse.json({
-      error: 'This business is not yet verified on Stud Deals.',
+      error: 'This business is not yet verified on Unideals.',
     }, { status: 403 });
   }
 
@@ -437,4 +437,4 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ stamps: data ?? [] });
-}
+         }
