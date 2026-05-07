@@ -412,7 +412,7 @@ export default function VendorProfilePage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push('/sign-in'); return; }
       setUserId(user.id);
 
       const { data } = await supabase
@@ -625,7 +625,7 @@ export default function VendorProfilePage() {
                   <input type="text" className={INPUT_CLS} value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Ground floor" />
                 </Field>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Field label="City" hint="Stud Deals currently operates in Budapest and Szeged.">
+                  <Field label="City" hint="Unideals currently operates in Budapest and Szeged.">
                     <select className={INPUT_CLS} value={city} onChange={(e) => setCity(e.target.value)}>
                       <option value="">Select city…</option>
                       <option value="Budapest">Budapest</option>
