@@ -48,7 +48,7 @@ export default function HomePage() {
               <GraduationCap size={17} className="text-white" />
             </div>
             <span className="font-bold text-gray-900 text-base">
-              Stud<span className="text-brand-600">Deals</span>
+              Uni<span className="text-brand-600">deals</span>
             </span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
@@ -203,9 +203,9 @@ export default function HomePage() {
         <footer className="bg-gray-900 text-gray-400 py-8 px-6 text-center text-sm">
           <div className="flex items-center justify-center gap-2 mb-2">
             <GraduationCap size={18} className="text-brand-400" />
-            <span className="text-white font-bold text-base">StudDeals</span>
+            <span className="text-white font-bold text-base">Unideals</span>
           </div>
-          <p>© 2026 StudDeals. The student marketplace that just works.</p>
+          <p>© 2026 Unideals. The student marketplace that just works.</p>
           <div className="flex items-center justify-center gap-6 mt-3">
             <Link href="/sign-in" className="hover:text-gray-200 transition-colors">Log in</Link>
             <Link href="/sign-up" className="hover:text-gray-200 transition-colors">Sign up</Link>
@@ -216,4 +216,4 @@ export default function HomePage() {
       </div>
     </div>
   );
-}
+        }
