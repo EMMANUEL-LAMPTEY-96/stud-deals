@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Your document has been submitted for review. We'll notify you within 1–2 business days.',
+      message: "Your document has been submitted for review. We'll notify you within 1–2 business days.",
       document_url: documentUrl,
       status: 'pending_review',
     });
