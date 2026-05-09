@@ -221,4 +221,4 @@ export default function VendorSignUpPage() {
       </div>
     </div>
   );
-                      }—
+}
