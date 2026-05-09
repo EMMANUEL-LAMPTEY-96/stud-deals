@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     // ── Insert notification for the student ──────────────────────────────────
     const notifTitle =
       decision === 'approve'
-        ? 'You\'re verified! 🎉
+        ? 'You\'re verified! 🎉'
         : 'Verification update';
 
     const notifBody =
