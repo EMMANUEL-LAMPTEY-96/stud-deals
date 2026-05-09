@@ -243,7 +243,7 @@ export default function StudentSignUpPage() {
           </form>
         </div>
 
-        <p className="text-center text-purple-300 mt-6 text-sm">
+        <p className="text-center text-purple-300 hmt-6 text-sm">
           Already have an account?{' '}
           <Link href="/sign-in" className="text-purple-400 hover:text-white font-medium transition-colors">
             Sign in
@@ -252,4 +252,4 @@ export default function StudentSignUpPage() {
       </div>
     </div>
   );
-                  }—
+}
