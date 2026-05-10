@@ -20,6 +20,7 @@ import Navbar from '@/components/shared/Navbar';
 import OfferCard from '@/components/student/OfferCard';
 import VoucherModal from '@/components/student/VoucherModal';
 import AchievementBadges from '@/components/student/AchievementBadges';
+import SavingsHero from '@/components/student/SavingsHero';
 import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
@@ -251,28 +252,8 @@ export default function StudentDashboard() {
                 </p>
               </div>
 
-              {/* Savings gamification */}
-              {isVerified && (studentProfile?.total_savings_usd ?? 0) > 0 && (
-                <button
-                  onClick={() => setShowEUR(v => !v)}
-                  className="flex-shrink-0 bg-white rounded-2xl border border-brand-100 px-4 py-3 text-center shadow-sm hover:border-brand-300 transition-colors"
-                  title="Click to toggle EUR"
-                >
-                  <div className="flex items-center gap-1.5 text-brand-600 mb-0.5">
-                    <Trophy size={14} />
-                    <span className="text-xs font-semibold">Total saved</span>
-                  </div>
-                  <div className="text-xl font-black text-gray-900">
-                    {showEUR
-                      ? fmtEUR((studentProfile?.total_savings_usd ?? 0) * 365)
-                      : fmtHUF((studentProfile?.total_savings_usd ?? 0) * 365)
-                    }
-                  </div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">
-                    {showEUR ? 'tap for Ft' : 'tap for €'}
-                  </div>
-                </button>
-              )}
+              {/* placeholder — SavingsHero renders below */}
+              <div />
             </div>
           </div>
 
@@ -284,6 +265,16 @@ export default function StudentDashboard() {
           {/* ── ACHIEVEMENT BADGES ─────────────────────────────────────── */}
           {studentProfile?.id && studentProfile.verification_status === 'verified' && (
             <AchievementBadges studentProfileId={studentProfile.id} />
+          )}
+
+          {/* ── SAVINGS HERO ───────────────────────────────────────────── */}
+          {studentProfile?.id && studentProfile.verification_status === 'verified' && (
+            <SavingsHero
+              studentProfileId={studentProfile.id}
+              institutionId={studentProfile.institution_id}
+              showEUR={showEUR}
+              onToggleCurrency={() => setShowEUR(v => !v)}
+            />
           )}
 
           {/* ── SEARCH BAR ─────────────────────────────────────────────── */}

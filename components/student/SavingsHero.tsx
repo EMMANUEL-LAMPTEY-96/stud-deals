@@ -8,7 +8,8 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Trophy, TrendingUp, Target, ChevronRight, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Trophy, TrendingUp, Target, ChevronRight, Zap, ArrowRight } from 'lucide-react';
 import { fmtHUF, fmtEUR } from '@/lib/currency';
 
 interface SavingsData {
@@ -57,6 +58,7 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
   const [savings, setSavings] = useState<SavingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!studentProfileId) return;
@@ -73,29 +75,36 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
     monthStart.setHours(0, 0, 0, 0);
 
     try {
-      // All-time redemptions for this student
+      // All-time confirmed redemptions for this student (fixed_amount have real HUF value)
       const { data: redemptions } = await supabase
         .from('redemptions')
-        .select('savings_amount_huf, confirmed_at, offers(category)')
+        .select('discount_value_applied, claimed_at, offer_category, offers(discount_type)')
         .eq('student_id', studentProfileId)
-        .eq('status', 'confirmed')
-        .not('savings_amount_huf', 'is', null);
+        .eq('status', 'confirmed');
 
       const all = redemptions ?? [];
-      const totalHuf = all.reduce((s, r) => s + (r.savings_amount_huf ?? 0), 0);
 
-      const semesterItems = all.filter(r => r.confirmed_at && r.confirmed_at >= semStart);
-      const semesterHuf = semesterItems.reduce((s, r) => s + (r.savings_amount_huf ?? 0), 0);
+      // Only count fixed-amount redemptions for HUF savings (percentage = no known bill amount)
+      function hufValue(r: typeof all[number]): number {
+        const dtype = (r.offers as any)?.discount_type ?? '';
+        if (dtype === 'percentage') return 0; // can't compute without bill amount
+        return r.discount_value_applied ?? 0;
+      }
 
-      const monthItems = all.filter(r => r.confirmed_at && r.confirmed_at >= monthStart.toISOString());
-      const monthHuf = monthItems.reduce((s, r) => s + (r.savings_amount_huf ?? 0), 0);
+      const totalHuf = all.reduce((s, r) => s + hufValue(r), 0);
+
+      const semesterItems = all.filter(r => r.claimed_at && r.claimed_at >= semStart);
+      const semesterHuf = semesterItems.reduce((s, r) => s + hufValue(r), 0);
+
+      const monthItems = all.filter(r => r.claimed_at && r.claimed_at >= monthStart.toISOString());
+      const monthHuf = monthItems.reduce((s, r) => s + hufValue(r), 0);
 
       // Group by category
       const catMap: Record<string, { totalHuf: number; count: number }> = {};
       for (const r of all) {
-        const cat = (r.offers as any)?.category ?? 'other';
+        const cat = r.offer_category ?? 'other';
         if (!catMap[cat]) catMap[cat] = { totalHuf: 0, count: 0 };
-        catMap[cat].totalHuf += r.savings_amount_huf ?? 0;
+        catMap[cat].totalHuf += hufValue(r);
         catMap[cat].count += 1;
       }
       const byCategory = Object.entries(catMap)
@@ -112,14 +121,16 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
           .eq('verification_status', 'verified');
 
         if (peers && peers.length > 1) {
-          // Count how many peers have lower semester savings (simplified: use total_savings_usd as proxy)
+          // Simplified percentile: students who have claimed fewer confirmed deals
           const { count: lowerCount } = await supabase
-            .from('student_profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('institution_id', institutionId)
-            .lt('total_savings_usd', semesterHuf / 400); // rough HUF→USD
+            .from('redemptions')
+            .select('student_id', { count: 'exact', head: true })
+            .eq('status', 'confirmed')
+            .in('student_id', peers.map(p => p.user_id).filter(Boolean));
 
-          percentileVsInstitution = Math.round(((lowerCount ?? 0) / peers.length) * 100);
+          // Our rank: redemptionCount vs total
+          const total = lowerCount ?? 0;
+          percentileVsInstitution = total > 0 ? Math.round((all.length / total) * 50) : 50;
         }
       }
 
@@ -239,6 +250,15 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
           ))}
         </div>
       )}
+
+      {/* Link to full savings page */}
+      <button
+        onClick={() => router.push('/my-savings')}
+        className="mt-4 w-full flex items-center justify-center gap-1.5 text-xs text-white/70 hover:text-white transition-colors py-1"
+      >
+        View full savings history
+        <ArrowRight size={12} />
+      </button>
     </div>
   );
 }
