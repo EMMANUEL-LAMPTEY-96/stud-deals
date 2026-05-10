@@ -1,21 +1,18 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { safeLog } from '@/lib/utils/safe-logger';
+
 // =============================================================================
 // app/api/vendor/customers/route.ts — Vendor Customer Directory
 //
 // GET /api/vendor/customers?sort=stamps|recent|name&search=<query>
 //
 // Returns aggregated customer data for the authenticated vendor:
-//   - Unique students who have at least 1 stamp with this vendor
-//   - Stamp count, last visit date, rewards claimed
+//   - Unique students who have at least 1 stamp/redemption with this vendor
+//   - Stamp count, rewards claimed, last/first visit dates
 //   - GDPR-safe: email partially masked (first 2 chars + domain)
 //   - Sorted by: most stamps (default), most recent visit, or name
-//   - Optional search by masked display name
-//
-// Auth: server-side Supabase session check (vendor_profiles.user_id = auth.uid())
 // =============================================================================
-
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
@@ -26,24 +23,8 @@ function maskEmail(email: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch (_) {}
-        },
-      },
-    }
-  );
+  const supabase = await createClient();
+  const admin = createAdminClient();
 
   // ── Auth check ──────────────────────────────────────────────────────────────
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -51,10 +32,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // ── Vendor profile check ────────────────────────────────────────────────────
+  // ── Vendor profile ──────────────────────────────────────────────────────────
   const { data: vp } = await supabase
     .from('vendor_profiles')
-    .select('id, is_approved')
+    .select('id')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -62,126 +43,161 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
   }
 
-  if (!vp.is_approved) {
-    return NextResponse.json({ error: 'Vendor not approved' }, { status: 403 });
-  }
-
   const vendorId = vp.id;
 
   // ── Query params ────────────────────────────────────────────────────────────
   const { searchParams } = new URL(req.url);
   const sort = searchParams.get('sort') ?? 'stamps'; // stamps | recent | name
-  const search = (searchParams.get('search') ?? '').trim().toLowerCase();
 
-  // ── Fetch all redemptions for this vendor ────────────────────────────────────
-  // We join to profiles to get display names and emails
-  const { data: redemptions, error: rdError } = await supabase
-    .from('redemptions')
-    .select(`
-      student_profile_id,
-      status,
-      claimed_at,
-      student_profiles!inner (
-        id,
-        user_id,
-        profiles (
-          id,
-          full_name,
-          email
-        )
-      )
-    `)
-    .eq('vendor_id', vendorId)
-    .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed'])
-    .order('claimed_at', { ascending: false });
+  try {
+    // ── Fetch all redemptions with student profile details ──────────────────
+    const { data: reds, error: rdErr } = await admin
+      .from('redemptions')
+      .select(`
+        student_id,
+        status,
+        claimed_at
+      `)
+      .eq('vendor_id', vendorId)
+      .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed'])
+      .order('claimed_at', { ascending: false });
 
-  if (rdError) {
-    console.error('[/api/vendor/customers] Fetch error:', rdError.message);
-    return NextResponse.json({ error: 'Failed to load customers' }, { status: 500 });
-  }
+    if (rdErr) {
+      safeLog.error('customers: redemptions fetch error', rdErr.message);
+      return NextResponse.json({ error: 'Failed to load customers' }, { status: 500 });
+    }
 
-  const rows = redemptions ?? [];
+    const rows = reds ?? [];
+    if (rows.length === 0) {
+      return NextResponse.json({ customers: [], meta: { total: 0, total_stamps: 0, total_rewards: 0 } });
+    }
 
-  // ── Aggregate per student ────────────────────────────────────────────────────
-  interface CustomerAgg {
-    student_profile_id: string;
-    full_name: string;
-    masked_email: string;
-    stamps: number;
-    rewards_claimed: number;
-    last_visit: string;  // ISO string of most recent stamp
-    first_visit: string; // ISO string of first stamp
-  }
+    // Get unique student profile IDs
+    const studentIds = [...new Set(rows.map(r => r.student_id).filter(Boolean))];
 
-  const aggMap = new Map<string, CustomerAgg>();
+    // Fetch student profile + auth user info via admin
+    const { data: studentProfiles } = await admin
+      .from('student_profiles')
+      .select('id, user_id, verification_status, institution_id, institutions(name)')
+      .in('id', studentIds);
 
-  for (const row of rows) {
-    const sid = row.student_profile_id;
-    // @ts-ignore — Supabase join typing
-    const profile = row.student_profiles?.profiles;
-    const fullName: string = profile?.full_name ?? 'Student';
-    const email: string = profile?.email ?? '';
-    const maskedEmail = email ? maskEmail(email) : '';
+    const spMap = new Map<string, typeof studentProfiles extends (infer T)[] | null ? T : never>();
+    (studentProfiles ?? []).forEach(sp => sp && spMap.set(sp.id, sp));
 
-    const existing = aggMap.get(sid);
-    const isStamp = row.status === 'stamp';
-    const isReward = ['reward_earned', 'tier_reward', 'confirmed'].includes(row.status);
+    // Fetch profiles (name + email) for all user_ids
+    const userIds = [...new Set((studentProfiles ?? []).map(sp => sp?.user_id).filter(Boolean))] as string[];
+    const { data: profiles } = await admin
+      .from('profiles')
+      .select('id, first_name, display_name')
+      .in('id', userIds);
 
-    if (!existing) {
-      aggMap.set(sid, {
-        student_profile_id: sid,
-        full_name: fullName,
-        masked_email: maskedEmail,
-        stamps: isStamp ? 1 : 0,
-        rewards_claimed: isReward ? 1 : 0,
-        last_visit: row.claimed_at,
-        first_visit: row.claimed_at,
-      });
-    } else {
-      if (isStamp) existing.stamps += 1;
-      if (isReward) existing.rewards_claimed += 1;
-      // last_visit: rows are descending so first encountered = most recent
-      // first_visit: always update to current (row) since we're going backwards
-      if (new Date(row.claimed_at) < new Date(existing.first_visit)) {
-        existing.first_visit = row.claimed_at;
+    const profileMap = new Map<string, { first_name: string | null; display_name: string | null }>();
+    (profiles ?? []).forEach(p => p && profileMap.set(p.id, p));
+
+    // Fetch auth users for emails (admin only)
+    const emailMap = new Map<string, string>();
+    for (const uid of userIds) {
+      try {
+        const { data: au } = await admin.auth.admin.getUserById(uid);
+        if (au?.user?.email) emailMap.set(uid, au.user.email);
+      } catch (_) {}
+    }
+
+    // ── Aggregate per student ─────────────────────────────────────────────────
+    interface CustomerAgg {
+      student_profile_id: string;
+      user_id: string;
+      display_name: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      email_masked: boolean;
+      institution_name: string | null;
+      stamp_count: number;
+      rewards_earned: number;
+      last_visit_at: string | null;
+      first_visit_at: string | null;
+      verification_status: string;
+    }
+
+    const aggMap = new Map<string, CustomerAgg>();
+
+    for (const row of rows) {
+      const sid = row.student_id;
+      if (!sid) continue;
+
+      const sp = spMap.get(sid);
+      const uid = sp?.user_id ?? '';
+      const profile = profileMap.get(uid);
+      const rawEmail = emailMap.get(uid) ?? null;
+      const maskedEmail = rawEmail ? maskEmail(rawEmail) : null;
+      // @ts-ignore
+      const institutionName = sp?.institutions?.name ?? null;
+
+      const isStamp = row.status === 'stamp';
+      const isReward = ['reward_earned', 'tier_reward', 'confirmed'].includes(row.status);
+
+      const existing = aggMap.get(sid);
+      if (!existing) {
+        aggMap.set(sid, {
+          student_profile_id: sid,
+          user_id: uid,
+          display_name: profile?.display_name ?? profile?.first_name ?? 'Student',
+          first_name: profile?.first_name ?? null,
+          last_name: null,
+          email: maskedEmail,
+          email_masked: rawEmail !== null,
+          institution_name: institutionName,
+          stamp_count: isStamp ? 1 : 0,
+          rewards_earned: isReward ? 1 : 0,
+          last_visit_at: row.claimed_at,
+          first_visit_at: row.claimed_at,
+          verification_status: sp?.verification_status ?? 'unverified',
+        });
+      } else {
+        if (isStamp) existing.stamp_count += 1;
+        if (isReward) existing.rewards_earned += 1;
+        // rows are in descending order — last encountered = earliest
+        if (row.claimed_at && row.claimed_at < (existing.first_visit_at ?? '')) {
+          existing.first_visit_at = row.claimed_at;
+        }
       }
     }
+
+    let customers = Array.from(aggMap.values());
+
+    // ── Sort ──────────────────────────────────────────────────────────────────
+    switch (sort) {
+      case 'recent':
+        customers.sort((a, b) =>
+          new Date(b.last_visit_at ?? 0).getTime() - new Date(a.last_visit_at ?? 0).getTime()
+        );
+        break;
+      case 'name':
+        customers.sort((a, b) => a.display_name.localeCompare(b.display_name));
+        break;
+      case 'stamps':
+      default:
+        customers.sort((a, b) =>
+          b.stamp_count - a.stamp_count ||
+          new Date(b.last_visit_at ?? 0).getTime() - new Date(a.last_visit_at ?? 0).getTime()
+        );
+        break;
+    }
+
+    const totalStamps = customers.reduce((s, c) => s + c.stamp_count, 0);
+    const totalRewards = customers.reduce((s, c) => s + c.rewards_earned, 0);
+
+    return NextResponse.json({
+      customers,
+      meta: {
+        total: customers.length,
+        total_stamps: totalStamps,
+        total_rewards: totalRewards,
+      },
+    });
+  } catch (err) {
+    safeLog.error('GET /api/vendor/customers error', (err as Error).message);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
-
-  let customers = Array.from(aggMap.values());
-
-  // ── Search filter ────────────────────────────────────────────────────────────
-  if (search) {
-    customers = customers.filter(c =>
-      c.full_name.toLowerCase().includes(search) ||
-      c.masked_email.toLowerCase().includes(search)
-    );
-  }
-
-  // ── Sort ─────────────────────────────────────────────────────────────────────
-  switch (sort) {
-    case 'recent':
-      customers.sort((a, b) => new Date(b.last_visit).getTime() - new Date(a.last_visit).getTime());
-      break;
-    case 'name':
-      customers.sort((a, b) => a.full_name.localeCompare(b.full_name));
-      break;
-    case 'stamps':
-    default:
-      customers.sort((a, b) => b.stamps - a.stamps || new Date(b.last_visit).getTime() - new Date(a.last_visit).getTime());
-      break;
-  }
-
-  // ── Summary stats ─────────────────────────────────────────────────────────────
-  const totalStamps = customers.reduce((s, c) => s + c.stamps, 0);
-  const totalRewards = customers.reduce((s, c) => s + c.rewards_claimed, 0);
-
-  return NextResponse.json({
-    customers,
-    meta: {
-      total: customers.length,
-      total_stamps: totalStamps,
-      total_rewards: totalRewards,
-    },
-  });
 }
