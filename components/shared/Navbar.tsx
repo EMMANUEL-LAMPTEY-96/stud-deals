@@ -193,7 +193,7 @@ export default function Navbar() {
   const studentLinks = [
     { href: '/dashboard', label: 'Discover', icon: <Sparkles size={15} /> },
     { href: '/my-vouchers', label: 'My Vouchers', icon: <Tag size={15} /> },
-    { href: '/saved', label: 'Saved', icon: <LayoutDashboard size={15} /> },
+    { href: '/reviews', label: 'Reviews', icon: <Star size={15} /> },
   ];
 
   // Vendors use VendorNav for all navigation — top navbar shows no extra links
