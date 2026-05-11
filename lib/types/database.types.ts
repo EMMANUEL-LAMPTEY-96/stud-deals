@@ -1,8 +1,9 @@
 // =============================================================================
 // database.types.ts
-// TypeScript interfaces generated from the PostgreSQL schema.
-// In production, run: `supabase gen types typescript --project-id <ref> > lib/types/database.types.ts`
-// These types are used throughout the app for type-safe Supabase queries.
+// TypeScript types matching the PostgreSQL schema.
+// Uses `type` (not `interface`) for Row/Insert/Update so they satisfy
+// Record<string, unknown> — required by Supabase's GenericSchema constraint.
+// In production: `supabase gen types typescript --project-id <ref> > lib/types/database.types.ts`
 // =============================================================================
 
 // ---------------------------------------------------------------------------
@@ -42,10 +43,10 @@ export type RedemptionStatus = 'claimed' | 'confirmed' | 'expired' | 'cancelled'
 export type VendorPlan = 'free' | 'starter' | 'growth';
 
 // ---------------------------------------------------------------------------
-// TABLE INTERFACES (mirror the SQL schema)
+// ROW TYPES  (use `type`, not `interface` — required for Supabase generic schema)
 // ---------------------------------------------------------------------------
 
-export interface Institution {
+export type Institution = {
   id: string;
   name: string;
   short_name: string | null;
@@ -55,17 +56,17 @@ export interface Institution {
   city: string | null;
   latitude: number | null;
   longitude: number | null;
-  email_domains: string[];           // e.g., ['umich.edu', 'student.umich.edu']
+  email_domains: string[];
   logo_url: string | null;
   website_url: string | null;
   estimated_student_count: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface Profile {
-  id: string;                        // Matches auth.users.id
+export type Profile = {
+  id: string;
   role: UserRole;
   first_name: string | null;
   last_name: string | null;
@@ -79,9 +80,9 @@ export interface Profile {
   last_seen_at: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface StudentProfile {
+export type StudentProfile = {
   id: string;
   user_id: string;
   institution_id: string | null;
@@ -102,9 +103,9 @@ export interface StudentProfile {
   total_offers_saved: number;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface VendorProfile {
+export type VendorProfile = {
   id: string;
   user_id: string;
   business_name: string;
@@ -112,6 +113,7 @@ export interface VendorProfile {
   description: string | null;
   logo_url: string | null;
   cover_image_url: string | null;
+  cover_photo_url: string | null;  // alias used in public profile
   website_url: string | null;
   business_phone: string | null;
   business_email: string | null;
@@ -132,11 +134,15 @@ export interface VendorProfile {
   total_active_offers: number;
   total_lifetime_redemptions: number;
   total_lifetime_views: number;
+  slug: string | null;             // URL-safe business name for public profiles
+  staff_pin: string | null;        // 4-digit PIN for staff scanner login
+  opening_hours: Record<string, unknown> | null;  // { mon: {open, close}, ... }
+  gallery_urls: string[] | null;   // photo gallery
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface Offer {
+export type Offer = {
   id: string;
   vendor_id: string;
   title: string;
@@ -161,18 +167,18 @@ export interface Offer {
   save_count: number;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface OfferView {
+export type OfferView = {
   id: string;
   offer_id: string;
   student_id: string | null;
   vendor_id: string;
   source: string | null;
   viewed_at: string;
-}
+};
 
-export interface Redemption {
+export type Redemption = {
   id: string;
   offer_id: string;
   student_id: string;
@@ -205,16 +211,16 @@ export interface Redemption {
   redemption_source: string | null;
   offer_category: OfferCategory | null;
   created_at: string;
-}
+};
 
-export interface SavedOffer {
+export type SavedOffer = {
   id: string;
   student_id: string;
   offer_id: string;
   saved_at: string;
-}
+};
 
-export interface Notification {
+export type Notification = {
   id: string;
   user_id: string;
   title: string;
@@ -225,22 +231,49 @@ export interface Notification {
   is_read: boolean;
   read_at: string | null;
   created_at: string;
-}
+};
+
+export type VendorReview = {
+  id: string;
+  vendor_id: string;
+  student_id: string;
+  rating: number;           // 1–5
+  title: string | null;
+  body: string | null;
+  vendor_reply: string | null;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string | null;
+};
+export type VendorReviewInsert = Partial<VendorReview>;
+
+// ---------------------------------------------------------------------------
+// INSERT TYPES  (optional versions for inserts)
+// ---------------------------------------------------------------------------
+
+export type InstitutionInsert = Partial<Institution>;
+export type ProfileInsert = Partial<Profile>;
+export type StudentProfileInsert = Partial<StudentProfile>;
+export type VendorProfileInsert = Partial<VendorProfile>;
+export type OfferInsert = Partial<Offer>;
+export type RedemptionInsert = Partial<Redemption>;
+export type SavedOfferInsert = Partial<SavedOffer>;
+export type NotificationInsert = Partial<Notification>;
 
 // ---------------------------------------------------------------------------
 // ENRICHED / JOIN TYPES (used in UI components)
 // ---------------------------------------------------------------------------
 
 /** Offer with vendor info joined — used in student offer cards */
-export interface OfferWithVendor extends Offer {
+export type OfferWithVendor = Offer & {
   vendor: Pick<VendorProfile, 'id' | 'business_name' | 'logo_url' | 'city' | 'address_line1'>;
-}
+};
 
-/** Redemption with offer + vendor + institution joined — used in student voucher list */
-export interface RedemptionWithDetails extends Redemption {
+/** Redemption with offer + vendor joined — used in student voucher list */
+export type RedemptionWithDetails = Redemption & {
   offer: Pick<Offer, 'id' | 'title' | 'discount_label' | 'image_url' | 'category'>;
   vendor: Pick<VendorProfile, 'id' | 'business_name' | 'logo_url' | 'address_line1' | 'city'>;
-}
+};
 
 /** Student profile with auth profile merged — used throughout student dashboard */
 export interface StudentUser {
@@ -300,27 +333,86 @@ export interface VerifyEduEmailResponse {
 
 // ---------------------------------------------------------------------------
 // SUPABASE DATABASE TYPE (used with createClient<Database>())
+// Must use `type` for Row/Insert/Update objects — `interface` types do NOT
+// extend Record<string, unknown>, which breaks Supabase's GenericSchema check.
 // ---------------------------------------------------------------------------
 
 export type Database = {
   public: {
     Tables: {
-      institutions:    { Row: Institution;    Insert: Partial<Institution>;    Update: Partial<Institution>    };
-      profiles:        { Row: Profile;        Insert: Partial<Profile>;        Update: Partial<Profile>        };
-      student_profiles:{ Row: StudentProfile; Insert: Partial<StudentProfile>; Update: Partial<StudentProfile> };
-      vendor_profiles: { Row: VendorProfile;  Insert: Partial<VendorProfile>;  Update: Partial<VendorProfile>  };
-      offers:          { Row: Offer;          Insert: Partial<Offer>;          Update: Partial<Offer>          };
-      offer_views:     { Row: OfferView;      Insert: Partial<OfferView>;      Update: Partial<OfferView>      };
-      redemptions:     { Row: Redemption;     Insert: Partial<Redemption>;     Update: Partial<Redemption>     };
-      saved_offers:    { Row: SavedOffer;     Insert: Partial<SavedOffer>;     Update: Partial<SavedOffer>     };
-      notifications:   { Row: Notification;  Insert: Partial<Notification>;   Update: Partial<Notification>   };
+      institutions: {
+        Row: Institution;
+        Insert: InstitutionInsert;
+        Update: InstitutionInsert;
+        Relationships: [];
+      };
+      profiles: {
+        Row: Profile;
+        Insert: ProfileInsert;
+        Update: ProfileInsert;
+        Relationships: [];
+      };
+      student_profiles: {
+        Row: StudentProfile;
+        Insert: StudentProfileInsert;
+        Update: StudentProfileInsert;
+        Relationships: [];
+      };
+      vendor_profiles: {
+        Row: VendorProfile;
+        Insert: VendorProfileInsert;
+        Update: VendorProfileInsert;
+        Relationships: [];
+      };
+      offers: {
+        Row: Offer;
+        Insert: OfferInsert;
+        Update: OfferInsert;
+        Relationships: [];
+      };
+      offer_views: {
+        Row: OfferView;
+        Insert: Partial<OfferView>;
+        Update: Partial<OfferView>;
+        Relationships: [];
+      };
+      redemptions: {
+        Row: Redemption;
+        Insert: RedemptionInsert;
+        Update: RedemptionInsert;
+        Relationships: [];
+      };
+      saved_offers: {
+        Row: SavedOffer;
+        Insert: SavedOfferInsert;
+        Update: SavedOfferInsert;
+        Relationships: [];
+      };
+      notifications: {
+        Row: Notification;
+        Insert: NotificationInsert;
+        Update: NotificationInsert;
+        Relationships: [];
+      };
+      vendor_reviews: {
+        Row: VendorReview;
+        Insert: VendorReviewInsert;
+        Update: VendorReviewInsert;
+        Relationships: [];
+      };
     };
     Views: {
-      v_vendor_performance_summary:   { Row: Record<string, unknown> };
-      v_redemptions_by_day_of_week:   { Row: Record<string, unknown> };
-      v_redemptions_by_hour:          { Row: Record<string, unknown> };
-      v_monthly_redemption_trend:     { Row: Record<string, unknown> };
-      v_redemptions_by_institution:   { Row: Record<string, unknown> };
+      v_vendor_performance_summary:   { Row: Record<string, unknown>; Relationships: [] };
+      v_redemptions_by_day_of_week:   { Row: Record<string, unknown>; Relationships: [] };
+      v_redemptions_by_hour:          { Row: Record<string, unknown>; Relationships: [] };
+      v_monthly_redemption_trend:     { Row: Record<string, unknown>; Relationships: [] };
+      v_redemptions_by_institution:   { Row: Record<string, unknown>; Relationships: [] };
+    };
+    Functions: {
+      [_ in string]: {
+        Args: Record<string, unknown>;
+        Returns: unknown;
+      };
     };
     Enums: {
       user_role:            UserRole;
