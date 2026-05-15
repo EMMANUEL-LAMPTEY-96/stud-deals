@@ -26,15 +26,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
+import { validationErrorResponse } from '@/lib/utils/validation';
+
+const PromoteBodySchema = z.object({
+  target: z.enum(['all', 'loyal', 'lapsed']),
+  title: z.string().min(1, 'Title is required.').max(80, 'Title must be 80 characters or fewer.'),
+  message: z.string().min(1, 'Message is required.').max(280, 'Message must be 280 characters or fewer.'),
+  offer_id: z.string().uuid().optional(),
+});
 
 type TargetGroup = 'all' | 'loyal' | 'lapsed';
-
-interface PromoteBody {
-  target: TargetGroup;
-  title: string;
-  message: string;
-  offer_id?: string;
-}
 
 const MAX_MESSAGE_LEN = 280;
 const MAX_TITLE_LEN = 80;
@@ -81,36 +83,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Vendor account not yet approved' }, { status: 403 });
   }
 
-  // ── Parse body ─────────────────────────────────────────────────────────────
-  let body: PromoteBody;
+  // ── Parse + validate body ──────────────────────────────────────────────────
+  let rawBody: unknown;
   try {
-    body = await req.json();
+    rawBody = await req.json();
   } catch (_) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { target, title, message, offer_id } = body;
-
-  // Validate
-  if (!['all', 'loyal', 'lapsed'].includes(target)) {
-    return NextResponse.json({ error: 'target must be all | loyal | lapsed' }, { status: 400 });
+  const parsedBody = PromoteBodySchema.safeParse(rawBody);
+  if (!parsedBody.success) {
+    return validationErrorResponse(parsedBody.error);
   }
 
-  if (!title || typeof title !== 'string' || title.trim().length === 0) {
-    return NextResponse.json({ error: 'title is required' }, { status: 400 });
-  }
-
-  if (title.trim().length > MAX_TITLE_LEN) {
-    return NextResponse.json({ error: `title must be ${MAX_TITLE_LEN} characters or fewer` }, { status: 400 });
-  }
-
-  if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    return NextResponse.json({ error: 'message is required' }, { status: 400 });
-  }
-
-  if (message.trim().length > MAX_MESSAGE_LEN) {
-    return NextResponse.json({ error: `message must be ${MAX_MESSAGE_LEN} characters or fewer` }, { status: 400 });
-  }
+  const { target, title, message, offer_id } = parsedBody.data;
 
   // ── Rate limit: check last campaign sent ───────────────────────────────────
   const { data: lastPromo } = await supabase

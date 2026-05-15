@@ -214,7 +214,12 @@ export default function StudentDashboard() {
       const res = await fetch('/api/redemptions/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offer_id: offerId, device_type: 'mobile' }),
+        body: JSON.stringify({
+          offer_id: offerId,
+          device_type: typeof window !== 'undefined'
+            ? window.innerWidth < 768 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop'
+            : 'mobile',
+        }),
       });
 
       const data: ClaimOfferResponse & { error?: string } = await res.json();

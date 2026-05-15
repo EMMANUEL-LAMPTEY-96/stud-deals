@@ -11,6 +11,17 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { safeLog } from '@/lib/utils/safe-logger';
 import { haversineKm } from '@/lib/utils/distance';
+import { z } from 'zod';
+import { validationErrorResponse } from '@/lib/utils/validation';
+
+const FlashDealBodySchema = z.object({
+  title: z.string().min(1, 'Title is required.').max(100, 'Title must be 100 characters or fewer.'),
+  description: z.string().max(500, 'Description must be 500 characters or fewer.').optional(),
+  discount_text: z.string().min(1, 'discount_text is required.').max(80, 'Discount text must be 80 characters or fewer.'),
+  duration_minutes: z.number().int().min(15, 'Duration must be at least 15 minutes.').max(480, 'Duration cannot exceed 8 hours.').default(120),
+  max_redemptions: z.number().int().min(1).max(1000).default(30),
+  radius_km: z.number().min(0.1).max(50).default(2.0),
+});
 
 function getAdminClient() {
   return createAdminClient(
@@ -51,22 +62,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch (_) {
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
+
+    const parsedBody = FlashDealBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return validationErrorResponse(parsedBody.error);
+    }
+
     const {
       title,
       description,
       discount_text,
-      duration_minutes = 120,
-      max_redemptions = 30,
-      radius_km = 2.0,
-    } = body;
-
-    if (!title || !discount_text) {
-      return NextResponse.json({ error: 'title and discount_text are required' }, { status: 400 });
-    }
-    if (duration_minutes < 15 || duration_minutes > 480) {
-      return NextResponse.json({ error: 'Duration must be between 15 minutes and 8 hours' }, { status: 400 });
-    }
+      duration_minutes,
+      max_redemptions,
+      radius_km,
+    } = parsedBody.data;
 
     const now = new Date();
     const endsAt = new Date(now.getTime() + duration_minutes * 60 * 1000);

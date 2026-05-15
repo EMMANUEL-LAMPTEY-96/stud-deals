@@ -150,6 +150,13 @@ export default function StampPage() {
   const params = useParams();
   const vendorId = params?.vendorId as string;
   const router = useRouter();
+
+  // Read the time-window nonce from the URL search params (?t=XXXXX).
+  // This nonce is embedded by VendorQRPanel and is verified server-side
+  // to prevent screenshot-and-scan-from-home replay attacks.
+  const qrNonce = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('t') ?? undefined
+    : undefined;
   const supabase = createClient();
 
   const [pageState, setPageState] = useState<PageState>('loading');
@@ -277,7 +284,7 @@ export default function StampPage() {
       const res = await fetch('/api/loyalty/stamp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendor_id: vendorId }),
+        body: JSON.stringify({ vendor_id: vendorId, nonce: qrNonce }),
       });
 
       const json = await res.json();

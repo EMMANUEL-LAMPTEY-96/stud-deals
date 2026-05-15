@@ -6,6 +6,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { z } from 'zod';
+import { validationErrorResponse } from '@/lib/utils/validation';
+
+const ReviewReplySchema = z.object({
+  reviewId: z.string().uuid({ message: 'reviewId must be a valid UUID.' }),
+  reply: z.string().min(1, 'Reply cannot be empty.').max(1000, 'Reply must be 1000 characters or fewer.'),
+});
 
 export async function GET() {
     const supabase = createClient();
@@ -57,10 +64,19 @@ export async function PATCH(req: NextRequest) {
           return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
         }
 
-    const { reviewId, reply } = await req.json();
-    if (!reviewId || typeof reply !== 'string') {
-          return NextResponse.json({ error: 'reviewId and reply are required' }, { status: 400 });
-        }
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch (_) {
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
+
+    const parsedBody = ReviewReplySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return validationErrorResponse(parsedBody.error);
+    }
+
+    const { reviewId, reply } = parsedBody.data;
 
     const { data: vendor } = await supabase
       .from('vendor_profiles')

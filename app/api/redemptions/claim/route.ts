@@ -28,6 +28,7 @@ import { createClient } from '@/lib/supabase/server';
 import { generateVoucherCode, computeVoucherExpiry, buildQrPayload } from '@/lib/utils/voucher';
 import { generateStudentVoucherQr } from '@/lib/utils/qr-code';
 import type { ClaimOfferRequest, ClaimOfferResponse } from '@/lib/types/database.types';
+import { ClaimSchema, validationErrorResponse } from '@/lib/utils/validation';
 
 // Retry up to 3 times on code collision before giving up
 const MAX_CODE_GENERATION_RETRIES = 3;
@@ -42,18 +43,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
     }
 
-    // ── 2. Parse request body ─────────────────────────────────────────────
-    let body: ClaimOfferRequest;
+    // ── 2. Rate limit: max 20 claims per student per hour ─────────────────
+    // Uses the redemptions table directly — no additional infrastructure needed.
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: claimsThisHour } = await supabase
+      .from('redemptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'claimed')
+      .gte('claimed_at', hourAgo);
+
+    if ((claimsThisHour ?? 0) >= 20) {
+      return NextResponse.json(
+        { error: 'You\'ve claimed too many vouchers this hour. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': '20',
+            'X-RateLimit-Remaining': '0',
+            'Retry-After': '3600',
+          },
+        }
+      );
+    }
+
+    // ── 3. Parse + validate request body ────────────────────────────────────
+    let rawBody: unknown;
     try {
-      body = await request.json();
+      rawBody = await request.json();
     } catch (_) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
     }
 
-    const { offer_id, device_type = 'mobile' } = body;
-    if (!offer_id) {
-      return NextResponse.json({ error: 'offer_id is required.' }, { status: 400 });
+    const parsed = ClaimSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return validationErrorResponse(parsed.error);
     }
+
+    const { offer_id, device_type } = parsed.data;
 
     // ── 3. Fetch student profile ──────────────────────────────────────────
     const { data: studentProfile, error: profileError } = await supabase

@@ -1,52 +1,34 @@
 // @ts-nocheck
 // Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
-'use client';
-
 // =============================================================================
-// app/vendor/[slug]/page.tsx — Public Vendor Profile
+// app/vendor/[slug]/page.tsx — Public Vendor Profile (React Server Component)
 //
-// Publicly accessible (no auth required) page for a vendor.
-// Designed for viral/sharing loops — vendors can share their page link,
-// students can browse offers and jump straight to claiming.
+// Publicly accessible (no auth required).
+// Converted from 'use client' + useEffect to an async RSC for:
+//   • Faster initial page load (HTML is pre-rendered on the server)
+//   • Full SEO — Google can index vendor name, city, offers, reviews
+//   • No client-side waterfall — all DB queries run in parallel server-side
 //
 // Slug = vendor_profiles.slug (unique, URL-safe business name).
 // Falls back to vendor_profiles.id if no slug is set.
-//
-// Shows:
-//   - Cover / logo, business name, city, category, rating summary
-//   - "Active offers" grid (only status='active' offers)
-//   - Recent reviews (publicly visible, vendor_reply included)
-//   - Loyalty card teaser — how many stamps to earn a reward
-//   - CTA: "Sign up to claim deals" (for unauthenticated users)
-//           "Go to dashboard" (for authenticated students)
 // =============================================================================
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import Navbar from '@/components/shared/Navbar';
-import {
-  MapPin, Star, Tag, Gift, Clock, ChevronRight, Share2,
-  Store, CheckCircle, Users, Loader2, ArrowRight, Zap,
-  Coffee, ShoppingBag, Laptop, Dumbbell, Book, Shirt, Sparkles,
-  Copy, Check,
-} from 'lucide-react';
+import ShareButton from '@/components/vendor/ShareButton';
+import { parseLoyaltyConfig } from '@/lib/utils/loyalty';
 import { fmtDate } from '@/lib/currency';
+import {
+  MapPin, Star, Tag, Gift, Clock, ChevronRight,
+  Store, CheckCircle, Users, ArrowRight, Zap,
+  Coffee, ShoppingBag, Laptop, Dumbbell, Book, Shirt, Sparkles,
+} from 'lucide-react';
+import type { Metadata } from 'next';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface VendorData {
-  id: string;
-  business_name: string;
-  logo_url: string | null;
-  cover_photo_url: string | null;
-  city: string | null;
-  business_type: string | null;
-  description: string | null;
-  is_verified: boolean;
-  slug: string | null;
-}
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PublicOffer {
   id: string;
@@ -67,6 +49,29 @@ interface PublicReview {
   body: string | null;
   vendor_reply: string | null;
   created_at: string;
+}
+
+// ── Metadata (SEO) ────────────────────────────────────────────────────────────
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const admin = createAdminClient();
+  const { data: vp } = await admin
+    .from('vendor_profiles')
+    .select('business_name, city, description')
+    .or(`slug.eq.${slug},id.eq.${slug}`)
+    .maybeSingle();
+
+  if (!vp) return { title: 'Vendor not found — Unideals' };
+
+  return {
+    title: `${vp.business_name} student deals${vp.city ? ` in ${vp.city}` : ''} — Unideals`,
+    description:
+      vp.description ??
+      `Exclusive student discounts at ${vp.business_name}. Verify your student status and claim deals instantly.`,
+  };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -91,15 +96,6 @@ const CATEGORY_LABEL: Record<string, string> = {
   entertainment:    'Entertainment',
 };
 
-function parseLoyaltyConfig(terms: string | null) {
-  if (!terms) return null;
-  const m = terms.match(/^\[\[LOYALTY:({.*?})\]\]/s);
-  if (!m) return null;
-  try { return JSON.parse(m[1]); } catch { return null; }
-}
-
-// ── Star display ──────────────────────────────────────────────────────────────
-
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -114,9 +110,7 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   );
 }
 
-// ── Offer card ────────────────────────────────────────────────────────────────
-
-function OfferCard({ offer, isLoggedIn, vendorSlug }: { offer: PublicOffer; isLoggedIn: boolean; vendorSlug: string }) {
+function OfferCard({ offer, isLoggedIn }: { offer: PublicOffer; isLoggedIn: boolean }) {
   const loyalty = parseLoyaltyConfig(offer.terms_and_conditions);
   const isLoyalty = loyalty?.mode === 'punch_card' || loyalty?.mode === 'tiered';
   const catIcon = CATEGORY_ICON[offer.category] ?? <Tag size={14} />;
@@ -124,7 +118,6 @@ function OfferCard({ offer, isLoggedIn, vendorSlug }: { offer: PublicOffer; isLo
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-      {/* Discount badge */}
       <div className="relative bg-gradient-to-br from-brand-500 to-brand-700 px-5 py-4">
         <p className="text-2xl font-black text-white leading-tight">{offer.discount_label}</p>
         {isLoyalty && (
@@ -174,8 +167,6 @@ function OfferCard({ offer, isLoggedIn, vendorSlug }: { offer: PublicOffer; isLo
   );
 }
 
-// ── Review card ───────────────────────────────────────────────────────────────
-
 function ReviewCard({ review }: { review: PublicReview }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -195,105 +186,54 @@ function ReviewCard({ review }: { review: PublicReview }) {
   );
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
+// ── Page (RSC) ────────────────────────────────────────────────────────────────
 
-export default function VendorPublicProfilePage() {
-  const { slug } = useParams<{ slug: string }>();
-  const router = useRouter();
-  const supabase = createClient();
+export default async function VendorPublicProfilePage(
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
 
-  const [loading, setLoading] = useState(true);
-  const [vendor, setVendor] = useState<VendorData | null>(null);
-  const [offers, setOffers] = useState<PublicOffer[]>([]);
-  const [reviews, setReviews] = useState<PublicReview[]>([]);
-  const [avgRating, setAvgRating] = useState<number | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // Run all data fetches in parallel
+  const admin = createAdminClient();
+  const supabase = await createClient();
 
-  useEffect(() => {
-    (async () => {
-      // Check auth (non-blocking — public page)
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsLoggedIn(!!user);
+  const [{ data: vp }, { data: { user } }] = await Promise.all([
+    admin
+      .from('vendor_profiles')
+      .select('id, business_name, logo_url, cover_photo_url, city, business_type, description, is_verified, slug')
+      .or(`slug.eq.${slug},id.eq.${slug}`)
+      .maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
 
-      // Fetch vendor — try slug first, then id
-      const { data: vp } = await supabase
-        .from('vendor_profiles')
-        .select('id, business_name, logo_url, cover_photo_url, city, business_type, description, is_verified, slug')
-        .or(`slug.eq.${slug},id.eq.${slug}`)
-        .maybeSingle();
+  if (!vp) notFound();
 
-      if (!vp) {
-        setLoading(false);
-        return;
-      }
-      setVendor(vp);
+  // Fetch offers + reviews in parallel (vendor confirmed to exist)
+  const [{ data: offerData }, { data: reviewData }] = await Promise.all([
+    admin
+      .from('offers')
+      .select('id, title, description, discount_label, category, terms_and_conditions, expires_at, view_count, redemption_count')
+      .eq('vendor_id', vp.id)
+      .eq('status', 'active')
+      .order('redemption_count', { ascending: false })
+      .limit(6),
+    admin
+      .from('vendor_reviews')
+      .select('id, rating, title, body, vendor_reply, created_at')
+      .eq('vendor_id', vp.id)
+      .eq('is_visible', true)
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ]);
 
-      // Fetch active offers
-      const { data: offerData } = await supabase
-        .from('offers')
-        .select('id, title, description, discount_label, category, terms_and_conditions, expires_at, view_count, redemption_count')
-        .eq('vendor_id', vp.id)
-        .eq('status', 'active')
-        .order('redemption_count', { ascending: false })
-        .limit(6);
+  const offers: PublicOffer[] = offerData ?? [];
+  const reviews: PublicReview[] = reviewData ?? [];
+  const isLoggedIn = !!user;
 
-      setOffers(offerData ?? []);
-
-      // Fetch public reviews (most recent 5, is_visible=true)
-      const { data: reviewData } = await supabase
-        .from('vendor_reviews')
-        .select('id, rating, title, body, vendor_reply, created_at')
-        .eq('vendor_id', vp.id)
-        .eq('is_visible', true)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      const rv = reviewData ?? [];
-      setReviews(rv);
-      if (rv.length > 0) {
-        setAvgRating(rv.reduce((s, r) => s + r.rating, 0) / rv.length);
-      }
-
-      setLoading(false);
-    })();
-  }, [slug]);
-
-  const handleShare = async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback: ignore
-    }
-  };
-
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <Loader2 size={28} className="animate-spin text-brand-600" />
-        </div>
-      </>
-    );
-  }
-
-  if (!vendor) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center px-4">
-          <Store size={40} className="text-gray-300 mb-4" />
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Vendor not found</h1>
-          <p className="text-gray-400 text-sm mb-6">This page doesn&apos;t exist or the link may be incorrect.</p>
-          <Link href="/dashboard" className="btn-primary text-sm px-5 py-2.5">Browse all deals</Link>
-        </div>
-      </>
-    );
-  }
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+      : null;
 
   const loyaltyOffer = offers.find(o => parseLoyaltyConfig(o.terms_and_conditions));
   const loyaltyConfig = loyaltyOffer ? parseLoyaltyConfig(loyaltyOffer.terms_and_conditions) : null;
@@ -305,9 +245,9 @@ export default function VendorPublicProfilePage() {
 
         {/* Hero */}
         <div className="relative bg-gradient-to-br from-brand-600 to-brand-800 pb-16 pt-8">
-          {vendor.cover_photo_url && (
+          {vp.cover_photo_url && (
             <img
-              src={vendor.cover_photo_url}
+              src={vp.cover_photo_url}
               alt="cover"
               className="absolute inset-0 w-full h-full object-cover opacity-20"
             />
@@ -315,10 +255,10 @@ export default function VendorPublicProfilePage() {
           <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
             <div className="flex items-start gap-4">
               {/* Logo */}
-              {vendor.logo_url ? (
+              {vp.logo_url ? (
                 <img
-                  src={vendor.logo_url}
-                  alt={vendor.business_name}
+                  src={vp.logo_url}
+                  alt={vp.business_name}
                   className="w-20 h-20 rounded-2xl object-cover border-4 border-white/30 flex-shrink-0 shadow-xl"
                 />
               ) : (
@@ -329,19 +269,19 @@ export default function VendorPublicProfilePage() {
 
               <div className="flex-1 min-w-0 pt-1">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h1 className="text-2xl font-black text-white">{vendor.business_name}</h1>
-                  {vendor.is_verified && (
+                  <h1 className="text-2xl font-black text-white">{vp.business_name}</h1>
+                  {vp.is_verified && (
                     <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
                   )}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  {vendor.city && (
+                  {vp.city && (
                     <span className="flex items-center gap-1 text-white/70 text-sm">
-                      <MapPin size={13} />{vendor.city}
+                      <MapPin size={13} />{vp.city}
                     </span>
                   )}
-                  {vendor.business_type && (
-                    <span className="text-white/60 text-sm capitalize">{vendor.business_type.replace('_', ' ')}</span>
+                  {vp.business_type && (
+                    <span className="text-white/60 text-sm capitalize">{vp.business_type.replace('_', ' ')}</span>
                   )}
                   {avgRating !== null && (
                     <span className="flex items-center gap-1 text-white/80 text-sm font-semibold">
@@ -350,19 +290,13 @@ export default function VendorPublicProfilePage() {
                     </span>
                   )}
                 </div>
-                {vendor.description && (
-                  <p className="text-white/70 text-sm mt-2 line-clamp-2">{vendor.description}</p>
+                {vp.description && (
+                  <p className="text-white/70 text-sm mt-2 line-clamp-2">{vp.description}</p>
                 )}
               </div>
 
-              {/* Share button */}
-              <button
-                onClick={handleShare}
-                className="flex-shrink-0 flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors border border-white/20"
-              >
-                {copied ? <Check size={13} /> : <Share2 size={13} />}
-                {copied ? 'Copied!' : 'Share'}
-              </button>
+              {/* Share button — client component for clipboard access */}
+              <ShareButton />
             </div>
 
             {/* Stats */}
@@ -422,12 +356,7 @@ export default function VendorPublicProfilePage() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 {offers.map(offer => (
-                  <OfferCard
-                    key={offer.id}
-                    offer={offer}
-                    isLoggedIn={isLoggedIn}
-                    vendorSlug={slug}
-                  />
+                  <OfferCard key={offer.id} offer={offer} isLoggedIn={isLoggedIn} />
                 ))}
               </div>
             </div>
@@ -447,7 +376,7 @@ export default function VendorPublicProfilePage() {
               </div>
               <h3 className="text-white font-black text-lg mb-1">Get exclusive student deals</h3>
               <p className="text-white/70 text-sm mb-5">
-                Verify your student status once, then claim deals at {vendor.business_name} and thousands of other venues.
+                Verify your student status once, then claim deals at {vp.business_name} and thousands of other venues.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
