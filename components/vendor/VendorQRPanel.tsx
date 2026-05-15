@@ -13,7 +13,7 @@
 //   city         — optional sub-label
 // =============================================================================
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { QrCode, Copy, ExternalLink, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import QRCode from 'qrcode';
 
@@ -23,6 +23,11 @@ interface VendorQRPanelProps {
   city?: string;
 }
 
+/** Returns the current 5-minute time window bucket (unix minutes / 5, integer). */
+function currentTimeWindow(): number {
+  return Math.floor(Date.now() / (5 * 60 * 1000));
+}
+
 export default function VendorQRPanel({ vendorId, businessName, city }: VendorQRPanelProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [stampUrl, setStampUrl] = useState<string>('');
@@ -30,34 +35,56 @@ export default function VendorQRPanel({ vendorId, businessName, city }: VendorQR
   const [qrError, setQrError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Generate (or regenerate) the QR code with the current time window nonce. */
+  const generateQr = useCallback(async (cancelled: { value: boolean }) => {
+    if (!vendorId) return;
+
+    // Include a 5-minute time-window nonce in the URL.
+    // The stamp API verifies this nonce is within ±1 window (±10 min) of current time.
+    // This prevents screenshot-and-scan-from-home attacks.
+    const t = currentTimeWindow();
+    const url = `${window.location.origin}/stamp/${vendorId}?t=${t}`;
+    setStampUrl(`${window.location.origin}/stamp/${vendorId}`); // display URL without nonce
+
+    setGenerating(true);
+    try {
+      const dataUrl = await QRCode.toDataURL(url, {
+        width: 256,
+        margin: 2,
+        color: { dark: '#111827', light: '#ffffff' },
+        errorCorrectionLevel: 'H',
+      });
+      if (!cancelled.value) {
+        setQrDataUrl(dataUrl);
+        setQrError(null);
+      }
+    } catch (_) {
+      if (!cancelled.value) setQrError('Could not generate QR code. Refresh to retry.');
+    } finally {
+      if (!cancelled.value) setGenerating(false);
+    }
+
+    // Schedule refresh at the start of the next 5-minute window
+    if (!cancelled.value) {
+      const msUntilNextWindow = (5 * 60 * 1000) - (Date.now() % (5 * 60 * 1000));
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = setTimeout(() => {
+        if (!cancelled.value) generateQr(cancelled);
+      }, msUntilNextWindow + 100); // +100ms buffer
+    }
+  }, [vendorId]);
 
   useEffect(() => {
     if (!vendorId) return;
-    const url = `${window.location.origin}/stamp/${vendorId}`;
-    setStampUrl(url);
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const dataUrl = await QRCode.toDataURL(url, {
-          width: 256,
-          margin: 2,
-          color: { dark: '#111827', light: '#ffffff' },
-          errorCorrectionLevel: 'H',
-        });
-        if (!cancelled) {
-          setQrDataUrl(dataUrl);
-          setQrError(null);
-        }
-      } catch (_) {
-        if (!cancelled) setQrError('Could not generate QR code. Refresh to retry.');
-      } finally {
-        if (!cancelled) setGenerating(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [vendorId]);
+    const cancelled = { value: false };
+    generateQr(cancelled);
+    return () => {
+      cancelled.value = true;
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [vendorId, generateQr]);
 
   // Cleanup copy timer on unmount
   useEffect(() => {
