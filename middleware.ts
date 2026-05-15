@@ -14,7 +14,7 @@ import type { Database } from '@/lib/types/database.types';
 import type { Profile } from '@/lib/types/database.types';
 
 // Route prefixes by required role
-const STUDENT_ROUTES  = ['/dashboard', '/offer', '/my-vouchers', '/saved', '/verification', '/reviews', '/loyalty', '/my-loyalty', '/notifications', '/my-savings'];
+const STUDENT_ROUTES  = ['/dashboard', '/explore', '/offer', '/my-vouchers', '/saved', '/verification', '/reviews', '/loyalty', '/my-loyalty', '/notifications', '/my-savings'];
 const VENDOR_ROUTES   = ['/vendor'];
 const ADMIN_ROUTES    = ['/admin'];
 const AUTH_ROUTES     = ['/sign-in', '/sign-up', '/login', '/register'];    // Redirect away if already logged in
