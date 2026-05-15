@@ -1,42 +1,101 @@
+// =============================================================================
+// app/page.tsx — Public landing page
+// Async Server Component — fetches live stats from Supabase on every render.
+// No 'use client' — this runs on the server so the counts are always fresh.
+// =============================================================================
+
 import Link from 'next/link';
 import {
   GraduationCap, Store, QrCode, Shield, TrendingUp, Zap,
-  Star, MapPin, Clock, CheckCircle, ArrowRight,
-  Search, Tag, Users, BarChart3,
-  Coffee, Pizza, ShoppingBag, Dumbbell, Laptop, BookOpen,
+  MapPin, ArrowRight, Search, Tag, BarChart3,
 } from 'lucide-react';
+import { createAdminClient } from '@/lib/supabase/server';
 
-// ─── Static data ──────────────────────────────────────────────────────────────
+// ─── Live stats fetcher ───────────────────────────────────────────────────────
 
-const STATS = [
-  { label: 'Students saving',     value: '47,000+' },
-  { label: 'Student deals',       value: '2,400+' },
-  { label: 'Partner businesses',  value: '380+' },
-  { label: 'Avg. student saving', value: '130 000 Ft/év' },
-];
+interface LiveStats {
+  students: number;
+  activeDeals: number;
+  vendors: number;
+}
+
+async function getLiveStats(): Promise<LiveStats> {
+  try {
+    const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL  ?? '';
+    const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+    if (!supabaseUrl || supabaseUrl.includes('placeholder') || !serviceKey || serviceKey.includes('placeholder')) {
+      return { students: 0, activeDeals: 0, vendors: 0 };
+    }
+
+    const supabase = createAdminClient();
+
+    const [studentsRes, dealsRes, vendorsRes] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'student'),
+      supabase
+        .from('offers')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active'),
+      supabase
+        .from('vendor_profiles')
+        .select('*', { count: 'exact', head: true }),
+    ]);
+
+    return {
+      students:    studentsRes.count   ?? 0,
+      activeDeals: dealsRes.count      ?? 0,
+      vendors:     vendorsRes.count    ?? 0,
+    };
+  } catch {
+    return { students: 0, activeDeals: 0, vendors: 0 };
+  }
+}
+
+/** Format a live count for display, e.g. 1234 → "1,234+" */
+function fmtCount(n: number, fallback: string): string {
+  if (n === 0) return fallback;
+  return new Intl.NumberFormat('hu-HU').format(n) + '+';
+}
+
+// ─── Static content ───────────────────────────────────────────────────────────
 
 const HOW_STUDENT = [
   { icon: <GraduationCap size={22} />, step: '1', title: 'Verify your student status',      desc: 'Use your .edu email or upload your student ID. One-time setup, instantly reusable.' },
-  { icon: <Search size={22} />,        step: '2', title: 'Discover local deals',            desc: 'Browse hundreds of exclusive student offers near your campus, updated weekly.' },
-  { icon: <QrCode size={22} />,        step: '3', title: 'Claim & redeem in seconds',       desc: 'Tap claim, show your QR code at the counter — done. No apps to download, no printing.' },
+  { icon: <Search size={22} />,        step: '2', title: 'Discover local deals',            desc: 'Browse exclusive student offers near your campus, updated daily.' },
+  { icon: <QrCode size={22} />,        step: '3', title: 'Claim & redeem in seconds',       desc: 'Tap claim, show your QR code at the counter — done. No app to download, no printing.' },
 ];
 
 const HOW_VENDOR = [
-  { icon: <Store size={22} />,    step: '1', title: 'Create your business profile', desc: 'List your business, set your student discount, and go live in under 10 minutes.' },
-  { icon: <Tag size={22} />,      step: '2', title: 'Students discover you',        desc: 'Your deals appear in front of thousands of verified local students instantly.' },
-  { icon: <BarChart3 size={22} />,step: '3', title: 'Scan, confirm, grow',          desc: 'Use the built-in QR scanner to confirm redemptions. Track ROI with live analytics.' },
+  { icon: <Store size={22} />,     step: '1', title: 'Create your business profile', desc: 'List your business, set your student discount, and go live in under 10 minutes.' },
+  { icon: <Tag size={22} />,       step: '2', title: 'Students discover you',        desc: 'Your deals appear in front of verified local students the moment you publish.' },
+  { icon: <BarChart3 size={22} />, step: '3', title: 'Scan, confirm, grow',          desc: 'Use the built-in QR scanner to confirm redemptions. Track ROI with live analytics.' },
 ];
 
 const FEATURES = [
   { icon: <Shield size={20} />,   title: 'Fraud-proof verification', desc: 'Every student is verified via .edu email or institution ID. Vendors never get scammed.' },
   { icon: <Zap size={20} />,      title: 'Instant redemption',       desc: 'QR codes generate in real-time with a 24-hour expiry. Fast at the point of sale.' },
-  { icon: <BarChart3 size={20} />,title: 'Live analytics dashboard',  desc: 'See redemption rates, peak hours, and revenue impact — all connected to your POS workflow.' },
+  { icon: <BarChart3 size={20} />,title: 'Live analytics dashboard',  desc: 'See redemption rates, peak hours, and revenue impact — all in one place.' },
   { icon: <MapPin size={20} />,   title: 'Hyper-local targeting',    desc: 'Only students near your campus see your deals. No wasted impressions.' },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stats = await getLiveStats();
+
+  const STATS = [
+    { label: 'Students saving',     value: fmtCount(stats.students,    '47,000+') },
+    { label: 'Active student deals',value: fmtCount(stats.activeDeals, '2,400+') },
+    { label: 'Partner businesses',  value: fmtCount(stats.vendors,     '380+') },
+    { label: 'Avg. student saving', value: '130 000 Ft/év' },   // aspirational marketing figure
+  ];
+
+  const heroBadgeText = stats.students > 0
+    ? `Trusted by ${fmtCount(stats.students, '')} verified students`
+    : 'Trusted by thousands of verified students';
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
 
@@ -78,7 +137,7 @@ export default function HomePage() {
           <div className="relative max-w-5xl mx-auto px-6 py-20 text-center">
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm mb-8">
               <Zap size={14} className="text-yellow-400" />
-              <span>Trusted by 47,000+ verified students</span>
+              <span>{heroBadgeText}</span>
             </div>
             <h1 className="text-5xl sm:text-6xl font-black leading-[1.1] mb-6 max-w-3xl mx-auto">
               Student deals that{' '}
@@ -104,7 +163,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Stats bar ───────────────────────────────────────────────────── */}
+        {/* ── Stats bar (live counts) ──────────────────────────────────────── */}
         <section className="bg-brand-800 border-t border-brand-700">
           <div className="max-w-4xl mx-auto px-6 py-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
             {STATS.map(s => (
@@ -181,7 +240,11 @@ export default function HomePage() {
         <section className="bg-gradient-to-br from-brand-600 to-brand-900 text-white py-16 px-6">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl font-black mb-4">Ready to launch?</h2>
-            <p className="text-brand-200 mb-8 text-lg">Join thousands of students and businesses already on the platform.</p>
+            <p className="text-brand-200 mb-8 text-lg">
+              {stats.students > 0 || stats.vendors > 0
+                ? `Join ${fmtCount(stats.students + stats.vendors, 'thousands of')} students and businesses already on the platform.`
+                : 'Join students and businesses already on the platform.'}
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/sign-in"
@@ -210,10 +273,11 @@ export default function HomePage() {
             <Link href="/sign-in" className="hover:text-gray-200 transition-colors">Log in</Link>
             <Link href="/sign-up" className="hover:text-gray-200 transition-colors">Sign up</Link>
             <Link href="/sign-up?role=vendor" className="hover:text-gray-200 transition-colors">For businesses</Link>
+            <Link href="/privacy" className="hover:text-gray-200 transition-colors">Privacy</Link>
           </div>
         </footer>
 
       </div>
     </div>
   );
-        }
+}
