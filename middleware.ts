@@ -8,9 +8,10 @@
 //   4. Redirect wrong-role users (e.g., vendor accessing /student/dashboard)
 // =============================================================================
 
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptionsWithName } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/types/database.types';
+import type { Profile } from '@/lib/types/database.types';
 
 // Route prefixes by required role
 const STUDENT_ROUTES  = ['/dashboard', '/offer', '/my-vouchers', '/saved', '/verification', '/reviews', '/loyalty', '/my-loyalty', '/notifications', '/my-savings'];
@@ -41,7 +42,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieOptionsWithName[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -88,7 +89,7 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
 
-    const role = profile?.role ?? 'student';
+    const role = (profile as { role?: string } | null)?.role ?? 'student';
     const dashboardPath = role === 'vendor' ? '/vendor'
                         : role === 'admin'  ? '/admin'
                         : '/dashboard';
@@ -107,7 +108,7 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
 
-    const role = profile?.role ?? 'student';
+    const role = (profile as { role?: string } | null)?.role ?? 'student';
 
     // Vendor trying to access student routes
     if (role === 'vendor' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
