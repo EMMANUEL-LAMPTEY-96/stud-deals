@@ -111,12 +111,21 @@ export default function CookieConsent() {
 
         {/* Actions */}
         <div className="flex items-center justify-between gap-3 px-5 py-4">
-          <Link
-            href="/privacy"
-            className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
-          >
-            Privacy policy
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/privacy"
+              className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+            >
+              Privacy policy
+            </Link>
+            <span className="text-gray-300 text-xs">·</span>
+            <Link
+              href="/terms"
+              className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+            >
+              Terms
+            </Link>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={decline}

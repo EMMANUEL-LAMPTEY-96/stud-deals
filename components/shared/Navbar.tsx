@@ -38,6 +38,7 @@ import {
   Star,
   HelpCircle,
   QrCode,
+  Search,
 } from 'lucide-react';
 
 interface NavUser {
@@ -193,9 +194,10 @@ export default function Navbar() {
   const role = user?.profile.role;
 
   const studentLinks = [
-    { href: '/dashboard', label: 'Discover', icon: <Sparkles size={15} /> },
-    { href: '/my-vouchers', label: 'My Vouchers', icon: <Tag size={15} /> },
-    { href: '/reviews', label: 'Reviews', icon: <Star size={15} /> },
+    { href: '/dashboard', label: 'Home',       icon: <Sparkles size={15} /> },
+    { href: '/explore',   label: 'Explore',    icon: <Search size={15} /> },
+    { href: '/my-vouchers', label: 'Vouchers', icon: <Tag size={15} /> },
+    { href: '/reviews',   label: 'Reviews',    icon: <Star size={15} /> },
   ];
 
   // Vendors use VendorNav for all navigation — top navbar shows no extra links
