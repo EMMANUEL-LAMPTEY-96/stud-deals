@@ -18,6 +18,10 @@ const VENDOR_ROUTES   = ['/vendor'];
 const ADMIN_ROUTES    = ['/admin'];
 const AUTH_ROUTES     = ['/sign-in', '/sign-up', '/login', '/register'];    // Redirect away if already logged in
 
+// Public routes inside /vendor/ that any authenticated user (including students) may access.
+// /vendor/[slug] is a shareable public profile page — it must NOT be blocked for students.
+const PUBLIC_VENDOR_ROUTES = /^\/vendor\/[a-z0-9][a-z0-9-]*[a-z0-9]?(\/.*)?$/;
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -64,6 +68,10 @@ export async function middleware(request: NextRequest) {
   ].some((route) => pathname.startsWith(route));
 
   if (!user && isProtectedRoute) {
+    // /vendor/[slug] is a public page — allow unauthenticated visitors to view it
+    if (PUBLIC_VENDOR_ROUTES.test(pathname)) {
+      return supabaseResponse;
+    }
     const redirectUrl = new URL('/sign-in', request.url);
     redirectUrl.searchParams.set('redirect', pathname);   // Remember where they were going
     return NextResponse.redirect(redirectUrl);
@@ -106,8 +114,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/vendor', request.url));
     }
 
-    // Student trying to access vendor routes
+    // Student trying to access vendor routes — but allow public vendor profile pages
     if (role === 'student' && VENDOR_ROUTES.some((r) => pathname.startsWith(r))) {
+      // /vendor/[slug] is a public profile — students can view it
+      if (PUBLIC_VENDOR_ROUTES.test(pathname)) {
+        return supabaseResponse;
+      }
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
