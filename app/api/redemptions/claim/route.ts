@@ -18,13 +18,16 @@
 //   → Inserts a row into redemptions with status = 'claimed'
 //   → Returns redemption code + QR code data URL to the frontend
 //   → Triggers DB view_count increment (via a prior offer_view insert)
+//   → Fire-and-forget: checks if this is the student's first-ever claim;
+//     if so and they were referred, marks the referral completed and
+//     grants 2 bonus stamps to both the referred student and the referrer.
 //
 // This endpoint is the most performance-critical in the app.
 // It runs on Vercel Edge Runtime for <50ms cold starts globally.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { generateVoucherCode, computeVoucherExpiry, buildQrPayload } from '@/lib/utils/voucher';
 import { generateStudentVoucherQr } from '@/lib/utils/qr-code';
 import type { ClaimOfferRequest, ClaimOfferResponse } from '@/lib/types/database.types';
@@ -300,6 +303,128 @@ export async function POST(request: NextRequest) {
       }
 
       redemptionCode = newRedemption.redemption_code;
+
+      // ── 14. Fire-and-forget: Referral reward check ────────────────────
+      // Trigger: first-ever voucher claim by a referred student.
+      // Reward:  +2 referral_bonus stamps for both parties at this vendor.
+      // This runs async and never blocks the response to the student.
+      (async () => {
+        try {
+          const admin = createAdminClient();
+          const vendorId = (offer.vendor as { id: string }).id;
+          const now = new Date().toISOString();
+
+          // Is this the student's very first voucher claim?
+          // Count all voucher-type rows (claimed + confirmed) for this student.
+          // We just inserted status='claimed', so count === 1 means first ever.
+          const { count: totalClaims } = await admin
+            .from('redemptions')
+            .select('id', { count: 'exact', head: true })
+            .eq('student_id', studentProfile.id)
+            .in('status', ['claimed', 'confirmed']);
+
+          if ((totalClaims ?? 0) !== 1) return; // Not the first claim — nothing to do.
+
+          // Was this student referred by someone?
+          const { data: sp } = await admin
+            .from('student_profiles')
+            .select('referred_by_id')
+            .eq('id', studentProfile.id)
+            .maybeSingle();
+
+          if (!sp?.referred_by_id) return; // No referrer — nothing to do.
+
+          // Find the pending referral row
+          const { data: referral } = await admin
+            .from('referrals')
+            .select('id, referrer_id')
+            .eq('referred_id', studentProfile.id)
+            .eq('status', 'pending')
+            .maybeSingle();
+
+          if (!referral) return; // Already completed or row missing.
+
+          // ── Mark referral as completed ────────────────────────────────
+          await admin
+            .from('referrals')
+            .update({
+              status:            'completed',
+              reward_granted_at: now,
+              reward_vendor_id:  vendorId,
+              reward_offer_id:   offer_id,
+            })
+            .eq('id', referral.id);
+
+          // ── Grant 2 bonus stamps to the referred student ──────────────
+          await admin.from('redemptions').insert([
+            {
+              student_id:   studentProfile.id,
+              vendor_id:    vendorId,
+              offer_id:     offer_id,
+              status:       'referral_bonus',
+              confirmed_at: now,
+            },
+            {
+              student_id:   studentProfile.id,
+              vendor_id:    vendorId,
+              offer_id:     offer_id,
+              status:       'referral_bonus',
+              confirmed_at: now,
+            },
+          ]);
+
+          // ── Grant 2 bonus stamps to the referrer ─────────────────────
+          await admin.from('redemptions').insert([
+            {
+              student_id:   referral.referrer_id,
+              vendor_id:    vendorId,
+              offer_id:     offer_id,
+              status:       'referral_bonus',
+              confirmed_at: now,
+            },
+            {
+              student_id:   referral.referrer_id,
+              vendor_id:    vendorId,
+              offer_id:     offer_id,
+              status:       'referral_bonus',
+              confirmed_at: now,
+            },
+          ]);
+
+          // ── In-app notifications for both parties ─────────────────────
+          const { data: referrerSp } = await admin
+            .from('student_profiles')
+            .select('user_id')
+            .eq('id', referral.referrer_id)
+            .maybeSingle();
+
+          const notifications: object[] = [
+            {
+              user_id: user.id,
+              type:    'referral_reward',
+              title:   'Bonus stamps earned! 🎉',
+              body:    'You earned 2 bonus stamps for joining via a referral. Keep going — your next reward is closer!',
+              is_read: false,
+            },
+          ];
+
+          if (referrerSp?.user_id) {
+            notifications.push({
+              user_id: referrerSp.user_id,
+              type:    'referral_reward',
+              title:   'Referral reward unlocked! 🎉',
+              body:    "Your friend just claimed their first deal — you've earned 2 bonus stamps. Thanks for spreading the word!",
+              is_read: false,
+            });
+          }
+
+          await admin.from('notifications').insert(notifications);
+
+        } catch (err) {
+          // Referral reward is non-critical — log but never surface to the student
+          console.error('[claim] Referral reward hook error:', err);
+        }
+      })();
 
       return NextResponse.json<ClaimOfferResponse>({
         success: true,

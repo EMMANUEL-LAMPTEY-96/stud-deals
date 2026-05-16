@@ -27,8 +27,9 @@ import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
   Coffee, ShoppingBag, Laptop, UtensilsCrossed, Dumbbell,
-  Book, Tag, Shirt
+  Book, Tag, Shirt, Gift
 } from 'lucide-react';
+import Link from 'next/link';
 import type {
   OfferWithVendor, StudentProfile, Profile,
   OfferCategory, ClaimOfferResponse
@@ -282,6 +283,25 @@ export default function StudentDashboard() {
               showEUR={showEUR}
               onToggleCurrency={() => setShowEUR(v => !v)}
             />
+          )}
+
+          {/* ── REFERRAL TEASER CARD ───────────────────────────────────── */}
+          {isVerified && (
+            <Link
+              href="/referral"
+              className="group flex items-center gap-4 bg-gradient-to-r from-purple-600/10 to-indigo-600/10 border border-purple-200 hover:border-purple-400 rounded-2xl px-5 py-4 mb-5 transition-all duration-200 hover:shadow-md"
+            >
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+                <Gift className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900">Invite friends, earn bonus stamps</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  You and your friend both get <strong>+2 stamps</strong> when they claim their first deal.
+                </p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-purple-400 group-hover:text-purple-600 flex-shrink-0 transition-colors" />
+            </Link>
           )}
 
           {/* ── SEARCH BAR ─────────────────────────────────────────────── */}
