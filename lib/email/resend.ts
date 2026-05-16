@@ -1,7 +1,7 @@
 // =============================================================================
 // lib/email/resend.ts
 //
-// Thin wrapper around the Resend SDK.
+// Thin wrapper around the Resend REST API (no npm package — uses native fetch).
 //
 // All email sending in the codebase goes through `sendEmail()`.
 // If RESEND_API_KEY is not set (local dev without a key), the call is a no-op
@@ -12,17 +12,6 @@
 //                    RESEND_FROM_NAME   (default: Unideals)
 // =============================================================================
 
-import { Resend } from 'resend';
-
-// Lazily instantiated — avoids throwing at import time if key is missing
-let _resend: Resend | null = null;
-
-function getResend(): Resend | null {
-  if (!process.env.RESEND_API_KEY) return null;
-  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
-  return _resend;
-}
-
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -31,14 +20,14 @@ export interface SendEmailOptions {
 }
 
 /**
- * Send a transactional email via Resend.
+ * Send a transactional email via the Resend REST API.
  * Fire-and-forget safe — always resolves, never throws.
  * Returns `true` if the email was sent, `false` if skipped or errored.
  */
 export async function sendEmail(opts: SendEmailOptions): Promise<boolean> {
-  const resend = getResend();
-  if (!resend) {
-    // Key not configured — silently skip in local dev
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
     if (process.env.NODE_ENV !== 'production') {
       console.log('[email] RESEND_API_KEY not set — skipping email to', opts.to);
     }
@@ -48,16 +37,24 @@ export async function sendEmail(opts: SendEmailOptions): Promise<boolean> {
   const from = `${process.env.RESEND_FROM_NAME ?? 'Unideals'} <${process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'}>`;
 
   try {
-    const { error } = await resend.emails.send({
-      from,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-      ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [opts.to],
+        subject: opts.subject,
+        html: opts.html,
+        ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+      }),
     });
 
-    if (error) {
-      console.error('[email] Resend error:', error.message);
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('[email] Resend API error:', res.status, body);
       return false;
     }
 
