@@ -30,9 +30,11 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isValidVoucherCodeFormat, normaliseVoucherCode, parseQrPayload } from '@/lib/utils/voucher';
 import type { ConfirmRedemptionRequest, ConfirmRedemptionResponse } from '@/lib/types/database.types';
+import { sendEmail } from '@/lib/email/resend';
+import { redemptionEmail } from '@/lib/email/templates';
 
 export async function POST(request: NextRequest) {
   try {
@@ -197,7 +199,24 @@ export async function POST(request: NextRequest) {
 
     const offerData = redemption.offer as { id: string; title: string; discount_label: string } | null;
 
-    // ── 10. Return success to vendor screen ───────────────────────────────
+    // ── 10. Email the vendor a redemption notification (fire-and-forget) ──
+    // Fetch vendor email from auth.users (it's not stored on vendor_profiles)
+    const admin = createAdminClient();
+    admin.auth.admin.getUserById(user.id).then(({ data: authUser }) => {
+      const vendorEmail = authUser?.user?.email;
+      if (vendorEmail) {
+        const { subject, html } = redemptionEmail({
+          vendorBusinessName: vendorProfile.business_name ?? 'your business',
+          offerTitle:         offerData?.title ?? 'Discount offer',
+          discountLabel:      offerData?.discount_label ?? '',
+          studentDisplayName: displayName,
+          confirmedAt:        confirmedAt,
+        });
+        sendEmail({ to: vendorEmail, subject, html });
+      }
+    }).catch(() => {/* ignore — email is non-critical */});
+
+    // ── 11. Return success to vendor screen ───────────────────────────────
     return NextResponse.json<ConfirmRedemptionResponse>({
       success: true,
       redemption_id: redemption.id,
@@ -209,7 +228,4 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (err) {
-    console.error('[confirm] Unexpected error:', err);
-    return NextResponse.json({ error: 'Unexpected server error.' }, { status: 500 });
-  }
-}
+    console.error('[confirm] Unexpected erro

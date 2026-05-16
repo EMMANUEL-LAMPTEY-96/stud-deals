@@ -37,6 +37,8 @@ import {
   type RewardTier,
 } from '@/lib/utils/loyalty';
 import { StampSchema, validationErrorResponse } from '@/lib/utils/validation';
+import { sendEmail } from '@/lib/email/resend';
+import { rewardEarnedEmail } from '@/lib/email/templates';
 
 const STAMP_COOLDOWN_HOURS = 8;
 
@@ -419,6 +421,37 @@ export async function POST(request: NextRequest) {
     admin.from('notifications').insert(notifRows as never[]).then(({ error: notifErr }) => {
       if (notifErr) console.error('loyalty notification insert error:', notifErr.message);
     });
+  }
+
+  // 15d. Email the vendor when their loyalty reward cycle completes (fire-and-forget)
+  if (rewardTriggered) {
+    (async () => {
+      try {
+        // Get vendor's user_id (not included in our earlier vendorProfile select)
+        const { data: vp } = await admin
+          .from('vendor_profiles')
+          .select('user_id')
+          .eq('id', vendorProfile.id)
+          .maybeSingle();
+        if (!vp?.user_id) return;
+
+        const { data: authUser } = await admin.auth.admin.getUserById(vp.user_id);
+        const vendorEmail = authUser?.user?.email;
+        if (!vendorEmail) return;
+
+        const { subject, html } = rewardEarnedEmail({
+          vendorBusinessName: vendorName,
+          offerTitle:         targetOffer.title,
+          rewardLabel,
+          studentDisplayName: 'A student',  // privacy-safe — no student PII to vendor
+          stampsRequired:     requiredVisits,
+          earnedAt:           now,
+        });
+        await sendEmail({ to: vendorEmail, subject, html });
+      } catch {
+        // Email is non-critical — never block the response
+      }
+    })();
   }
 
   // ── 16. Build response ─────────────────────────────────────────────────────
