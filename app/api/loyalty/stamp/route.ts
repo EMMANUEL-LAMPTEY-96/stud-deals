@@ -369,7 +369,59 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to record stamp' }, { status: 500 });
   }
 
-  // ── 15. Build response ─────────────────────────────────────────────────────
+  // ── 15. Fire loyalty notifications (fire-and-forget) ──────────────────────
+  // All inserts use user.id (auth UUID) as notifications.user_id since that
+  // maps to profiles.id, matching how flash-deal and review notifications work.
+
+  const notifRows: object[] = [];
+  const vendorName = vendorProfile.business_name ?? 'Your loyalty business';
+
+  // 15a. "Almost there" — exactly 1 stamp away from completing the cycle.
+  //      Only fire when the main reward hasn't already triggered this visit.
+  const almostThere = cyclePositionAfter === requiredVisits - 1 && !rewardTriggered;
+  if (almostThere) {
+    notifRows.push({
+      user_id:    user.id,
+      type:       'almost_there',
+      title:      '🎯 Just 1 stamp away!',
+      body:       `Visit ${vendorName} one more time to earn: ${rewardLabel}`,
+      action_url: `/loyalty`,
+      is_read:    false,
+    });
+  }
+
+  // 15b. Main cycle reward earned
+  if (rewardTriggered) {
+    notifRows.push({
+      user_id:    user.id,
+      type:       'reward_earned',
+      title:      '🎉 Reward unlocked!',
+      body:       `You earned "${rewardLabel}" at ${vendorName}. Show this to redeem it.`,
+      action_url: `/loyalty`,
+      is_read:    false,
+    });
+  }
+
+  // 15c. Tier rewards
+  for (const tier of triggeredTiers) {
+    notifRows.push({
+      user_id:    user.id,
+      type:       'tier_reward',
+      title:      '⭐ Milestone reward!',
+      body:       `You unlocked "${tier.reward_label}" at ${vendorName}!`,
+      action_url: `/loyalty`,
+      is_read:    false,
+    });
+  }
+
+  if (notifRows.length > 0) {
+    // Fire-and-forget: notification failures must never block the stamp response
+    admin.from('notifications').insert(notifRows as never[]).then(({ error: notifErr }) => {
+      if (notifErr) console.error('loyalty notification insert error:', notifErr.message);
+    });
+  }
+
+  // ── 16. Build response ─────────────────────────────────────────────────────
   const finalCyclePosition = stampsAfter % requiredVisits;
   const stampsInCycle = finalCyclePosition === 0 ? requiredVisits : finalCyclePosition;
 
@@ -411,6 +463,7 @@ export async function POST(request: NextRequest) {
     reward_label:     effectiveRewardLabel,
     main_reward_triggered: rewardTriggered,
     // Context flags
+    almost_there:     almostThere,
     is_first_visit:   isFirstVisit,
     double_stamp:     inDoubleWindow,
     bonus_stamps:     bonusStamps,
@@ -456,3 +509,4 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ stamps: data ?? [] });
          }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
