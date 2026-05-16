@@ -5,15 +5,20 @@
 // Detects university emails (.ac.uk, .edu, etc.) in real-time.
 // If uni email → instant verification badge shown.
 // If personal email → student ID upload option appears.
+//
+// Referral: if the URL contains ?ref=XXXXXXXX, the code is captured and
+// registered via POST /api/referral immediately after account creation.
+// This links the new student to their referrer so that both parties earn
+// 2 bonus stamps when the new student claims their first deal.
 // =============================================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   GraduationCap, Mail, Lock, User, CheckCircle,
-  AlertCircle, Loader2, Upload, Shield, ArrowLeft, Eye, EyeOff
+  AlertCircle, Loader2, Upload, Shield, ArrowLeft, Eye, EyeOff, Gift
 } from 'lucide-react';
 
 const UNIVERSITY_DOMAINS = [
@@ -26,8 +31,12 @@ function isUniversityEmail(email: string): boolean {
   return UNIVERSITY_DOMAINS.some(domain => email.toLowerCase().endsWith(domain));
 }
 
-export default function StudentSignUpPage() {
+// Inner component that reads search params (requires Suspense boundary)
+function StudentSignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = (searchParams.get('ref') ?? '').trim().toUpperCase().slice(0, 8);
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -87,6 +96,22 @@ export default function StudentSignUpPage() {
       }
     }
 
+    // ── Referral registration (fire-and-forget) ───────────────────────────
+    // If the student signed up via a referral link, register the link now.
+    // The DB trigger will have created their student_profiles row by this point.
+    // On success → referral is linked. On failure → silently ignored (non-critical).
+    if (referralCode && referralCode.length === 8) {
+      try {
+        await fetch('/api/referral', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ referral_code: referralCode }),
+        });
+      } catch (_) {
+        // Non-critical — referral reward still fires on first claim if link exists
+      }
+    }
+
     router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
@@ -111,6 +136,16 @@ export default function StudentSignUpPage() {
           <h1 className="text-2xl font-bold text-white">Student sign up</h1>
           <p className="text-purple-300 mt-1">Free access to exclusive student deals</p>
         </div>
+
+        {/* Referral banner — shown only when a valid ref code is present */}
+        {referralCode && referralCode.length === 8 && (
+          <div className="mb-4 flex items-center gap-3 bg-purple-500/15 border border-purple-500/30 rounded-xl px-4 py-3">
+            <Gift className="w-5 h-5 text-purple-300 flex-shrink-0" />
+            <p className="text-sm text-purple-200">
+              You were invited by a friend! Sign up and claim your first deal to both earn <span className="font-semibold text-purple-100">2 bonus stamps</span>.
+            </p>
+          </div>
+        )}
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -243,7 +278,7 @@ export default function StudentSignUpPage() {
           </form>
         </div>
 
-        <p className="text-center text-purple-300 hmt-6 text-sm">
+        <p className="text-center text-purple-300 mt-6 text-sm">
           Already have an account?{' '}
           <Link href="/sign-in" className="text-purple-400 hover:text-white font-medium transition-colors">
             Sign in
@@ -251,5 +286,18 @@ export default function StudentSignUpPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+// Suspense boundary required for useSearchParams in Next.js App Router
+export default function StudentSignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0f0b2e] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+      </div>
+    }>
+      <StudentSignUpForm />
+    </Suspense>
   );
 }
