@@ -67,6 +67,7 @@ interface StampResult {
   stamps_awarded: number;
   reward_triggered: boolean;
   reward_label: string;
+  almost_there: boolean;
   is_first_visit: boolean;
   double_stamp: boolean;
   bonus_stamps: number;
@@ -624,6 +625,21 @@ export default function StampPage() {
             </div>
           )}
 
+          {/* Almost-there nudge — shown when exactly 1 stamp away from the reward */}
+          {r.almost_there && !isReward && (
+            <div className="bg-gradient-to-r from-brand-50 to-purple-50 border border-brand-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-3 text-sm">
+              <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
+                <Star size={18} className="text-brand-600" />
+              </div>
+              <div>
+                <p className="font-black text-brand-800 leading-tight">Almost there! 🎯</p>
+                <p className="text-brand-600 text-xs mt-0.5">
+                  Just <strong>1 more visit</strong> to earn your <strong>{r.reward_label}</strong>!
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* CTA */}
           <Link
             href="/loyalty"
@@ -707,3 +723,4 @@ export default function StampPage() {
     </main>
   );
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
