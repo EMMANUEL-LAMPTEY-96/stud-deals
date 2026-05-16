@@ -194,4 +194,11 @@ export async function POST(req: NextRequest) {
       })();
     }
 
-    safeLog.audit('review_submitted', { vendo
+    safeLog.audit('review_submitted', { vendorId: vendor_id, rating });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    safeLog.error('POST /api/student/reviews error', (err as Error).message);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}

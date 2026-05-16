@@ -228,4 +228,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (err) {
-    console.error('[confirm] Unexpected erro
+    console.error('[confirm] Unexpected error:', err);
+    return NextResponse.json({ error: 'Unexpected server error.' }, { status: 500 });
+  }
+}
