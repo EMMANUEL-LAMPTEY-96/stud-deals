@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { safeLog } from '@/lib/utils/safe-logger';
+import { sendEmail } from '@/lib/email/resend';
+import { newReviewEmail } from '@/lib/email/templates';
 
 // =============================================================================
 // app/api/student/reviews/route.ts
@@ -155,20 +157,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: upsertErr.message }, { status: 500 });
     }
 
-    // Notify the vendor
-    await admin.from('notifications').insert({
-      user_id: (await admin.from('vendor_profiles').select('user_id').eq('id', vendor_id).maybeSingle()).data?.user_id,
-      type: 'new_review',
-      title: 'New student review',
-      body: `A student left a ${rating}★ review.`,
-      is_read: false,
-    }).then(() => {});   // fire-and-forget, ignore errors
+    // Notify the vendor — in-app notification + email (both fire-and-forget)
+    const { data: vendorRow } = await admin
+      .from('vendor_profiles')
+      .select('user_id, business_name')
+      .eq('id', vendor_id)
+      .maybeSingle();
 
-    safeLog.audit('review_submitted', { vendorId: vendor_id, rating });
+    if (vendorRow?.user_id) {
+      // In-app notification
+      admin.from('notifications').insert({
+        user_id:  vendorRow.user_id,
+        type:     'new_review',
+        title:    'New student review',
+        body:     `A student left a ${rating}★ review.`,
+        is_read:  false,
+      }).then(() => {});
 
-    return NextResponse.json({ success: true, id: upserted?.id });
-  } catch (err) {
-    safeLog.error('POST /api/student/reviews error', (err as Error).message);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
-  }
-}
+      // Email notification
+      (async () => {
+        try {
+          const { data: authUser } = await admin.auth.admin.getUserById(vendorRow.user_id);
+          const vendorEmail = authUser?.user?.email;
+          if (!vendorEmail) return;
+          const { subject, html } = newReviewEmail({
+            vendorBusinessName: vendorRow.business_name ?? 'your business',
+            rating,
+            reviewTitle:  title?.trim() || undefined,
+            reviewBody:   review?.trim() || undefined,
+            submittedAt:  new Date().toISOString(),
+          });
+          await sendEmail({ to: vendorEmail, subject, html });
+        } catch {
+          // Email is non-critical
+        }
+      })();
+    }
+
+    safeLog.audit('review_submitted', { vendo
