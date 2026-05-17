@@ -40,6 +40,9 @@ export async function GET() {
   todayStart.setHours(0, 0, 0, 0);
 
   // ── Run all queries in parallel ────────────────────────────────────────────
+  const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
   const [
     studentsRes,
     vendorsRes,
@@ -53,6 +56,9 @@ export async function GET() {
     recentActivityRes,
     dailyStampsRes,
     cityVendorsRes,
+    signupCohortStudentsRes,
+    signupCohortVendorsRes,
+    dailyRedemptionsRes,
   ] = await Promise.all([
     // Total students
     admin.from('student_profiles').select('id', { count: 'exact', head: true }),
@@ -110,6 +116,21 @@ export async function GET() {
     // Vendors with city for city breakdown
     admin.from('vendor_profiles')
       .select('id, city'),
+    // Signup cohort — students last 8 weeks
+    admin.from('profiles')
+      .select('created_at')
+      .eq('role', 'student')
+      .gte('created_at', eightWeeksAgo),
+    // Signup cohort — vendors last 8 weeks
+    admin.from('profiles')
+      .select('created_at')
+      .eq('role', 'vendor')
+      .gte('created_at', eightWeeksAgo),
+    // Daily redemptions last 30 days (stamps + claimed vouchers)
+    admin.from('redemptions')
+      .select('confirmed_at, status')
+      .in('status', ['stamp', 'reward_earned', 'claimed', 'confirmed'])
+      .gte('confirmed_at', thirtyDaysAgo),
   ]);
 
   // ── City breakdown ─────────────────────────────────────────────────────────
@@ -188,6 +209,53 @@ export async function GET() {
     };
   });
 
+  // ── Weekly signup cohort (last 8 weeks) ──────────────────────────────────
+  const weeklySignups: Record<string, { students: number; vendors: number }> = {};
+  const now = Date.now();
+  for (let i = 7; i >= 0; i--) {
+    const weekStart = new Date(now - i * 7 * 24 * 60 * 60 * 1000);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekKey = weekStart.toISOString().slice(0, 10);
+    weeklySignups[weekKey] = { students: 0, vendors: 0 };
+  }
+
+  const getWeekKey = (iso: string) => {
+    const d = new Date(iso);
+    // Find Monday of that week
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().slice(0, 10);
+  };
+
+  for (const r of signupCohortStudentsRes.data ?? []) {
+    const k = getWeekKey(r.created_at as string);
+    if (weeklySignups[k]) weeklySignups[k].students += 1;
+  }
+  for (const r of signupCohortVendorsRes.data ?? []) {
+    const k = getWeekKey(r.created_at as string);
+    if (weeklySignups[k]) weeklySignups[k].vendors += 1;
+  }
+
+  const signup_cohorts = Object.entries(weeklySignups).map(([week, counts]) => ({
+    week,
+    ...counts,
+  }));
+
+  // ── Daily redemptions last 30 days ────────────────────────────────────────
+  const redemptionDayMap: Record<string, number> = {};
+  for (const r of dailyRedemptionsRes.data ?? []) {
+    const day = (r.confirmed_at as string).slice(0, 10);
+    redemptionDayMap[day] = (redemptionDayMap[day] ?? 0) + 1;
+  }
+
+  const daily_redemptions = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000);
+    const key = d.toISOString().slice(0, 10);
+    return { date: key, count: redemptionDayMap[key] ?? 0 };
+  });
+
   return NextResponse.json({
     overview: {
       students:              studentsRes.count ?? 0,
@@ -203,5 +271,7 @@ export async function GET() {
     cities,
     activity,
     daily_stamps,
+    signup_cohorts,
+    daily_redemptions,
   });
 }

@@ -16,16 +16,17 @@
 //   - Alert strip (pending verifications, unverified students)
 // =============================================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
+import AdminNav from '@/components/admin/AdminNav';
 import {
   Users, Store, Stamp, Gift, Tag, Shield, RefreshCw,
   Loader2, CheckCircle, Clock, AlertTriangle, MapPin,
   TrendingUp, ArrowRight, Star, Bell, Activity, Crown,
-  GraduationCap, XCircle,
+  GraduationCap, XCircle, Search, X,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -50,7 +51,9 @@ interface Stats {
     city: string;
     at: string;
   }[];
-  daily_stamps: { date: string; count: number }[];
+  daily_stamps:      { date: string; count: number }[];
+  signup_cohorts:    { week: string; students: number; vendors: number }[];
+  daily_redemptions: { date: string; count: number }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -138,37 +141,122 @@ function ActivityRow({ item }: { item: Stats['activity'][0] }) {
   );
 }
 
-// ── Admin Nav ─────────────────────────────────────────────────────────────────
-function AdminNav({ active }: { active: string }) {
-  const links = [
-    { href: '/admin',               label: 'Overview',  icon: <Activity size={14} /> },
-    { href: '/admin/verifications', label: 'Students',  icon: <Shield size={14} /> },
-    { href: '/admin/vendors',       label: 'Vendors',   icon: <Store size={14} /> },
-    { href: '/admin/users',         label: 'Users',     icon: <Users size={14} /> },
-  ];
+// ── Global Search ─────────────────────────────────────────────────────────────
+interface SearchResults {
+  users:   { id: string; name: string; role: string; city: string | null; href: string }[];
+  vendors: { id: string; business_name: string; city: string | null; is_verified: boolean; href: string }[];
+  offers:  { id: string; title: string; status: string; href: string }[];
+}
+
+function GlobalSearch() {
+  const [q, setQ]             = useState('');
+  const [results, setResults] = useState<SearchResults | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen]       = useState(false);
+  const debounce              = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapRef               = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  useEffect(() => {
+    if (debounce.current) clearTimeout(debounce.current);
+    if (q.length < 2) { setResults(null); setOpen(false); return; }
+    debounce.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res  = await fetch(`/api/admin/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setResults(data);
+        setOpen(true);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+  }, [q]);
+
+  const total = results ? results.users.length + results.vendors.length + results.offers.length : 0;
+
   return (
-    <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex items-center gap-1 py-1">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                active === l.href
-                  ? 'bg-purple-50 text-purple-700'
-                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-              }`}
-            >
-              {l.icon}
-              {l.label}
-            </Link>
-          ))}
-          <span className="ml-auto text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded-lg font-semibold">
-            Admin
-          </span>
-        </nav>
+    <div ref={wrapRef} className="relative w-full max-w-md">
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => results && setOpen(true)}
+          placeholder="Search users, vendors, offers…"
+          className="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300"
+        />
+        {searching && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+        {q && !searching && (
+          <button onClick={() => { setQ(''); setResults(null); setOpen(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <X size={13} />
+          </button>
+        )}
       </div>
+      {open && results && (
+        <div className="absolute top-full mt-1 left-0 right-0 bg-white rounded-2xl border border-gray-200 shadow-xl z-50 overflow-hidden max-h-96 overflow-y-auto">
+          {total === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-gray-400">No results for "{q}"</div>
+          ) : (
+            <>
+              {results.users.length > 0 && (
+                <div>
+                  <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Users</div>
+                  {results.users.map((u) => (
+                    <Link key={u.id} href={u.href} onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                      <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-xs font-bold text-purple-600 shrink-0">
+                        {u.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{u.name}</div>
+                        <div className="text-xs text-gray-400">{u.role}{u.city ? ` · ${u.city}` : ''}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {results.vendors.length > 0 && (
+                <div>
+                  <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Vendors</div>
+                  {results.vendors.map((v) => (
+                    <Link key={v.id} href={v.href} onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                      <Store size={14} className="text-blue-500 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{v.business_name}</div>
+                        <div className="text-xs text-gray-400">{v.is_verified ? 'Verified' : 'Unverified'}{v.city ? ` · ${v.city}` : ''}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {results.offers.length > 0 && (
+                <div>
+                  <div className="px-4 pt-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Offers</div>
+                  {results.offers.map((o) => (
+                    <Link key={o.id} href={o.href} onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                      <Tag size={14} className="text-green-500 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{o.title}</div>
+                        <div className="text-xs text-gray-400">{o.status}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -222,7 +310,7 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
               <Activity size={22} className="text-purple-600" />
@@ -233,13 +321,16 @@ export default function AdminDashboard() {
               <span className="ml-2 text-gray-400">· Auto-refreshes every 30s</span>
             </p>
           </div>
-          <button
-            onClick={fetchStats}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <GlobalSearch />
+            <button
+              onClick={fetchStats}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* ── Alert strip ── */}
@@ -336,6 +427,91 @@ export default function AdminDashboard() {
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
                   <span>{stats?.daily_stamps[0]?.date.slice(5)}</span>
                   <span>{stats?.daily_stamps[stats.daily_stamps.length - 1]?.date.slice(5)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Cohort analytics row ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+              {/* Weekly signups */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                  <GraduationCap size={15} className="text-blue-500" />
+                  Weekly signups — last 8 weeks
+                </h2>
+                {stats?.signup_cohorts ? (
+                  <div className="space-y-2">
+                    {stats.signup_cohorts.map((c) => {
+                      const maxVal = Math.max(...(stats.signup_cohorts ?? []).map((x) => x.students + x.vendors), 1);
+                      const total = c.students + c.vendors;
+                      return (
+                        <div key={c.week}>
+                          <div className="flex items-center justify-between text-xs text-gray-500 mb-0.5">
+                            <span>{c.week.slice(5)}</span>
+                            <span className="font-semibold text-gray-700">{total} signups</span>
+                          </div>
+                          <div className="flex h-5 rounded-lg overflow-hidden bg-gray-100">
+                            {c.students > 0 && (
+                              <div
+                                className="bg-purple-500 transition-all"
+                                style={{ width: `${(c.students / maxVal) * 100}%` }}
+                                title={`${c.students} students`}
+                              />
+                            )}
+                            {c.vendors > 0 && (
+                              <div
+                                className="bg-blue-400 transition-all"
+                                style={{ width: `${(c.vendors / maxVal) * 100}%` }}
+                                title={`${c.vendors} vendors`}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-32 flex items-center justify-center text-gray-300 text-sm">Loading…</div>
+                )}
+                <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-purple-500 inline-block" /> Students</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-400 inline-block" /> Vendors</span>
+                </div>
+              </div>
+
+              {/* Daily redemptions */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <Tag size={15} className="text-green-500" />
+                    Daily redemptions — last 30 days
+                  </h2>
+                  <span className="text-xs text-gray-400">
+                    Total: {stats?.daily_redemptions?.reduce((s, d) => s + d.count, 0) ?? 0}
+                  </span>
+                </div>
+                {stats?.daily_redemptions ? (
+                  <div className="flex items-end gap-0.5 h-24">
+                    {stats.daily_redemptions.map((d, i) => {
+                      const maxVal = Math.max(...stats.daily_redemptions.map((x) => x.count), 1);
+                      const pct = (d.count / maxVal) * 100;
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 bg-green-400 rounded-t transition-all hover:bg-green-500"
+                          style={{ height: `${Math.max(pct, d.count > 0 ? 4 : 0)}%` }}
+                          title={`${d.date.slice(5)}: ${d.count}`}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-24 flex items-center justify-center text-gray-300 text-sm">Loading…</div>
+                )}
+                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <span>{stats?.daily_redemptions?.[0]?.date.slice(5)}</span>
+                  <span>{stats?.daily_redemptions?.[stats.daily_redemptions.length - 1]?.date.slice(5)}</span>
                 </div>
               </div>
             </div>
