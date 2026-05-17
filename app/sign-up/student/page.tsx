@@ -8,8 +8,9 @@
 //
 // Referral: if the URL contains ?ref=XXXXXXXX, the code is captured and
 // registered via POST /api/referral immediately after account creation.
-// This links the new student to their referrer so that both parties earn
-// 2 bonus stamps when the new student claims their first deal.
+//
+// Birthday: optional date_of_birth field — used for the annual birthday
+// bonus (3 free stamps on their birthday).
 // =============================================================================
 
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -18,7 +19,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   GraduationCap, Mail, Lock, User, CheckCircle,
-  AlertCircle, Loader2, Upload, Shield, ArrowLeft, Eye, EyeOff, Gift
+  AlertCircle, Loader2, Upload, Shield, ArrowLeft, Eye, EyeOff, Gift, Cake
 } from 'lucide-react';
 
 const UNIVERSITY_DOMAINS = [
@@ -41,6 +42,7 @@ function StudentSignUpForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [studentIdFile, setStudentIdFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -93,6 +95,19 @@ function StudentSignUpForm() {
           .upload(filePath, studentIdFile, { upsert: true });
       } catch (_) {
         // Non-fatal — verification can still happen manually
+      }
+    }
+
+    // ── Save birthday (fire-and-forget) ──────────────────────────────────────
+    if (dateOfBirth && data.user) {
+      try {
+        const supabaseDirect = createClient();
+        await supabaseDirect
+          .from('student_profiles')
+          .update({ date_of_birth: dateOfBirth })
+          .eq('user_id', data.user.id);
+      } catch (_) {
+        // Non-fatal — can be set later in settings
       }
     }
 
@@ -234,6 +249,30 @@ function StudentSignUpForm() {
               </div>
               {password.length > 0 && password.length < 8 && (
                 <p className="mt-1 text-xs text-amber-400">{8 - password.length} more characters needed</p>
+              )}
+            </div>
+
+            {/* Birthday — optional, used for annual birthday reward */}
+            <div>
+              <label className="block text-sm font-medium text-purple-200 mb-1.5">
+                Date of birth{' '}
+                <span className="text-purple-400 font-normal">(optional — unlocks birthday rewards 🎂)</span>
+              </label>
+              <div className="relative">
+                <Cake className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+                <input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={e => setDateOfBirth(e.target.value)}
+                  max={new Date(Date.now() - 16 * 365.25 * 24 * 3600 * 1000).toISOString().split('T')[0]}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-3 text-white placeholder-purple-400/50 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 [color-scheme:dark]"
+                />
+              </div>
+              {dateOfBirth && (
+                <p className="mt-1.5 text-xs text-purple-400 flex items-center gap-1.5">
+                  <Cake className="w-3 h-3" />
+                  We&apos;ll surprise you with 3 bonus stamps on your birthday every year
+                </p>
               )}
             </div>
 
