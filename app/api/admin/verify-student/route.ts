@@ -55,6 +55,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // ── Audit log ────────────────────────────────────────────────────────────
+  await admin.from('admin_audit_log').insert({
+    admin_id:    user.id,
+    action:      action === 'approve' ? 'student_verified' : 'student_rejected',
+    entity_type: 'student_profile',
+    entity_id:   student_profile_id,
+    metadata:    notes ? { notes } : {},
+  });
+  // Non-fatal — failure here should not block the response
+
   return NextResponse.json({ success: true, new_status: newStatus });
 }
 
@@ -102,7 +112,7 @@ export async function GET(request: NextRequest) {
       )
     `)
     .eq('verification_status', status)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: true }); // FIFO — oldest submissions reviewed first
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

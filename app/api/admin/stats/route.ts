@@ -115,33 +115,34 @@ export async function GET() {
   // ── City breakdown ─────────────────────────────────────────────────────────
   const LAUNCH_CITIES = ['Budapest', 'Szeged'];
 
-  // Count vendors per city
+  // Count vendors per city (using already-fetched cityVendorsRes)
   const vendorsByCity: Record<string, number> = {};
+  // Build vendor_profile_id → city map for stamp aggregation below
+  const vendorIdToCity: Record<string, string> = {};
   for (const v of cityVendorsRes.data ?? []) {
     const c = (v.city as string) || 'Other';
     vendorsByCity[c] = (vendorsByCity[c] ?? 0) + 1;
+    if (v.id) vendorIdToCity[v.id as string] = c;
   }
 
-  // Stamps per city from activity
-  const allStampsRes = await admin
-    .from('redemptions')
-    .select(`
-      status,
-      vendor:vendor_profiles!vendor_id ( city )
-    `)
-    .in('status', ['stamp', 'reward_earned']);
+  // Stamps per city — fetch only vendor_id (no JOIN) and map via vendorIdToCity
+  // This avoids loading vendor_profiles a second time and eliminates the JOIN cost
+  const [allStampsRes, studentsPerCityRes] = await Promise.all([
+    admin
+      .from('redemptions')
+      .select('vendor_id')
+      .in('status', ['stamp', 'reward_earned']),
+    admin
+      .from('profiles')
+      .select('city')
+      .eq('role', 'student'),
+  ]);
 
   const stampsByCity: Record<string, number> = {};
   for (const r of allStampsRes.data ?? []) {
-    const c = (r.vendor as { city?: string } | null)?.city ?? 'Other';
+    const c = vendorIdToCity[r.vendor_id as string] ?? 'Other';
     stampsByCity[c] = (stampsByCity[c] ?? 0) + 1;
   }
-
-  // Students per city (via profiles.city)
-  const studentsPerCityRes = await admin
-    .from('profiles')
-    .select('city')
-    .eq('role', 'student');
 
   const studentsByCity: Record<string, number> = {};
   for (const p of studentsPerCityRes.data ?? []) {
