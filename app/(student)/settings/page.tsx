@@ -211,9 +211,10 @@ export default function StudentSettingsPage() {
     );
   }
 
-  const displayName = profile?.display_name
+  const displayName = (
+    profile?.display_name
     ?? [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
-    || 'Student';
+  ) || 'Student';
 
   const statusKey = studentProfile?.verification_status ?? 'unverified';
   const statusBadge = STATUS_BADGES[statusKey] ?? STATUS_BADGES.unverified;
