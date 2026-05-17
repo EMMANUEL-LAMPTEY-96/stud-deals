@@ -13,6 +13,7 @@ import { safeLog } from '@/lib/utils/safe-logger';
 import { haversineKm } from '@/lib/utils/distance';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
+import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
 
 const FlashDealBodySchema = z.object({
   title: z.string().min(1, 'Title is required.').max(100, 'Title must be 100 characters or fewer.'),
@@ -47,6 +48,15 @@ export async function POST(request: NextRequest) {
 
     if (vendorError || !vendor) return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
     if (!vendor.is_verified) return NextResponse.json({ error: 'Your business must be verified to send flash deals' }, { status: 403 });
+
+    // Plan gate: flash deals require Growth or Pro
+    const plan = await getVendorPlan(supabase, user.id);
+    if (!plan || !hasAccess(plan, 'growth')) {
+      return NextResponse.json(
+        { error: 'upgrade_required', message: 'Flash deals require a Growth or Pro plan.', tier: 'growth' },
+        { status: 403 }
+      );
+    }
 
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count: todayCount } = await supabase

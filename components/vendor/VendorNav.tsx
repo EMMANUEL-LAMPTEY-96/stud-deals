@@ -14,7 +14,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
-  LayoutDashboard, Tag, BarChart3, Users, Gift,
+  LayoutDashboard, Tag, BarChart3, Users, Gift, CreditCard,
 } from 'lucide-react';
 
 export default function VendorNav() {
@@ -49,6 +49,7 @@ export default function VendorNav() {
     { href: '/vendor/rewards',   label: 'Rewards',   icon: <Gift size={15} />, badge: unclaimed },
     { href: '/vendor/customers', label: 'Customers', icon: <Users size={15} /> },
     { href: '/vendor/analytics', label: 'Analytics', icon: <BarChart3 size={15} /> },
+    { href: '/vendor/billing',   label: 'Billing',   icon: <CreditCard size={15} /> },
   ];
 
   const isActive = (href: string) => {

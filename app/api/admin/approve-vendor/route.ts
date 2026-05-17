@@ -124,10 +124,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'vendor_profile_id and action are required' }, { status: 400 });
   }
 
+  // On approval start a 60-day Growth trial automatically
+  const trialEndsAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
   const update =
     action === 'approve'
-      ? { is_verified: true, verified_at: new Date().toISOString() }
-      : { is_verified: false, verified_at: new Date().toISOString() }; // rejected: set verified_at but keep is_verified=false
+      ? {
+          is_verified:   true,
+          verified_at:   new Date().toISOString(),
+          plan_tier:     'growth',
+          plan_status:   'trialing',
+          trial_ends_at: trialEndsAt,
+        }
+      : { is_verified: false, verified_at: new Date().toISOString() };
 
   const { error } = await admin
     .from('vendor_profiles')
