@@ -126,10 +126,13 @@ export default function StudentSettingsPage() {
           .maybeSingle(),
       ]);
 
+      // Cast required: share_with_vendors / date_of_birth were added in SQL migrations
+      // after the last Supabase type regeneration. Safe cast — columns exist in DB.
+      const spTyped = sp as unknown as StudentProfileData | null;
       setProfile({ ...(p ?? {}), email: user.email ?? null } as ProfileData);
-      setStudentProfile(sp ?? null);
-      setShareWithVendors(sp?.share_with_vendors ?? false);
-      setDateOfBirth(sp?.date_of_birth ?? '');
+      setStudentProfile(spTyped);
+      setShareWithVendors(spTyped?.share_with_vendors ?? false);
+      setDateOfBirth(spTyped?.date_of_birth ?? '');
       setLoading(false);
     })();
   }, [router]);
