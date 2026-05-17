@@ -40,7 +40,9 @@ export type OfferCategory =
 
 export type RedemptionStatus = 'claimed' | 'confirmed' | 'expired' | 'cancelled';
 
-export type VendorPlan = 'free' | 'starter' | 'growth';
+export type VendorPlan = 'free' | 'starter' | 'growth' | 'pro';
+
+export type PlanStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'free';
 
 // ---------------------------------------------------------------------------
 // ROW TYPES  (use `type`, not `interface` — required for Supabase generic schema)
@@ -101,6 +103,15 @@ export type StudentProfile = {
   total_savings_usd: number;
   total_redemptions: number;
   total_offers_saved: number;
+  // Consent & GDPR columns (migration 007)
+  date_of_birth: string | null;
+  share_with_vendors: boolean;
+  consent_updated_at: string | null;
+  // Birthday bonus (migration 009)
+  birthday_bonus_claimed_year: number | null;
+  // Referral programme (migration 008)
+  referral_code: string | null;
+  referred_by_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -131,6 +142,11 @@ export type VendorProfile = {
   plan_tier: VendorPlan;
   plan_started_at: string | null;
   plan_expires_at: string | null;
+  // Billing / Stripe columns (migration 010)
+  plan_status: PlanStatus;
+  trial_ends_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   total_active_offers: number;
   total_lifetime_redemptions: number;
   total_lifetime_views: number;
