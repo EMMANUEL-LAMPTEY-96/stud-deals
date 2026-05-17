@@ -19,7 +19,7 @@ export default function TermsPage() {
       title: '1. Acceptance of Terms',
       content: (
         <p>
-          By creating an account on Unideals (available at{' '}
+          By creating an account on Studeals (available at{' '}
           <a href="https://studeals.vercel.app" className="text-brand-600 underline">studeals.vercel.app</a>),
           accessing the platform, or using any of its features, you agree to be bound by these Terms of
           Service ("Terms") and our{' '}
@@ -44,7 +44,7 @@ export default function TermsPage() {
           </ul>
           <p className="mt-2">
             Providing false verification documents is a violation of these Terms and may result in
-            immediate account suspension and referral to the relevant institution. Unideals reserves the
+            immediate account suspension and referral to the relevant institution. Studeals reserves the
             right to re-verify your status at any time.
           </p>
         </div>
@@ -57,15 +57,15 @@ export default function TermsPage() {
         <div className="space-y-3">
           <p>Vendors ("businesses") who list offers on the platform agree to:</p>
           <ul className="list-disc ml-5 space-y-1.5 text-gray-600">
-            <li>Honour all published discounts and promotions when presented with a valid, unexpired Unideals voucher or QR stamp.</li>
+            <li>Honour all published discounts and promotions when presented with a valid, unexpired Studeals voucher or QR stamp.</li>
             <li>Ensure offer descriptions, discount values, and expiry dates are accurate at the time of publication.</li>
-            <li>Not discriminate against students presenting Unideals vouchers in a manner inconsistent with the advertised offer.</li>
+            <li>Not discriminate against students presenting Studeals vouchers in a manner inconsistent with the advertised offer.</li>
             <li>Use the platform's QR scanner to confirm redemptions — off-platform redemption confirmation may not be recorded in analytics.</li>
             <li>Comply with all applicable Hungarian consumer protection laws and advertising standards.</li>
             <li>Not use student data obtained through the platform for any purpose other than confirming the specific redemption at hand.</li>
           </ul>
           <p className="mt-2">
-            Unideals reserves the right to remove vendor listings, suspend accounts, or terminate vendor
+            Studeals reserves the right to remove vendor listings, suspend accounts, or terminate vendor
             access for repeated non-fulfilment of advertised offers or breach of these Terms.
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function TermsPage() {
             { term: 'Expiry', detail: 'QR vouchers expire 24 hours after generation. Loyalty stamps expire per the vendor\'s configured stamp expiry window (default: no expiry unless the vendor sets one).' },
             { term: 'Single use', detail: 'Each claimed voucher is valid for a single redemption at the issuing vendor. Voucher codes must not be shared, screenshotted, or transferred to another person.' },
             { term: 'Non-transferable', detail: 'Vouchers and stamp cards are tied to your verified student account. They have no monetary or exchange value and cannot be sold or transferred.' },
-            { term: 'No cash equivalent', detail: 'Discounts are applied at the point of sale by the vendor. Unideals does not process any financial transaction and is not a party to the sale.' },
+            { term: 'No cash equivalent', detail: 'Discounts are applied at the point of sale by the vendor. Studeals does not process any financial transaction and is not a party to the sale.' },
             { term: 'Fraudulent use', detail: 'Attempting to forge, reuse, or alter vouchers or stamps is a breach of these Terms and may constitute fraud under Hungarian law.' },
             { term: 'Loyalty rewards', detail: 'Reward thresholds (e.g., "free coffee after 10 stamps") are set by the vendor and may change at the vendor\'s discretion with reasonable notice.' },
           ].map(({ term, detail }) => (
@@ -119,7 +119,7 @@ export default function TermsPage() {
       content: (
         <div className="space-y-3">
           <p>
-            <strong>Unideals is a marketplace intermediary.</strong> We connect students with vendors but
+            <strong>Studeals is a marketplace intermediary.</strong> We connect students with vendors but
             are not a party to any transaction between them. We make no warranty that:
           </p>
           <ul className="list-disc ml-5 space-y-1.5 text-gray-600">
@@ -128,12 +128,12 @@ export default function TermsPage() {
             <li>Savings figures displayed are guaranteed or represent actual cash savings.</li>
           </ul>
           <p className="mt-3">
-            To the maximum extent permitted by Hungarian law, Unideals shall not be liable for indirect,
+            To the maximum extent permitted by Hungarian law, Studeals shall not be liable for indirect,
             incidental, or consequential damages arising from your use of the platform, including losses
             resulting from a vendor's failure to honour a voucher.
           </p>
           <p className="mt-3">
-            Nothing in these Terms limits Unideals' liability for death or personal injury caused by
+            Nothing in these Terms limits Studeals' liability for death or personal injury caused by
             negligence, fraud, or fraudulent misrepresentation, or any other liability that cannot be
             excluded by law.
           </p>
@@ -145,10 +145,10 @@ export default function TermsPage() {
       title: '7. Intellectual Property',
       content: (
         <p>
-          All platform content, branding, code, and design belonging to Unideals is protected by copyright
+          All platform content, branding, code, and design belonging to Studeals is protected by copyright
           and intellectual property law. Vendors retain ownership of their business information and offer
-          content, but grant Unideals a licence to display it on the platform. You may not reproduce,
-          redistribute, or create derivative works from Unideals content without express written permission.
+          content, but grant Studeals a licence to display it on the platform. You may not reproduce,
+          redistribute, or create derivative works from Studeals content without express written permission.
         </p>
       ),
     },
@@ -164,7 +164,7 @@ export default function TermsPage() {
             <Link href="/privacy" className="text-brand-600 underline">Privacy Policy</Link>).
           </p>
           <p className="mt-2">
-            <strong>Unideals</strong> may suspend or terminate your account immediately and without notice if
+            <strong>Studeals</strong> may suspend or terminate your account immediately and without notice if
             you breach these Terms, engage in fraudulent activity, or if we are required to do so by law.
             Termination does not affect any accrued rights or obligations.
           </p>
@@ -193,10 +193,10 @@ export default function TermsPage() {
       content: (
         <p>
           For questions about these Terms, contact us at{' '}
-          <a href="mailto:legal@unideals.app" className="text-brand-600 underline">legal@unideals.app</a>.
+          <a href="mailto:legal@studeals.app" className="text-brand-600 underline">legal@studeals.app</a>.
           For privacy-related enquiries, see our{' '}
           <Link href="/privacy" className="text-brand-600 underline">Privacy Policy</Link> or contact{' '}
-          <a href="mailto:privacy@unideals.app" className="text-brand-600 underline">privacy@unideals.app</a>.
+          <a href="mailto:privacy@studeals.app" className="text-brand-600 underline">privacy@studeals.app</a>.
         </p>
       ),
     },
@@ -239,7 +239,7 @@ export default function TermsPage() {
           <p className="text-sm text-amber-800">
             <strong>Jurisdiction: Hungary.</strong> These Terms are governed by Hungarian law (Civil Code,
             Ptk.) and applicable EU consumer protection regulations. These Terms form a binding agreement
-            between you and Unideals when you use the platform.
+            between you and Studeals when you use the platform.
           </p>
         </div>
 
@@ -266,10 +266,10 @@ export default function TermsPage() {
             Our legal team is happy to help with any questions about your rights or obligations.
           </p>
           <a
-            href="mailto:legal@unideals.app"
+            href="mailto:legal@studeals.app"
             className="inline-block bg-white text-brand-600 font-bold text-sm px-5 py-2 rounded-xl hover:bg-blue-50 transition-colors"
           >
-            legal@unideals.app
+            legal@studeals.app
           </a>
           <p className="text-blue-200 text-xs mt-3">
             Also see our <Link href="/privacy" className="underline">Privacy Policy</Link> for data rights.

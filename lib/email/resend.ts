@@ -9,7 +9,7 @@
 //
 // Required env var:  RESEND_API_KEY
 // Optional env var:  RESEND_FROM_EMAIL  (default: onboarding@resend.dev)
-//                    RESEND_FROM_NAME   (default: Unideals)
+//                    RESEND_FROM_NAME   (default: Studeals)
 // =============================================================================
 
 export interface SendEmailOptions {
@@ -34,7 +34,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<boolean> {
     return false;
   }
 
-  const from = `${process.env.RESEND_FROM_NAME ?? 'Unideals'} <${process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'}>`;
+  const from = `${process.env.RESEND_FROM_NAME ?? 'Studeals'} <${process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev'}>`;
 
   try {
     const res = await fetch('https://api.resend.com/emails', {

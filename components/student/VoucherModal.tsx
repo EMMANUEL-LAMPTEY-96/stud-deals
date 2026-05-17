@@ -157,18 +157,34 @@ export default function VoucherModal({ voucher, onClose }: VoucherModalProps) {
           {timeLeft}
         </div>
 
-        {/* Vendor info */}
+        {/* Vendor info + Directions */}
         <div className="px-6 pb-4">
-          <div className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
-            <MapPin size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-gray-800">{voucher.vendor.business_name}</p>
-              {(voucher.vendor.address_line1 || voucher.vendor.city) && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {voucher.vendor.address_line1 ? `${voucher.vendor.address_line1}, ` : ''}{voucher.vendor.city}
-                </p>
-              )}
+          <div className="flex items-start justify-between gap-2.5 bg-gray-50 rounded-xl p-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <MapPin size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{voucher.vendor.business_name}</p>
+                {(voucher.vendor.address_line1 || voucher.vendor.city) && (
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    {voucher.vendor.address_line1 ? `${voucher.vendor.address_line1}, ` : ''}{voucher.vendor.city}
+                  </p>
+                )}
+              </div>
             </div>
+            {(voucher.vendor.address_line1 || voucher.vendor.city) && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  [voucher.vendor.business_name, voucher.vendor.address_line1, voucher.vendor.city]
+                    .filter(Boolean).join(', ')
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 font-semibold bg-violet-50 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                <MapPin size={11} />
+                Directions
+              </a>
+            )}
           </div>
         </div>
 

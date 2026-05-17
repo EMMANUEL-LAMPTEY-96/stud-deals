@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       content: (
         <>
           <p>
-            Unideals ("we", "us", "our") is a student discount marketplace operated as a service
+            Studeals ("we", "us", "our") is a student discount marketplace operated as a service
             for verified university students and local businesses. Our live platform is available at{' '}
             <a href="https://studeals.vercel.app" className="text-brand-600 underline">
               studeals.vercel.app
@@ -28,8 +28,8 @@ export default function PrivacyPage() {
           </p>
           <p className="mt-3">
             For privacy-related enquiries, contact us at:{' '}
-            <a href="mailto:privacy@unideals.app" className="text-brand-600 underline">
-              privacy@unideals.app
+            <a href="mailto:privacy@studeals.app" className="text-brand-600 underline">
+              privacy@studeals.app
             </a>
           </p>
         </>
@@ -154,7 +154,7 @@ export default function PrivacyPage() {
               { party: 'Vendors (businesses on the platform)', scope: 'When you redeem a voucher, the vendor sees your display name only (e.g., "Emmanuel A.") — not your full name, email, or ID.' },
               { party: 'Supabase (data processor)', scope: 'Database storage and authentication. EU/Ireland servers only.' },
               { party: 'Vercel (infrastructure processor)', scope: 'Web hosting and serverless function execution. No personal data stored.' },
-              { party: 'Admins', scope: 'Unideals staff may access your data to resolve support issues or review student ID documents for verification.' },
+              { party: 'Admins', scope: 'Studeals staff may access your data to resolve support issues or review student ID documents for verification.' },
             ].map(({ party, scope }) => (
               <div key={party} className="flex gap-3">
                 <span className="text-brand-600 font-bold text-sm min-w-fit">•</span>
@@ -318,10 +318,10 @@ export default function PrivacyPage() {
             us at:
           </p>
           <a
-            href="mailto:privacy@unideals.app"
+            href="mailto:privacy@studeals.app"
             className="inline-block bg-white text-brand-600 font-bold text-sm px-5 py-2 rounded-xl hover:bg-blue-50 transition-colors"
           >
-            privacy@unideals.app
+            privacy@studeals.app
           </a>
           <p className="text-blue-200 text-xs mt-3">
             You can also delete your account instantly from Account Settings → Delete Account.

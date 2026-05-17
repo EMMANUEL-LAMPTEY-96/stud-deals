@@ -165,10 +165,25 @@ export default function OfferCard({ offer, isSaved = false, onSaveToggle }: Offe
           {offer.title}
         </h3>
 
-        {/* Location */}
-        <div className="flex items-center gap-1 text-gray-400 text-xs mt-auto">
-          <MapPin size={11} />
-          <span className="truncate">{offer.vendor.address_line1 ? `${offer.vendor.address_line1}, ` : ''}{offer.vendor.city}</span>
+        {/* Location + Directions */}
+        <div className="flex items-center justify-between gap-1 mt-auto">
+          <div className="flex items-center gap-1 text-gray-400 text-xs min-w-0">
+            <MapPin size={11} className="flex-shrink-0" />
+            <span className="truncate">{offer.vendor.address_line1 ? `${offer.vendor.address_line1}, ` : ''}{offer.vendor.city}</span>
+          </div>
+          {(offer.vendor.address_line1 || offer.vendor.city) && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                [offer.vendor.address_line1, offer.vendor.city].filter(Boolean).join(', ')
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="flex-shrink-0 flex items-center gap-0.5 text-xs text-violet-600 hover:text-violet-700 font-medium transition-colors"
+            >
+              Directions ↗
+            </a>
+          )}
         </div>
 
         {/* Stats row */}

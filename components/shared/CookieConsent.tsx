@@ -4,7 +4,7 @@
 // components/shared/CookieConsent.tsx — GDPR Cookie Consent Banner
 //
 // Shown once on first visit. Stores preference in localStorage under
-// 'unideals_cookie_consent'. Options: 'accepted' | 'declined'.
+// 'studeals_cookie_consent'. Options: 'accepted' | 'declined'.
 //
 // Legal basis: GDPR Article 7 (consent) + ePrivacy Directive.
 // Data storage location: EU (Ireland, eu-west-1) — disclosed in banner.
@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react';
 import { Shield, X, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
-const CONSENT_KEY = 'unideals_cookie_consent';
+const CONSENT_KEY = 'studeals_cookie_consent';
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
@@ -75,7 +75,7 @@ export default function CookieConsent() {
         {/* Body */}
         <div className="px-5 pb-2">
           <p className="text-sm text-gray-600 leading-relaxed">
-            Unideals uses essential cookies to keep you logged in and remember your preferences.
+            Studeals uses essential cookies to keep you logged in and remember your preferences.
             We do <span className="font-medium text-gray-900">not</span> sell your data or run
             advertising trackers.{' '}
             <button

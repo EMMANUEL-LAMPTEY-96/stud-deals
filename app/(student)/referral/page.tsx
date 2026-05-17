@@ -3,7 +3,7 @@
 // =============================================================================
 // app/(student)/referral/page.tsx — Student Referral Hub
 //
-// Surfaces everything a student needs to share Unideals with friends:
+// Surfaces everything a student needs to share Studeals with friends:
 //
 //   1. SHARE CARD — Referral link with one-tap copy + QR code for IRL sharing.
 //   2. STATS ROW — Pending / completed referrals + total bonus stamps earned.
@@ -150,7 +150,7 @@ export default function ReferralPage() {
     if (!data) return;
     if (navigator.share) {
       await navigator.share({
-        title: 'Join me on Unideals!',
+        title: 'Join me on Studeals!',
         text:  'Get exclusive student discounts near campus. Use my link and we both earn bonus stamps when you claim your first deal!',
         url:   data.referral_link,
       }).catch(() => {});
@@ -213,7 +213,7 @@ export default function ReferralPage() {
             Refer a friend
           </h1>
           <p className="text-purple-300 mt-1 text-sm">
-            Invite friends to Unideals. When they claim their first deal, you both earn <strong className="text-purple-200">2 bonus stamps</strong>.
+            Invite friends to Studeals. When they claim their first deal, you both earn <strong className="text-purple-200">2 bonus stamps</strong>.
           </p>
         </div>
 
@@ -303,7 +303,7 @@ export default function ReferralPage() {
               {
                 step: '2',
                 title: 'Friend signs up',
-                desc:  'They create a free Unideals account using your link.',
+                desc:  'They create a free Studeals account using your link.',
               },
               {
                 step: '3',

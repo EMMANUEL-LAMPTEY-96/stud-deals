@@ -266,9 +266,9 @@ export default async function HomePage() {
         <footer className="bg-gray-900 text-gray-400 py-8 px-6 text-center text-sm">
           <div className="flex items-center justify-center gap-2 mb-2">
             <GraduationCap size={18} className="text-brand-400" />
-            <span className="text-white font-bold text-base">Unideals</span>
+            <span className="text-white font-bold text-base">Studeals</span>
           </div>
-          <p>© 2026 Unideals. The student marketplace that just works.</p>
+          <p>© 2026 Studeals. The student marketplace that just works.</p>
           <div className="flex items-center justify-center gap-6 mt-3">
             <Link href="/sign-in" className="hover:text-gray-200 transition-colors">Log in</Link>
             <Link href="/sign-up" className="hover:text-gray-200 transition-colors">Sign up</Link>

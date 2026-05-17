@@ -64,10 +64,10 @@ export async function generateMetadata(
     .or(`slug.eq.${slug},id.eq.${slug}`)
     .maybeSingle();
 
-  if (!vp) return { title: 'Vendor not found — Unideals' };
+  if (!vp) return { title: 'Vendor not found — Studeals' };
 
   return {
-    title: `${vp.business_name} student deals${vp.city ? ` in ${vp.city}` : ''} — Unideals`,
+    title: `${vp.business_name} student deals${vp.city ? ` in ${vp.city}` : ''} — Studeals`,
     description:
       vp.description ??
       `Exclusive student discounts at ${vp.business_name}. Verify your student status and claim deals instantly.`,

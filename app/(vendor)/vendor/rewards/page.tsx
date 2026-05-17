@@ -276,7 +276,7 @@ export default function RewardsPage() {
                   {pending.length} reward{pending.length !== 1 ? 's' : ''} waiting to be claimed
                 </p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Ask students to show their Unideals app, then mark as claimed after handing out the reward.
+                  Ask students to show their Studeals app, then mark as claimed after handing out the reward.
                 </p>
               </div>
             </div>
