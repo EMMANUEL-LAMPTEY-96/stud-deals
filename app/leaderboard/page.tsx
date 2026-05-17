@@ -5,7 +5,7 @@
 /**
  * /leaderboard — Public institution leaderboard
  * No login required — shareable and embeddable.
- * Shows which universities are saving the most on Unideals.
+ * Shows which universities are saving the most on Studeals.
  */
 
 import { useEffect, useState } from 'react';
@@ -152,7 +152,7 @@ export default function LeaderboardPage() {
               Who's saving the most? 🏆
             </h1>
             <p className="text-gray-500 text-sm max-w-md mx-auto">
-              Verified students saving the most on Unideals — ranked by university.
+              Verified students saving the most on Studeals — ranked by university.
               Updated weekly.
             </p>
           </div>
@@ -266,7 +266,7 @@ export default function LeaderboardPage() {
                   href="/sign-up/student"
                   className="inline-flex items-center gap-2 bg-white text-brand-700 font-bold px-6 py-3 rounded-xl hover:bg-brand-50 transition-colors text-sm"
                 >
-                  Join Unideals Free
+                  Join Studeals Free
                   <TrendingUp size={16} />
                 </a>
               </div>

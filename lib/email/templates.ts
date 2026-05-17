@@ -5,7 +5,7 @@
 // All templates:
 //   - Use inline styles (email client compatibility)
 //   - Are mobile-first (max-width 600px)
-//   - Use Unideals brand colour #4f46e5 (indigo-600)
+//   - Use Studeals brand colour #4f46e5 (indigo-600)
 //   - Are plain HTML — no React, no JSX, runs on the server only
 // =============================================================================
 
@@ -18,7 +18,7 @@ function emailWrapper(content: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Unideals</title>
+  <title>Studeals</title>
 </head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 16px;">
@@ -28,7 +28,7 @@ function emailWrapper(content: string): string {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);padding:28px 32px;text-align:center;">
-              <span style="font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">Unideals</span>
+              <span style="font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">Studeals</span>
               <span style="display:block;font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px;">Student Loyalty Platform</span>
             </td>
           </tr>
@@ -43,7 +43,7 @@ function emailWrapper(content: string): string {
             <td style="padding:20px 32px;border-top:1px solid #f0f0f0;text-align:center;">
               <p style="margin:0;font-size:12px;color:#9ca3af;">
                 You're receiving this because you have a vendor account on
-                <a href="${BASE_URL}" style="color:#4f46e5;text-decoration:none;">Unideals</a>.
+                <a href="${BASE_URL}" style="color:#4f46e5;text-decoration:none;">Studeals</a>.
               </p>
               <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">
                 <a href="${BASE_URL}/vendor" style="color:#4f46e5;text-decoration:none;">Go to your dashboard</a>

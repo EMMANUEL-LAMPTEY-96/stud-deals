@@ -191,7 +191,7 @@ export default function BillingPage() {
 
     // Show success / cancelled flash
     const params = new URLSearchParams(window.location.search);
-    if (params.get('success'))   setToast('🎉 Subscription activated! Welcome to Unideals paid.');
+    if (params.get('success'))   setToast('🎉 Subscription activated! Welcome to Studeals paid.');
     if (params.get('cancelled')) setToast('Checkout cancelled. You can subscribe anytime.');
     window.history.replaceState({}, '', window.location.pathname);
   }, []);

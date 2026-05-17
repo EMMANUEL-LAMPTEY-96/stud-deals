@@ -147,7 +147,7 @@ function StudentSignUpForm() {
             <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-white font-bold text-xl">Unideals</span>
+            <span className="text-white font-bold text-xl">Studeals</span>
           </div>
           <h1 className="text-2xl font-bold text-white">Student sign up</h1>
           <p className="text-purple-300 mt-1">Free access to exclusive student deals</p>

@@ -237,7 +237,7 @@ export default function StampPage() {
 
         if (!vp.is_approved) {
           setPageState('error');
-          setErrorMsg('This vendor is not yet approved on Unideals.');
+          setErrorMsg('This vendor is not yet approved on Studeals.');
           return;
         }
 
@@ -379,7 +379,7 @@ export default function StampPage() {
               <GraduationCap size={36} className="text-white" />
             </div>
             <h1 className="text-2xl font-black text-gray-900 mb-2">Sign in to earn stamps</h1>
-            <p className="text-gray-500 text-sm">Join Unideals and collect loyalty stamps at hundreds of student-friendly spots.</p>
+            <p className="text-gray-500 text-sm">Join Studeals and collect loyalty stamps at hundreds of student-friendly spots.</p>
           </div>
           <Link
             href={`/sign-in?next=/stamp/${vendorId}`}
@@ -408,7 +408,7 @@ export default function StampPage() {
           </div>
           <h1 className="text-2xl font-black text-gray-900 mb-2">Verify your student status</h1>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-            Unideals is exclusively for verified students. It only takes 60 seconds — then you can earn stamps here and at hundreds of other spots.
+            Studeals is exclusively for verified students. It only takes 60 seconds — then you can earn stamps here and at hundreds of other spots.
           </p>
           <Link
             href={`/verification?next=/stamp/${vendorId}`}
@@ -433,7 +433,7 @@ export default function StampPage() {
             <AlertCircle size={36} className="text-gray-400" />
           </div>
           <h1 className="text-2xl font-black text-gray-900 mb-2">Venue not found</h1>
-          <p className="text-gray-500 text-sm mb-6">This QR code doesn't match any active venue on Unideals. It may have been removed or the link is incorrect.</p>
+          <p className="text-gray-500 text-sm mb-6">This QR code doesn't match any active venue on Studeals. It may have been removed or the link is incorrect.</p>
           <Link href="/dashboard" className="block w-full py-4 bg-brand-600 text-white font-bold text-center rounded-2xl">
             Browse deals
           </Link>
@@ -717,7 +717,7 @@ export default function StampPage() {
 
         <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed">
           One stamp per visit · 8-hour cooldown between stamps<br/>
-          Exclusive to verified Unideals members
+          Exclusive to verified Studeals members
         </p>
       </div>
     </main>

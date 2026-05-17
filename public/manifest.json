@@ -1,0 +1,38 @@
+{
+  "name": "Studeals",
+  "short_name": "Studeals",
+  "description": "Exclusive student deals near your campus",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0b2e",
+  "theme_color": "#7c3aed",
+  "categories": ["shopping", "lifestyle", "education"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Browse Deals",
+      "url": "/dashboard",
+      "description": "See all student deals near you"
+    },
+    {
+      "name": "My Stamps",
+      "url": "/loyalty",
+      "description": "View your loyalty stamp cards"
+    }
+  ]
+}

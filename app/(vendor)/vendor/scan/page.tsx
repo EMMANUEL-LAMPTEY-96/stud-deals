@@ -153,7 +153,7 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
           <div className="w-16 h-16 rounded-2xl bg-vendor-600 flex items-center justify-center mx-auto mb-4">
             <QrCode size={28} className="text-white" />
           </div>
-          <h1 className="text-xl font-black text-white">Unideals</h1>
+          <h1 className="text-xl font-black text-white">Studeals</h1>
           <p className="text-gray-400 text-sm mt-1">Staff Scan Mode</p>
         </div>
 

@@ -32,7 +32,7 @@ function VerifyEmailContent() {
           <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
-          <span className="text-white font-bold text-xl">Unideals</span>
+          <span className="text-white font-bold text-xl">Studeals</span>
         </Link>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
@@ -49,7 +49,7 @@ function VerifyEmailContent() {
           <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl px-5 py-4 text-sm text-purple-200 mb-6 text-left space-y-2">
             <p className="flex items-start gap-2">
               <span className="w-5 h-5 bg-purple-600 rounded-full text-xs flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-              Open the email from Unideals
+              Open the email from Studeals
             </p>
             <p className="flex items-start gap-2">
               <span className="w-5 h-5 bg-purple-600 rounded-full text-xs flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
