@@ -22,7 +22,7 @@ import Navbar from '@/components/shared/Navbar';
 import {
   Users, Search, GraduationCap, Store, MapPin,
   CheckCircle, Clock, AlertTriangle, XCircle, Shield,
-  Loader2, RefreshCw, Activity, Mail,
+  Loader2, RefreshCw, Activity, Mail, ChevronLeft, ChevronRight, Ban, UserCheck,
 } from 'lucide-react';
 
 interface UserRecord {
@@ -35,6 +35,7 @@ interface UserRecord {
   verification_status: string | null;
   business_name: string | null;
   active_offers: number | null;
+  is_active: boolean;
 }
 
 function VerifBadge({ status }: { status: string | null }) {
@@ -91,6 +92,11 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [banning, setBanning] = useState<string | null>(null);
+  const LIMIT = 50;
 
   useEffect(() => {
     const check = async () => {
@@ -102,23 +108,48 @@ export default function AdminUsersPage() {
     check();
   }, []);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (targetPage = page) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (cityFilter !== 'all') params.set('city', cityFilter);
+      params.set('page', String(targetPage));
+      params.set('limit', String(LIMIT));
       const res = await fetch(`/api/admin/users?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users ?? []);
+        setTotalCount(data.total ?? 0);
+        setTotalPages(data.total_pages ?? 1);
       }
     } finally {
       setLoading(false);
     }
-  }, [roleFilter, cityFilter]);
+  }, [roleFilter, cityFilter, page]);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [roleFilter, cityFilter]);
+  useEffect(() => { fetchUsers(page); }, [roleFilter, cityFilter, page]);
+
+  const handleBanToggle = async (userId: string, currentlyActive: boolean) => {
+    if (!confirm(`${currentlyActive ? 'Deactivate' : 'Reactivate'} this account?`)) return;
+    setBanning(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/ban`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: currentlyActive ? 'ban' : 'unban' }),
+      });
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) => u.id === userId ? { ...u, is_active: !currentlyActive } : u)
+        );
+      }
+    } finally {
+      setBanning(null);
+    }
+  };
 
   const filtered = search
     ? users.filter((u) =>
@@ -128,8 +159,8 @@ export default function AdminUsersPage() {
       )
     : users;
 
-  const studentCount = users.filter((u) => u.role === 'student').length;
-  const vendorCount  = users.filter((u) => u.role === 'vendor').length;
+  const studentCount  = users.filter((u) => u.role === 'student').length;
+  const vendorCount   = users.filter((u) => u.role === 'vendor').length;
   const verifiedCount = users.filter((u) => u.verification_status === 'verified').length;
 
   return (
@@ -145,7 +176,7 @@ export default function AdminUsersPage() {
               <Users size={22} className="text-purple-600" /> User Management
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {studentCount} students · {vendorCount} vendors · {verifiedCount} verified
+              {totalCount} total users · {verifiedCount} verified on this page
             </p>
           </div>
           <button onClick={fetchUsers} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50">
@@ -213,24 +244,31 @@ export default function AdminUsersPage() {
                 <div className="col-span-2">Role</div>
                 <div className="col-span-2">City</div>
                 <div className="col-span-2">Status</div>
-                <div className="col-span-2">Joined</div>
+                <div className="col-span-1">Joined</div>
+                <div className="col-span-1">Actions</div>
               </div>
               {filtered.map((u) => (
-                <div key={u.id} className="grid grid-cols-12 gap-3 px-5 py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 items-center transition-colors">
+                <div key={u.id} className={`grid grid-cols-12 gap-3 px-5 py-4 border-b border-gray-100 last:border-0 items-center transition-colors ${
+                  u.is_active === false ? 'bg-red-50/40' : 'hover:bg-gray-50'
+                }`}>
                   <div className="col-span-4 flex items-center gap-3 min-w-0">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+                      u.is_active === false ? 'bg-red-100 text-red-400' :
                       u.role === 'vendor' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                     }`}>
                       {(u.business_name ?? u.name)[0]?.toUpperCase() ?? '?'}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">
+                      <p className={`text-sm font-bold truncate ${u.is_active === false ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                         {u.role === 'vendor' ? u.business_name ?? u.name : u.name}
                       </p>
                       {u.email && (
                         <p className="text-xs text-gray-400 truncate flex items-center gap-1">
                           <Mail size={9} />{u.email}
                         </p>
+                      )}
+                      {u.is_active === false && (
+                        <span className="text-xs font-bold text-red-500">Suspended</span>
                       )}
                     </div>
                   </div>
@@ -258,16 +296,59 @@ export default function AdminUsersPage() {
                       </span>
                     )}
                   </div>
-                  <div className="col-span-2 text-xs text-gray-400">
+                  <div className="col-span-1 text-xs text-gray-400">
                     {new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                  </div>
+                  <div className="col-span-1">
+                    {u.role !== 'admin' && (
+                      <button
+                        onClick={() => handleBanToggle(u.id, u.is_active !== false)}
+                        disabled={banning === u.id}
+                        title={u.is_active === false ? 'Reactivate account' : 'Suspend account'}
+                        className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors disabled:opacity-40 ${
+                          u.is_active === false
+                            ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                            : 'bg-red-50 text-red-500 hover:bg-red-100'
+                        }`}
+                      >
+                        {banning === u.id
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : u.is_active === false
+                          ? <UserCheck size={13} />
+                          : <Ban size={13} />
+                        }
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
             </>
           )}
         </div>
-        <p className="text-center text-xs text-gray-400 mt-4">
-          {filtered.length} user{filtered.length !== 1 ? 's' : ''} shown
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={14} /> Previous
+            </button>
+            <span className="text-sm text-gray-500 font-medium">
+              Page {page} of {totalPages} · {totalCount} users
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+        <p className="text-center text-xs text-gray-400 mt-3">
+          {filtered.length} user{filtered.length !== 1 ? 's' : ''} on this page
         </p>
       </div>
     </div>

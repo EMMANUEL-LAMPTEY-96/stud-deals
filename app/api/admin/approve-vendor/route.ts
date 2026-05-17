@@ -45,8 +45,11 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const statusFilter = searchParams.get('status') ?? 'pending';
+  const page   = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+  const limit  = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
+  const offset = (page - 1) * limit;
 
-  // Fetch all vendors with profile data
+  // Fetch vendors with profile data (paginated)
   const { data: vendors, error } = await admin
     .from('vendor_profiles')
     .select(`
@@ -62,34 +65,32 @@ export async function GET(request: NextRequest) {
       logo_url,
       is_verified,
       verified_at,
+      rejection_notes,
       created_at
     `)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Get auth emails for vendors
+  // Get auth emails — single listUsers call instead of N getUserById calls
   const emailMap: Record<string, string> = {};
-  await Promise.all(
-    (vendors ?? []).map(async (vp) => {
-      try {
-        const { data } = await admin.auth.admin.getUserById(vp.user_id as string);
-        if (data.user?.email) emailMap[vp.user_id as string] = data.user.email;
-      } catch (_) { /* skip */ }
-    })
-  );
+  try {
+    const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    for (const u of authData?.users ?? []) {
+      if (u.email) emailMap[u.id] = u.email;
+    }
+  } catch (_) { /* skip — emails fall back to null */ }
 
-  // Get active offer counts per vendor
+  // Get active offer counts per vendor (only fetch active status)
   const vpIds = (vendors ?? []).map((v) => v.id as string);
-  const { data: offers } = vpIds.length
-    ? await admin.from('offers').select('vendor_id, status').in('vendor_id', vpIds)
+  const { data: activeOfferRows } = vpIds.length
+    ? await admin.from('offers').select('vendor_id').eq('status', 'active').in('vendor_id', vpIds)
     : { data: [] };
 
   const offerCountMap: Record<string, number> = {};
-  for (const o of offers ?? []) {
-    if (o.status === 'active') {
-      offerCountMap[o.vendor_id as string] = (offerCountMap[o.vendor_id as string] ?? 0) + 1;
-    }
+  for (const o of activeOfferRows ?? []) {
+    offerCountMap[o.vendor_id as string] = (offerCountMap[o.vendor_id as string] ?? 0) + 1;
   }
 
   // Filter by status
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     }))
     .filter((vp) => statusFilter === 'all' || vp.approval_status === statusFilter);
 
-  return NextResponse.json({ vendors: filtered, total: filtered.length });
+  return NextResponse.json({ vendors: filtered, total: filtered.length, page, limit });
 }
 
 export async function POST(request: NextRequest) {
@@ -129,13 +130,18 @@ export async function POST(request: NextRequest) {
   const update =
     action === 'approve'
       ? {
-          is_verified:   true,
-          verified_at:   new Date().toISOString(),
-          plan_tier:     'growth',
-          plan_status:   'trialing',
-          trial_ends_at: trialEndsAt,
+          is_verified:     true,
+          verified_at:     new Date().toISOString(),
+          plan_tier:       'growth',
+          plan_status:     'trialing',
+          trial_ends_at:   trialEndsAt,
+          rejection_notes: null, // clear any previous rejection notes on approval
         }
-      : { is_verified: false, verified_at: new Date().toISOString() };
+      : {
+          is_verified:     false,
+          verified_at:     new Date().toISOString(),
+          rejection_notes: notes ?? null, // persist rejection reason for next review
+        };
 
   const { error } = await admin
     .from('vendor_profiles')
@@ -165,6 +171,19 @@ export async function POST(request: NextRequest) {
       data: JSON.stringify({ vendor_profile_id, action }),
     });
   }
+
+  // ── Audit log ────────────────────────────────────────────────────────────
+  await admin.from('admin_audit_log').insert({
+    admin_id:    user.id,
+    action:      action === 'approve' ? 'vendor_approved' : 'vendor_rejected',
+    entity_type: 'vendor_profile',
+    entity_id:   vendor_profile_id,
+    metadata:    {
+      ...(notes ? { notes } : {}),
+      ...(action === 'approve' ? { plan_tier: 'growth', plan_status: 'trialing' } : {}),
+    },
+  });
+  // Non-fatal — failure here should not block the response
 
   return NextResponse.json({ success: true, action });
 }
