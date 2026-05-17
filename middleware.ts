@@ -98,15 +98,24 @@ export async function middleware(request: NextRequest) {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // RULE 3: Role-based route protection
-  // Prevents a student from hitting /vendor/... and vice versa
+  // RULE 3: Role-based route protection + banned user check
+  // Prevents a student from hitting /vendor/... and vice versa.
+  // Banned users (is_active = false) are redirected to /sign-in.
   // ──────────────────────────────────────────────────────────────────────────
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_active')
       .eq('id', user.id)
       .maybeSingle();
+
+    // Blocked accounts — sign them out and redirect to login
+    if (profile && (profile as { is_active?: boolean }).is_active === false) {
+      await supabase.auth.signOut();
+      const redirectUrl = new URL('/sign-in', request.url);
+      redirectUrl.searchParams.set('error', 'account_suspended');
+      return NextResponse.redirect(redirectUrl);
+    }
 
     const role = (profile as { role?: string } | null)?.role ?? 'student';
 

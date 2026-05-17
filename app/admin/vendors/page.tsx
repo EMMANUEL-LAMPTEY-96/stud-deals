@@ -39,6 +39,7 @@ interface VendorRecord {
   logo_url: string | null;
   is_verified: boolean;
   verified_at: string | null;
+  rejection_notes: string | null;
   created_at: string;
   approval_status: string;
   email: string | null;
@@ -80,7 +81,7 @@ function VendorCard({
 }: {
   vendor: VendorRecord;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onReject: (id: string, notes?: string) => void;
   processing: string | null;
 }) {
   const [rejectNote, setRejectNote] = useState('');
@@ -183,8 +184,8 @@ function VendorCard({
               Cancel
             </button>
             <button
-              onClick={() => { onReject(vendor.id); }}
-              disabled={processing === vendor.id}
+              onClick={() => { onReject(vendor.id, rejectNote || undefined); }}
+              disabled={processing === vendor.id || !rejectNote.trim()}
               className="flex items-center gap-2 px-5 py-2 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {processing === vendor.id ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />}
@@ -196,10 +197,18 @@ function VendorCard({
 
       {/* Already actioned state */}
       {!isPending && vendor.verified_at && (
-        <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
-          {vendor.approval_status === 'approved'
-            ? `Approved on ${new Date(vendor.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-            : `Rejected on ${new Date(vendor.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
+          <p className="text-xs text-gray-400">
+            {vendor.approval_status === 'approved'
+              ? `Approved on ${new Date(vendor.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+              : `Rejected on ${new Date(vendor.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+          </p>
+          {vendor.approval_status === 'rejected' && vendor.rejection_notes && (
+            <div className="flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <XCircle size={12} className="text-red-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-red-700"><strong>Rejection reason:</strong> {vendor.rejection_notes}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -269,13 +278,13 @@ export default function AdminVendorsPage() {
     }
   };
 
-  const handleReject = async (vendorProfileId: string) => {
+  const handleReject = async (vendorProfileId: string, notes?: string) => {
     setProcessing(vendorProfileId);
     try {
       const res = await fetch('/api/admin/approve-vendor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendor_profile_id: vendorProfileId, action: 'reject' }),
+        body: JSON.stringify({ vendor_profile_id: vendorProfileId, action: 'reject', notes }),
       });
       if (res.ok) {
         setVendors((prev) => prev.filter((v) => v.id !== vendorProfileId));
