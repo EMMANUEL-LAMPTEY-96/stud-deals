@@ -27,7 +27,7 @@ import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
   Coffee, ShoppingBag, Laptop, UtensilsCrossed, Dumbbell,
-  Book, Tag, Shirt, Gift
+  Book, Tag, Shirt, Gift, Cake, X, Star
 } from 'lucide-react';
 import Link from 'next/link';
 import type {
@@ -136,6 +136,16 @@ export default function StudentDashboard() {
   const [city, setCity] = useState<string>('');
   const [showEUR, setShowEUR] = useState(false);
 
+  // Birthday modal state
+  const [birthdayData, setBirthdayData] = useState<{
+    is_birthday: boolean; has_dob: boolean; claimed: boolean;
+    top_vendor: { id: string; business_name: string; logo_url: string | null } | null;
+    bonus_stamps: number;
+  } | null>(null);
+  const [showBirthdayModal, setShowBirthdayModal] = useState(false);
+  const [claimingBirthday, setClaimingBirthday] = useState(false);
+  const [birthdayClaimed, setBirthdayClaimed] = useState(false);
+
   // ── Fetch user + student profile ──────────────────────────────────────────
   useEffect(() => {
     const fetchUser = async () => {
@@ -150,6 +160,17 @@ export default function StudentDashboard() {
       setUser(profileRes.data);
       setStudentProfile(studentRes.data);
       setCity(profileRes.data?.city ?? '');
+
+      // Check for birthday bonus (verified students only)
+      if (studentRes.data?.verification_status === 'verified') {
+        fetch('/api/birthday')
+          .then(r => r.json())
+          .then(d => {
+            setBirthdayData(d);
+            if (d.is_birthday && !d.claimed) setShowBirthdayModal(true);
+          })
+          .catch(() => {});
+      }
     };
 
     fetchUser();
@@ -235,6 +256,22 @@ export default function StudentDashboard() {
       alert('Network error. Please check your connection and try again.');
     } finally {
       setClaimingId(null);
+    }
+  };
+
+  // ── Claim birthday reward ─────────────────────────────────────────────────
+  const handleClaimBirthday = async () => {
+    setClaimingBirthday(true);
+    try {
+      const res = await fetch('/api/birthday', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to claim birthday reward');
+      setBirthdayClaimed(true);
+      setBirthdayData(prev => prev ? { ...prev, claimed: true } : prev);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setClaimingBirthday(false);
     }
   };
 
@@ -434,6 +471,82 @@ export default function StudentDashboard() {
           voucher={activeVoucher}
           onClose={() => setActiveVoucher(null)}
         />
+      )}
+
+      {/* ── BIRTHDAY MODAL ─────────────────────────────────────────────── */}
+      {showBirthdayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => !claimingBirthday && setShowBirthdayModal(false)}
+          />
+
+          {/* Card */}
+          <div className="relative w-full max-w-sm bg-gradient-to-br from-[#1a1040] to-[#0f0b2e] border border-purple-500/40 rounded-3xl p-7 text-center shadow-2xl">
+            {/* Close */}
+            {!claimingBirthday && (
+              <button
+                onClick={() => setShowBirthdayModal(false)}
+                className="absolute top-4 right-4 text-purple-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Cake emoji + confetti stars */}
+            <div className="relative mb-4">
+              <div className="text-6xl mb-2">🎂</div>
+              <div className="flex justify-center gap-2 text-yellow-400">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-3 h-3 fill-current animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-white mb-1">
+              Happy Birthday, {firstName}! 🎉
+            </h2>
+            <p className="text-purple-300 text-sm mb-5">
+              {birthdayClaimed
+                ? `${birthdayData?.bonus_stamps ?? 3} bonus stamps have been added to your${birthdayData?.top_vendor ? ` ${birthdayData.top_vendor.business_name}` : ''} punch card. Keep collecting!`
+                : `You have a birthday gift waiting — ${birthdayData?.bonus_stamps ?? 3} free bonus stamps${birthdayData?.top_vendor ? ` for ${birthdayData.top_vendor.business_name}` : ''}!`}
+            </p>
+
+            {!birthdayClaimed ? (
+              <button
+                onClick={handleClaimBirthday}
+                disabled={claimingBirthday}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold py-3 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                {claimingBirthday ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Claiming...</>
+                ) : (
+                  <><Cake className="w-4 h-4" /> Claim my birthday gift</>
+                )}
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 bg-green-500/15 border border-green-500/30 rounded-xl py-3 text-green-400 font-semibold text-sm">
+                  <Sparkles className="w-4 h-4" /> Stamps credited — enjoy your birthday!
+                </div>
+                <button
+                  onClick={() => setShowBirthdayModal(false)}
+                  className="w-full text-purple-400 hover:text-white text-sm py-2 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+
+            {/* Settings nudge */}
+            {!birthdayClaimed && (
+              <p className="text-xs text-purple-500 mt-4">
+                Reward resets automatically each year 🎈
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </>
   );
