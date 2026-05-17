@@ -23,3 +23,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Generated PDFs and backup files
+*.pdf
+*.bak
+test_write.txt
