@@ -178,11 +178,13 @@ export default function BillingPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
-        .from('vendor_profiles')
+      // Cast required: plan_status + trial_ends_at added in migration 010_billing
+      // after last type regeneration. Safe — columns exist in DB.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase.from('vendor_profiles') as any)
         .select('plan_tier, plan_status, trial_ends_at')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle() as { data: { plan_tier: string; plan_status: string; trial_ends_at: string | null } | null };
       if (data) setPlan(data as VendorPlan);
       setLoading(false);
     })();

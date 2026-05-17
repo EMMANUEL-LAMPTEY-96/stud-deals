@@ -41,11 +41,13 @@ export async function POST(request: NextRequest) {
 
     // Fetch vendor profile
     const adminSupabase = createAdminClient();
-    const { data: vendor } = await adminSupabase
-      .from('vendor_profiles')
+    // Cast required: stripe_customer_id + plan_tier added in migration 010_billing
+    // after last type regeneration. Safe — columns exist in DB.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: vendor } = await (adminSupabase.from('vendor_profiles') as any)
       .select('id, stripe_customer_id, plan_tier')
       .eq('user_id', user.id)
-      .maybeSingle();
+      .maybeSingle() as { data: { id: string; stripe_customer_id: string | null; plan_tier: string } | null };
 
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
@@ -68,8 +70,8 @@ export async function POST(request: NextRequest) {
       });
       stripeCustomerId = customer.id;
 
-      await adminSupabase
-        .from('vendor_profiles')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (adminSupabase.from('vendor_profiles') as any)
         .update({ stripe_customer_id: stripeCustomerId })
         .eq('id', vendor.id);
     }

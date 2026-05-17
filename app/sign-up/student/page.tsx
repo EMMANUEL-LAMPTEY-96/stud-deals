@@ -102,8 +102,9 @@ function StudentSignUpForm() {
     if (dateOfBirth && data.user) {
       try {
         const supabaseDirect = createClient();
-        await supabaseDirect
-          .from('student_profiles')
+        // Cast required: date_of_birth added in SQL migration after last type regen.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabaseDirect.from('student_profiles') as any)
           .update({ date_of_birth: dateOfBirth })
           .eq('user_id', data.user.id);
       } catch (_) {

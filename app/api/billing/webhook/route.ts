@@ -66,8 +66,10 @@ async function updateVendorPlan(
   const tier    = tierFromPriceId(priceId);
   const status  = mapStripeStatus(subscription.status);
 
-  await adminSupabase
-    .from('vendor_profiles')
+  // Cast required: plan_status, stripe_subscription_id, trial_ends_at added in
+  // migration 010_billing after last type regeneration. Safe — columns exist in DB.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (adminSupabase.from('vendor_profiles') as any)
     .update({
       plan_tier:              tier,
       plan_status:            status,
@@ -80,8 +82,8 @@ async function updateVendorPlan(
 
 async function downgradeToFree(customerId: string) {
   const adminSupabase = createAdminClient();
-  await adminSupabase
-    .from('vendor_profiles')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (adminSupabase.from('vendor_profiles') as any)
     .update({
       plan_tier:              'free',
       plan_status:            'cancelled',
@@ -146,8 +148,8 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         const adminSupabase = createAdminClient();
-        await adminSupabase
-          .from('vendor_profiles')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (adminSupabase.from('vendor_profiles') as any)
           .update({ plan_status: 'past_due' })
           .eq('stripe_customer_id', invoice.customer as string);
         break;
