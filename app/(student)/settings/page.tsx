@@ -188,8 +188,10 @@ export default function StudentSettingsPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
-      const { error } = await supabase
-        .from('student_profiles')
+      // Cast required: date_of_birth was added in a SQL migration after the last
+      // Supabase type regeneration. Safe cast — column exists in DB.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('student_profiles') as any)
         .update({ date_of_birth: dateOfBirth || null })
         .eq('user_id', user.id);
       if (error) throw new Error(error.message);
