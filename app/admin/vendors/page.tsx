@@ -15,7 +15,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
@@ -194,14 +194,19 @@ function VendorCard({
 
 export default function AdminVendorsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
   const [vendors, setVendors] = useState<VendorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [statusTab, setStatusTab] = useState<StatusTab>('pending');
-  const [search, setSearch] = useState(searchParams.get('q') ?? '');
+  const [search, setSearch] = useState('');
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
+
+  // Pre-fill search from ?q= query param (from global search navigation)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearch(q);
+  }, []);
 
   useEffect(() => {
     const check = async () => {
