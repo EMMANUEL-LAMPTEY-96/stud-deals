@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import AdminNav from '@/components/admin/AdminNav';
 import {
@@ -81,6 +81,7 @@ function ConfirmModal({
 
 export default function AdminOffersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading]     = useState(true);
   const [acting, setActing]       = useState(false);
   const [offers, setOffers]       = useState<Offer[]>([]);
@@ -89,7 +90,7 @@ export default function AdminOffersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter]     = useState('');
-  const [search, setSearch]             = useState('');
+  const [search, setSearch]             = useState(searchParams.get('q') ?? '');
   const [confirm, setConfirm] = useState<{ offer: Offer; action: 'pause' | 'activate' | 'delete' } | null>(null);
 
   useEffect(() => {
@@ -124,11 +125,16 @@ export default function AdminOffersPage() {
     if (!confirm) return;
     setActing(true);
     try {
-      await fetch(`/api/admin/offers/${confirm.offer.id}`, {
+      const res = await fetch(`/api/admin/offers/${confirm.offer.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: confirm.action }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Action failed: ${err.error ?? 'Unknown error'}`);
+        return;
+      }
       setConfirm(null);
       fetchOffers(page);
     } finally {

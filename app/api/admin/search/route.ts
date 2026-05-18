@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     role: p.role,
     name: p.first_name ? `${p.first_name} ${p.last_name ?? ''}`.trim() : p.display_name ?? 'Unknown',
     city: p.city,
-    href: `/admin/users`,
+    href: `/admin/users?q=${encodeURIComponent(q)}`,
   }));
 
   const vendors = (vendorsRes.data ?? []).map((v) => ({
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     business_name: v.business_name,
     city:          v.city,
     is_verified:   v.is_verified,
-    href:          `/admin/vendors`,
+    href:          `/admin/vendors?q=${encodeURIComponent(q)}`,
   }));
 
   const offers = (offersRes.data ?? []).map((o) => ({
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     title:     o.title,
     status:    o.status,
     vendor_id: o.vendor_id,
-    href:      `/admin/offers`,
+    href:      `/admin/offers?q=${encodeURIComponent(q)}`,
   }));
 
   return NextResponse.json({ users, vendors, offers });

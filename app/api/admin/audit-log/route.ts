@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
   const offset      = (page - 1) * limit;
   const actionFilter     = searchParams.get('action')      ?? '';
   const entityTypeFilter = searchParams.get('entity_type') ?? '';
+  const startDate        = searchParams.get('start')       ?? '';
+  const endDate          = searchParams.get('end')         ?? '';
 
   let q = admin
     .from('admin_audit_log')
@@ -46,6 +48,8 @@ export async function GET(request: NextRequest) {
 
   if (actionFilter)     q = q.eq('action',      actionFilter);
   if (entityTypeFilter) q = q.eq('entity_type', entityTypeFilter);
+  if (startDate)        q = q.gte('created_at', startDate);
+  if (endDate)          q = q.lte('created_at', endDate);
 
   const { data: entries, count: totalCount, error } = await q;
 

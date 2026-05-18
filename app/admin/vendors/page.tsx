@@ -15,7 +15,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
@@ -194,12 +194,13 @@ function VendorCard({
 
 export default function AdminVendorsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [vendors, setVendors] = useState<VendorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [statusTab, setStatusTab] = useState<StatusTab>('pending');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
 
   useEffect(() => {

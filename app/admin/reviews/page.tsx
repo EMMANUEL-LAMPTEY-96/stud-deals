@@ -123,7 +123,12 @@ export default function AdminReviewsPage() {
     if (!toDelete) return;
     setDeleting(true);
     try {
-      await fetch(`/api/admin/reviews/${toDelete.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/reviews/${toDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Delete failed: ${err.error ?? 'Unknown error'}`);
+        return;
+      }
       setToDelete(null);
       fetchReviews(page);
     } finally {
