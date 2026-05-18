@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
   const limit  = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10)));
   const offset = (page - 1) * limit;
 
-  // Fetch vendors with profile data (paginated)
-  const { data: vendors, error } = await admin
+  // Build status filter in DB (not client-side) to get accurate pagination counts
+  let vendorQuery = admin
     .from('vendor_profiles')
     .select(`
       id,
@@ -67,9 +67,21 @@ export async function GET(request: NextRequest) {
       verified_at,
       rejection_notes,
       created_at
-    `)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+    `, { count: 'exact' })
+    .order('created_at', { ascending: false });
+
+  // Filter in DB so pagination counts are accurate
+  if (statusFilter === 'pending') {
+    vendorQuery = vendorQuery.eq('is_verified', false).is('verified_at', null);
+  } else if (statusFilter === 'approved') {
+    vendorQuery = vendorQuery.eq('is_verified', true);
+  } else if (statusFilter === 'rejected') {
+    vendorQuery = vendorQuery.eq('is_verified', false).not('verified_at', 'is', null);
+  }
+
+  vendorQuery = vendorQuery.range(offset, offset + limit - 1);
+
+  const { data: vendors, error, count: totalCount } = await vendorQuery;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -93,17 +105,15 @@ export async function GET(request: NextRequest) {
     offerCountMap[o.vendor_id as string] = (offerCountMap[o.vendor_id as string] ?? 0) + 1;
   }
 
-  // Filter by status
-  const filtered = (vendors ?? [])
-    .map((vp) => ({
-      ...vp,
-      approval_status: getVendorStatus({ is_verified: vp.is_verified as boolean, verified_at: vp.verified_at as string | null }),
-      email: emailMap[vp.user_id as string] ?? null,
-      active_offers: offerCountMap[vp.id as string] ?? 0,
-    }))
-    .filter((vp) => statusFilter === 'all' || vp.approval_status === statusFilter);
+  const enriched = (vendors ?? []).map((vp) => ({
+    ...vp,
+    approval_status: getVendorStatus({ is_verified: vp.is_verified as boolean, verified_at: vp.verified_at as string | null }),
+    email: emailMap[vp.user_id as string] ?? null,
+    active_offers: offerCountMap[vp.id as string] ?? 0,
+  }));
 
-  return NextResponse.json({ vendors: filtered, total: filtered.length, page, limit });
+  const total = totalCount ?? enriched.length;
+  return NextResponse.json({ vendors: enriched, total, page, limit, total_pages: Math.ceil(total / limit) });
 }
 
 export async function POST(request: NextRequest) {

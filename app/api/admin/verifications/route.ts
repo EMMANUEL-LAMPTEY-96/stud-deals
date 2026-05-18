@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json({
-      submissions: enriched,
+      students: enriched,
       total: count ?? 0,
       page,
       limit,

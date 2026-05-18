@@ -68,6 +68,13 @@ export async function PATCH(request: NextRequest) {
   const { key, value } = body;
   if (!key) return NextResponse.json({ error: 'key is required' }, { status: 400 });
 
+  // Capture old value before updating (for full audit trail)
+  const { data: oldRow } = await admin
+    .from('platform_config')
+    .select('value')
+    .eq('key', key)
+    .maybeSingle();
+
   const { error } = await admin
     .from('platform_config')
     .update({ value, updated_by: user.id })
@@ -80,7 +87,7 @@ export async function PATCH(request: NextRequest) {
     action:      'config_updated',
     entity_type: 'platform_config',
     entity_id:   key,
-    metadata:    { key, value },
+    metadata:    { key, old_value: oldRow?.value ?? null, new_value: value },
   });
 
   safeLog.info('[admin/config] Config updated', { adminId: user.id, key, value });
