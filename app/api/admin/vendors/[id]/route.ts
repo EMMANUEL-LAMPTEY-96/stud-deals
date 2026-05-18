@@ -51,14 +51,13 @@ export async function GET(
       id, user_id, business_name, business_type, description,
       city, business_email, business_phone, website_url, logo_url,
       is_verified, verified_at, rejection_notes, created_at,
-      plan_tier, plan_status, trial_ends_at, staff_pin
+      plan_tier, plan_status, trial_ends_at, staff_pins
     `)
     .eq('id', vendorProfileId)
     .maybeSingle();
 
-  if (vpErr || !vp) {
-    return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
-  }
+  if (vpErr) return NextResponse.json({ error: vpErr.message }, { status: 500 });
+  if (!vp) return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
 
   // ── Auth email ─────────────────────────────────────────────────────────────
   let email: string | null = null;
@@ -155,7 +154,7 @@ export async function GET(
     vendor: {
       ...vp,
       email,
-      staff_pin: maskPin(vp.staff_pin),
+      staff_pin: maskPin(vp.staff_pins),
       approval_status: vp.is_verified
         ? 'approved'
         : vp.verified_at ? 'rejected' : 'pending',
