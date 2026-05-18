@@ -239,13 +239,16 @@ export default function AdminVendorsPage() {
   const fetchVendors = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch all tabs' counts in parallel
+      // Use limit=1 for count-only requests to minimise payload
       const [pendingRes, approvedRes, rejectedRes, currentRes] = await Promise.all([
-        fetch('/api/admin/approve-vendor?status=pending'),
-        fetch('/api/admin/approve-vendor?status=approved'),
-        fetch('/api/admin/approve-vendor?status=rejected'),
-        fetch(`/api/admin/approve-vendor?status=${statusTab}`),
+        fetch('/api/admin/approve-vendor?status=pending&limit=1'),
+        fetch('/api/admin/approve-vendor?status=approved&limit=1'),
+        fetch('/api/admin/approve-vendor?status=rejected&limit=1'),
+        fetch(`/api/admin/approve-vendor?status=${statusTab}&limit=100`),
       ]);
+      if (!pendingRes.ok || !approvedRes.ok || !rejectedRes.ok || !currentRes.ok) {
+        throw new Error('Failed to fetch vendor data — check admin session');
+      }
       const [pendingData, approvedData, rejectedData, currentData] = await Promise.all([
         pendingRes.json(), approvedRes.json(), rejectedRes.json(), currentRes.json(),
       ]);
@@ -255,6 +258,8 @@ export default function AdminVendorsPage() {
         rejected: rejectedData.total ?? 0,
       });
       setVendors(currentData.vendors ?? []);
+    } catch (err) {
+      console.error('[AdminVendors] fetchVendors error:', err);
     } finally {
       setLoading(false);
     }
@@ -323,7 +328,7 @@ export default function AdminVendorsPage() {
           </div>
           <div className="flex gap-2">
             <a
-              href="/api/admin/vendors/export"
+              href={`/api/admin/approve-vendor/export?status=${statusTab}`}
               download
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50"
             >

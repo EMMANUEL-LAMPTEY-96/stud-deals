@@ -53,13 +53,19 @@ export async function GET(request: NextRequest) {
 
   if (status !== 'all') q = q.eq('status', status);
   if (city) q = q.eq('vendor_profiles.city', city);
+  // Push search to DB so pagination counts stay accurate (no client-side filter)
+  if (search) {
+    q = q.or(
+      `title.ilike.%${search}%,category.ilike.%${search}%,vendor_profiles.business_name.ilike.%${search}%`
+    );
+  }
 
   const { data: offers, count: totalCount, error } = await q;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!offers?.length) return NextResponse.json({ offers: [], total: 0, page, limit, total_pages: 0 });
 
-  let mapped = offers.map((o) => ({
+  const mapped = offers.map((o) => ({
     id:             o.id,
     title:          o.title,
     description:    o.description,
@@ -73,14 +79,6 @@ export async function GET(request: NextRequest) {
     business_name:  (o.vendor_profiles as any)?.business_name ?? null,
     city:           (o.vendor_profiles as any)?.city ?? null,
   }));
-
-  if (search) {
-    mapped = mapped.filter((o) =>
-      o.title.toLowerCase().includes(search) ||
-      (o.business_name ?? '').toLowerCase().includes(search) ||
-      (o.category ?? '').toLowerCase().includes(search)
-    );
-  }
 
   const total       = totalCount ?? mapped.length;
   const total_pages = Math.ceil(total / limit);
