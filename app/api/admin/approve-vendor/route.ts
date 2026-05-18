@@ -66,7 +66,9 @@ export async function GET(request: NextRequest) {
       is_verified,
       verified_at,
       rejection_notes,
-      created_at
+      created_at,
+      plan_tier,
+      plan_status
     `, { count: 'exact' })
     .order('created_at', { ascending: false });
 

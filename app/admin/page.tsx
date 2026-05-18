@@ -26,7 +26,7 @@ import {
   Users, Store, Stamp, Gift, Tag, Shield, RefreshCw,
   Loader2, CheckCircle, Clock, AlertTriangle, MapPin,
   TrendingUp, ArrowRight, Star, Bell, Activity, Crown,
-  GraduationCap, XCircle, Search, X,
+  GraduationCap, XCircle, Search, X, ShieldAlert, Receipt,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -255,6 +255,118 @@ function GlobalSearch() {
               )}
             </>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Fraud & Health Signals ────────────────────────────────────────────────────
+interface FraudSignal {
+  rate_limit_hits: { student_id: string; vendor_id: string; student_name: string; vendor_name: string; stamp_count: number }[];
+  at_risk_vendors: { id: string; business_name: string; city: string; days_since_join: number }[];
+  velocity_spikes: { student_id: string; vendor_id: string; student_name: string; vendor_name: string; max_in_hour: number }[];
+}
+
+function FraudSignals() {
+  const [data, setData]       = useState<FraudSignal | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/admin/fraud-signals')
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const total = data
+    ? data.rate_limit_hits.length + data.velocity_spikes.length + data.at_risk_vendors.length
+    : 0;
+
+  if (!loading && total === 0) return null; // nothing suspicious — keep the overview clean
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-3">
+        <ShieldAlert size={15} className="text-red-500" />
+        <h2 className="text-sm font-bold text-gray-900">Loyalty Fraud &amp; Health Signals</h2>
+        {loading && <Loader2 size={12} className="animate-spin text-gray-400" />}
+      </div>
+
+      {loading ? null : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* Rate-limit hits */}
+          <div className="bg-white rounded-2xl border border-red-100 p-4">
+            <h3 className="text-xs font-bold text-red-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <AlertTriangle size={11} /> High-velocity stamps (24h)
+            </h3>
+            {data?.rate_limit_hits.length === 0 ? (
+              <p className="text-xs text-gray-400">No suspicious activity</p>
+            ) : (
+              <div className="space-y-2">
+                {data?.rate_limit_hits.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{r.student_name}</p>
+                      <p className="text-gray-400 truncate">@ {r.vendor_name}</p>
+                    </div>
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold shrink-0">
+                      {r.stamp_count} stamps
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Velocity spikes */}
+          <div className="bg-white rounded-2xl border border-orange-100 p-4">
+            <h3 className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <AlertTriangle size={11} /> Velocity spikes (≥10/hr, 7d)
+            </h3>
+            {data?.velocity_spikes.length === 0 ? (
+              <p className="text-xs text-gray-400">No spikes detected</p>
+            ) : (
+              <div className="space-y-2">
+                {data?.velocity_spikes.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{s.student_name}</p>
+                      <p className="text-gray-400 truncate">@ {s.vendor_name}</p>
+                    </div>
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold shrink-0">
+                      {s.max_in_hour}/hr
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* At-risk vendors */}
+          <div className="bg-white rounded-2xl border border-yellow-100 p-4">
+            <h3 className="text-xs font-bold text-yellow-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <Store size={11} /> At-risk vendors (0 activity, 30d)
+            </h3>
+            {data?.at_risk_vendors.length === 0 ? (
+              <p className="text-xs text-gray-400">All vendors have recent activity</p>
+            ) : (
+              <div className="space-y-2">
+                {data?.at_risk_vendors.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between text-xs">
+                    <div className="min-w-0">
+                      <Link href={`/admin/vendors/${v.id}`} className="font-semibold text-purple-600 hover:underline truncate block">
+                        {v.business_name}
+                      </Link>
+                      <p className="text-gray-400">{v.city} · joined {v.days_since_join}d ago</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -516,6 +628,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* ── Fraud & Health Signals ── */}
+            <FraudSignals />
+
             {/* ── Quick actions + activity ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
@@ -549,6 +664,14 @@ export default function AdminDashboard() {
                       sub: `${ov?.students ?? 0} students, ${ov?.vendors ?? 0} vendors`,
                       icon: <Users size={14} />,
                       color: 'text-purple-600 bg-purple-50',
+                      badge: 0,
+                    },
+                    {
+                      href: '/admin/redemptions',
+                      label: 'Redemptions',
+                      sub: 'Void stamps, claims & rewards',
+                      icon: <Receipt size={14} />,
+                      color: 'text-red-600 bg-red-50',
                       badge: 0,
                     },
                     {

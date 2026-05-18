@@ -24,7 +24,7 @@ import {
   Store, CheckCircle, XCircle, Clock, MapPin, Mail,
   Globe, Phone, Shield, Users, Activity, Loader2,
   RefreshCw, Building2, Tag, Search, AlertTriangle,
-  ArrowRight, Download,
+  ArrowRight, Download, ExternalLink, Crown,
 } from 'lucide-react';
 
 interface VendorRecord {
@@ -45,6 +45,8 @@ interface VendorRecord {
   approval_status: string;
   email: string | null;
   active_offers: number;
+  plan_tier: string | null;
+  plan_status: string | null;
 }
 
 type StatusTab = 'pending' | 'approved' | 'rejected';
@@ -188,6 +190,22 @@ function VendorCard({
           )}
         </div>
       )}
+
+      {/* Deep-dive link — always visible */}
+      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+        <Link
+          href={`/admin/vendors/${vendor.id}`}
+          className="flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-800"
+        >
+          <ExternalLink size={12} /> View full profile &amp; controls
+        </Link>
+        {vendor.approval_status === 'approved' && (
+          <span className="text-xs text-gray-400 flex items-center gap-1">
+            <Crown size={11} className="text-amber-400" />
+            {vendor.plan_tier ?? 'free'} · {vendor.plan_status ?? 'active'}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
