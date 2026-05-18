@@ -15,7 +15,7 @@
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
@@ -60,13 +60,18 @@ function VerifBadge({ status }: { status: string | null }) {
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
-  const [search, setSearch] = useState(searchParams.get('q') ?? '');
+  const [search, setSearch] = useState('');
+
+  // Pre-fill search from ?q= query param (from global search navigation)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setSearch(q);
+  }, []);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
