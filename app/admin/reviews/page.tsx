@@ -107,6 +107,7 @@ export default function AdminReviewsPage() {
       if (ratingFilter) params.set('rating', String(ratingFilter));
       if (search)       params.set('search', search);
       const res  = await fetch(`/api/admin/reviews?${params}`);
+      if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       setReviews(data.reviews ?? []);
       setTotal(data.total ?? 0);

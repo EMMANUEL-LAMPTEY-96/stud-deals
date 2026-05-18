@@ -114,6 +114,7 @@ export default function AdminOffersPage() {
       if (cityFilter) params.set('city', cityFilter);
       if (search)     params.set('search', search);
       const res  = await fetch(`/api/admin/offers?${params}`);
+      if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       setOffers(data.offers ?? []);
       setTotal(data.total ?? 0);

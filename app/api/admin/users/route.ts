@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
   if (vendorUserIds.length) {
     const { data: vendorProfiles } = await admin
       .from('vendor_profiles')
-      .select('user_id, business_name, city')
+      .select('id, user_id, business_name, city')
       .in('user_id', vendorUserIds);
 
     const vpIds = (vendorProfiles ?? []).map((vp) => vp.id as string);
