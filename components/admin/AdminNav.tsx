@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   Activity, Shield, Store, Users,
-  BookOpen, Tag, Star, Megaphone, Settings,
+  BookOpen, Tag, Star, Megaphone, Settings, Receipt,
 } from 'lucide-react';
 
 interface Counts {
@@ -54,6 +54,7 @@ export default function AdminNav({ active }: { active: string }) {
     { href: '/admin/users',         label: 'Users',     icon: <Users     size={14} />, badge: 0 },
     { href: '/admin/offers',        label: 'Offers',    icon: <Tag       size={14} />, badge: 0 },
     { href: '/admin/reviews',       label: 'Reviews',   icon: <Star      size={14} />, badge: 0 },
+    { href: '/admin/redemptions',    label: 'Redeem',    icon: <Receipt   size={14} />, badge: 0 },
     { href: '/admin/audit-log',     label: 'Audit Log', icon: <BookOpen  size={14} />, badge: 0 },
     { href: '/admin/announcements', label: 'Announce',  icon: <Megaphone size={14} />, badge: 0 },
     { href: '/admin/config',        label: 'Config',    icon: <Settings  size={14} />, badge: 0 },
