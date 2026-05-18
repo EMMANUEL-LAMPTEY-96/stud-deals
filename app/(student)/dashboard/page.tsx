@@ -27,7 +27,7 @@ import {
   GraduationCap, MapPin, Search, SlidersHorizontal,
   Sparkles, Trophy, AlertTriangle, ArrowRight, Loader2,
   Coffee, ShoppingBag, Laptop, UtensilsCrossed, Dumbbell,
-  Book, Tag, Shirt, Gift, Cake, X, Star
+  Book, Tag, Shirt, Gift, Cake, X, Star, Flame, Clock, Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import type {
@@ -118,6 +118,117 @@ function VerificationBanner({ status }: { status: string }) {
   );
 }
 
+// ── Discover / Trending types ─────────────────────────────────────────────────
+
+interface DiscoverOffer {
+  id: string;
+  title: string;
+  category: string | null;
+  discount_value: number | null;
+  discount_type: string | null;
+  expires_at: string | null;
+  claim_count: number;
+  business_name: string | null;
+  city: string | null;
+  logo_url: string | null;
+}
+
+interface DiscoverData {
+  trending:      DiscoverOffer[];
+  expiring_soon: DiscoverOffer[];
+  new_this_week: DiscoverOffer[];
+}
+
+// ── Discover section pill ─────────────────────────────────────────────────────
+
+function DiscoverPill({ offer, badge }: { offer: DiscoverOffer; badge?: React.ReactNode }) {
+  const discount =
+    offer.discount_value != null
+      ? offer.discount_type === 'percentage'
+        ? `${offer.discount_value}%`
+        : `${offer.discount_value.toLocaleString('hu-HU')} HUF`
+      : null;
+
+  return (
+    <Link
+      href={`/offer/${offer.id}`}
+      className="flex-shrink-0 w-44 bg-white border border-gray-100 rounded-2xl p-3 hover:border-purple-200 hover:shadow-md transition-all duration-150 group"
+    >
+      <div className="flex items-start justify-between gap-1 mb-2">
+        <div className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+          {offer.logo_url
+            ? <img src={offer.logo_url} alt="" className="w-full h-full object-cover" />
+            : <span className="text-lg">{CATEGORY_EMOJI[offer.category ?? ''] ?? '🏷️'}</span>
+          }
+        </div>
+        {badge}
+      </div>
+      <p className="text-xs font-bold text-gray-800 leading-tight line-clamp-2 group-hover:text-purple-700 transition-colors mb-1">
+        {offer.title}
+      </p>
+      <p className="text-xs text-gray-400 truncate">{offer.business_name}</p>
+      {discount && (
+        <span className="mt-1.5 inline-block bg-purple-50 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+          {discount} off
+        </span>
+      )}
+    </Link>
+  );
+}
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  food_drink:       '☕',
+  groceries:        '🛒',
+  tech:             '💻',
+  books_stationery: '📚',
+  fitness:          '🏋️',
+  fashion:          '👗',
+  other:            '🏷️',
+};
+
+function DiscoverRow({
+  title, icon, offers, emptyMsg,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  offers: DiscoverOffer[];
+  emptyMsg: string;
+  badgeFn?: (o: DiscoverOffer) => React.ReactNode;
+}) {
+  if (offers.length === 0) return null;
+  return (
+    <div className="mb-5">
+      <div className="flex items-center gap-2 mb-3">
+        {icon}
+        <h2 className="text-sm font-bold text-gray-700">{title}</h2>
+      </div>
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4">
+        {offers.map((o) => {
+          let badge: React.ReactNode = null;
+          if (o.claim_count > 0) {
+            badge = (
+              <span className="ml-auto flex items-center gap-0.5 bg-orange-50 text-orange-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                <Flame size={8} /> {o.claim_count}
+              </span>
+            );
+          }
+          if (o.expires_at) {
+            const hoursLeft = Math.max(0, Math.ceil(
+              (new Date(o.expires_at).getTime() - Date.now()) / 3_600_000
+            ));
+            badge = (
+              <span className="ml-auto flex items-center gap-0.5 bg-red-50 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                <Clock size={8} /> {hoursLeft}h
+              </span>
+            );
+          }
+          return <DiscoverPill key={o.id} offer={o} badge={badge} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function StudentDashboard() {
@@ -135,6 +246,9 @@ export default function StudentDashboard() {
   const [activeVoucher, setActiveVoucher] = useState<ClaimOfferResponse | null>(null);
   const [city, setCity] = useState<string>('');
   const [showEUR, setShowEUR] = useState(false);
+
+  // Discover / trending state
+  const [discover, setDiscover] = useState<DiscoverData | null>(null);
 
   // Birthday modal state
   const [birthdayData, setBirthdayData] = useState<{
@@ -169,6 +283,12 @@ export default function StudentDashboard() {
             setBirthdayData(d);
             if (d.is_birthday && !d.claimed) setShowBirthdayModal(true);
           })
+          .catch(() => {});
+
+        // Fetch discover / trending data
+        fetch('/api/offers/discover')
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d) setDiscover(d); })
           .catch(() => {});
       }
     };
@@ -339,6 +459,30 @@ export default function StudentDashboard() {
               </div>
               <ArrowRight className="w-4 h-4 text-purple-400 group-hover:text-purple-600 flex-shrink-0 transition-colors" />
             </Link>
+          )}
+
+          {/* ── DISCOVER SECTION ──────────────────────────────────────── */}
+          {isVerified && discover && (
+            <div className="mb-2">
+              <DiscoverRow
+                title="Trending this week"
+                icon={<Flame size={14} className="text-orange-500" />}
+                offers={discover.trending}
+                emptyMsg=""
+              />
+              <DiscoverRow
+                title="Expiring soon"
+                icon={<Clock size={14} className="text-red-500" />}
+                offers={discover.expiring_soon}
+                emptyMsg=""
+              />
+              <DiscoverRow
+                title="New this week"
+                icon={<Zap size={14} className="text-yellow-500" />}
+                offers={discover.new_this_week}
+                emptyMsg=""
+              />
+            </div>
           )}
 
           {/* ── SEARCH BAR ─────────────────────────────────────────────── */}
