@@ -209,6 +209,7 @@ export default function StudentProfilePage() {
 
   const [data, setData] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string>('student');
 
   // Form state
   const [firstName, setFirstName]         = useState('');
@@ -228,6 +229,14 @@ export default function StudentProfilePage() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login'); return; }
+
+      // Fetch role to conditionally hide admin-irrelevant sections
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profileRow?.role) setRole(profileRow.role);
 
       try {
         const res = await fetch('/api/student/profile');
@@ -328,8 +337,10 @@ export default function StudentProfilePage() {
 
         <div className="space-y-5">
 
-          {/* ── 1. Verification status ── */}
-          <VerificationCard studentProfile={data?.student_profile ?? null} />
+          {/* ── 1. Verification status — hidden for admin accounts ── */}
+          {role !== 'admin' && (
+            <VerificationCard studentProfile={data?.student_profile ?? null} />
+          )}
 
           {/* ── 2. Personal info ── */}
           <Section title="Personal information" icon={<User size={15} />}>
