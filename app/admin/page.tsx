@@ -379,7 +379,7 @@ export default function AdminDashboard() {
   const supabase = createClient();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   useEffect(() => {
     const check = async () => {
@@ -429,7 +429,9 @@ export default function AdminDashboard() {
               Platform Overview
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Last updated {lastRefresh.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              {lastRefresh
+                ? <>Last updated {lastRefresh.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>
+                : <>Loading…</>}
               <span className="ml-2 text-gray-400">· Auto-refreshes every 30s</span>
             </p>
           </div>
