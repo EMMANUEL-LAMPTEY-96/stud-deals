@@ -97,6 +97,9 @@ function PunchDots({ filled, total, small = false }: { filled: number; total: nu
 // ── Card component ────────────────────────────────────────────────────────────
 
 function LoyaltyCardItem({ card }: { card: LoyaltyCard }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const pct = card.required_visits > 0 ? (card.stamps_in_cycle / card.required_visits) * 100 : 0;
   const isNearComplete = pct >= 80 && pct < 100;
   const isComplete = pct >= 100;
@@ -133,7 +136,7 @@ function LoyaltyCardItem({ card }: { card: LoyaltyCard }) {
               <MapPin size={10} /> {card.vendor_city}
             </p>
           )}
-          <p className="text-xs text-gray-400 mt-0.5">{timeAgo(card.last_visited)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{mounted ? timeAgo(card.last_visited) : ''}</p>
         </div>
         {card.cycles_completed > 0 && (
           <div className="flex items-center gap-1 bg-amber-50 text-amber-700 rounded-lg px-2 py-1 text-xs font-bold flex-shrink-0">

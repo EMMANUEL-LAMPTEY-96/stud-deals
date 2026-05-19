@@ -100,6 +100,9 @@ function NotifItem({
   notif: Notification;
   onRead: (id: string) => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const handleClick = () => {
     if (!notif.is_read) onRead(notif.id);
   };
@@ -136,7 +139,7 @@ function NotifItem({
             {!notif.is_read && (
               <div className="w-2 h-2 rounded-full bg-brand-600 flex-shrink-0" />
             )}
-            <span className="text-[11px] text-gray-400 whitespace-nowrap">{timeAgo(notif.created_at)}</span>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">{mounted ? timeAgo(notif.created_at) : ''}</span>
           </div>
         </div>
 
