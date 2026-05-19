@@ -124,6 +124,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/vendor', request.url));
     }
 
+    // Admin trying to access student routes → redirect to admin panel
+    if (role === 'admin' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
     // Student trying to access vendor routes — but allow public vendor profile pages
     if (role === 'student' && VENDOR_ROUTES.some((r) => pathname.startsWith(r))) {
       // /vendor/[slug] is a public profile — students can view it
