@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profile?.role !== 'vendor') {
       return NextResponse.json({ error: 'Only vendor accounts can confirm redemptions.' }, { status: 403 });
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       .from('vendor_profiles')
       .select('id, business_name, is_verified')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!vendorProfile) {
       return NextResponse.json({ error: 'Vendor profile not found.' }, { status: 404 });

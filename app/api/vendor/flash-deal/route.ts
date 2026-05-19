@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
         is_active: true,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (insertError || !flashDeal) {
       safeLog.error('flash-deal: insert failed', insertError?.message ?? 'unknown');

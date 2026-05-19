@@ -112,8 +112,8 @@ export default function MyLoyaltyPage() {
       if (!user) { router.push('/login'); return; }
 
       const [pRes, spRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('student_profiles').select('*').eq('user_id', user.id).single(),
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('student_profiles').select('*').eq('user_id', user.id).maybeSingle(),
       ]);
 
       setProfile(pRes.data);

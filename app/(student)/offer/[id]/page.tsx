@@ -75,7 +75,7 @@ export default function OfferDetailPage() {
           )
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (!data) { router.push('/dashboard'); return; }
       setOffer(data as unknown as OfferWithVendor);

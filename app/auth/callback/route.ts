@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     .from('profiles')
     .select('id, role')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (!existingProfile) {
     const meta = user.user_metadata;
