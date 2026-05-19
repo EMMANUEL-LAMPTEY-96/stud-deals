@@ -39,6 +39,7 @@ import {
   HelpCircle,
   QrCode,
   Search,
+  Settings,
 } from 'lucide-react';
 
 interface NavUser {
@@ -388,6 +389,18 @@ export default function Navbar() {
                     <User size={15} className="text-gray-400" />
                     Profile settings
                   </Link>
+
+                  {/* Account settings — students only (GDPR consent, account deletion) */}
+                  {role === 'student' && (
+                    <Link
+                      href="/settings"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={() => setProfileMenuOpen(false)}
+                    >
+                      <Settings size={15} className="text-gray-400" />
+                      Account settings
+                    </Link>
+                  )}
 
                   {/* Sign out */}
                   <button
