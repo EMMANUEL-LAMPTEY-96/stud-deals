@@ -19,14 +19,14 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '';
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+    return NextResponse.redirect(`${origin}/sign-in?error=missing_code`);
   }
 
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !user) {
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/sign-in?error=auth_failed`);
   }
 
   // Use admin client to bypass RLS when creating the profile

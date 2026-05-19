@@ -104,7 +104,7 @@ export default function OfferDetailPage() {
   }, [id]);
 
   const handleSave = async () => {
-    if (!isLoggedIn) { router.push('/login'); return; }
+    if (!isLoggedIn) { router.push('/sign-in'); return; }
     const newState = !isSaved;
     setIsSaved(newState);
     if (newState) {
@@ -115,7 +115,7 @@ export default function OfferDetailPage() {
   };
 
   const handleClaim = async () => {
-    if (!isLoggedIn) { router.push(`/login?redirect=/offer/${id}`); return; }
+    if (!isLoggedIn) { router.push(`/sign-in?redirect=/offer/${id}`); return; }
     setClaiming(true);
     setClaimError('');
 
@@ -330,7 +330,7 @@ export default function OfferDetailPage() {
           <div className="max-w-2xl mx-auto">
             {!isLoggedIn ? (
               <div className="flex gap-3">
-                <Link href={`/login?redirect=/offer/${id}`} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl text-center text-sm transition-colors">
+                <Link href={`/sign-in?redirect=/offer/${id}`} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-xl text-center text-sm transition-colors">
                   Sign in to claim
                 </Link>
                 <Link href="/sign-up/student" className="flex-1 border border-purple-200 hover:border-purple-400 text-purple-700 font-bold py-3.5 rounded-xl text-center text-sm transition-colors">
