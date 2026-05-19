@@ -200,8 +200,8 @@ export default function Navbar() {
     { href: '/reviews',   label: 'Reviews',    icon: <Star size={15} /> },
   ];
 
-  // Vendors use VendorNav for all navigation — top navbar shows no extra links
-  const navLinks = role === 'vendor' ? [] : studentLinks;
+  // Vendors and admins use their own nav — top navbar shows no extra links
+  const navLinks = (role === 'vendor' || role === 'admin') ? [] : studentLinks;
   const accentClass = role === 'vendor' ? 'text-vendor-600' : 'text-brand-600';
   const logoGradient = role === 'vendor'
     ? 'from-vendor-500 to-vendor-700'
@@ -212,7 +212,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={role === 'vendor' ? '/vendor' : '/dashboard'} className="flex items-center gap-2.5 group flex-shrink-0">
+          <Link href={role === 'vendor' ? '/vendor' : role === 'admin' ? '/admin' : '/dashboard'} className="flex items-center gap-2.5 group flex-shrink-0">
             <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${logoGradient} flex items-center justify-center shadow-sm`}>
               {role === 'vendor'
                 ? <Store className="text-white" size={17} />
@@ -284,6 +284,11 @@ export default function Navbar() {
                     <p className="text-sm font-semibold text-gray-900 truncate">
                       {user?.profile.first_name} {user?.profile.last_name}
                     </p>
+                    {role === 'admin' && (
+                      <span className="mt-1 text-xs px-2 py-0.5 rounded-full inline-block bg-purple-100 text-purple-700 font-semibold">
+                        ⚡ Admin
+                      </span>
+                    )}
                     {role === 'student' && user?.studentProfile && (
                       <span className={`mt-1 text-xs px-2 py-0.5 rounded-full inline-block ${
                         user.studentProfile.verification_status === 'verified'
@@ -360,6 +365,18 @@ export default function Navbar() {
 
                       <div className="border-t border-gray-100 mx-2 my-1" />
                     </>
+                  )}
+
+                  {/* Admin panel shortcut */}
+                  {role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 transition-colors font-medium"
+                      onClick={() => setProfileMenuOpen(false)}
+                    >
+                      <LayoutDashboard size={15} className="text-purple-500" />
+                      Admin panel
+                    </Link>
                   )}
 
                   {/* Profile settings */}
