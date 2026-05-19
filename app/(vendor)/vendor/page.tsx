@@ -154,7 +154,7 @@ export default function VendorDashboard() {
     const fetchData = async () => {
       try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push('/sign-in'); return; }
 
       // Check role — admin can preview vendor pages
       const { data: profileData } = await supabase

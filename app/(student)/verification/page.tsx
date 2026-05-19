@@ -95,7 +95,7 @@ export default function VerificationPage() {
   useEffect(() => {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push('/sign-in'); return; }
       const { data: sp } = await supabase
         .from('student_profiles')
         .select('verification_status, student_email')

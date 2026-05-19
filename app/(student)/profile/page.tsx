@@ -228,7 +228,7 @@ export default function StudentProfilePage() {
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push('/sign-in'); return; }
 
       // Fetch role to conditionally hide admin-irrelevant sections
       const { data: profileRow } = await supabase

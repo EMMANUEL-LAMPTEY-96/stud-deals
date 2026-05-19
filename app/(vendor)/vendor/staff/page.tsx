@@ -139,7 +139,7 @@ export default function StaffPage() {
   useEffect(() => {
     (async () => { try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login?role=vendor'); return; }
+      if (!user) { router.push('/sign-in'); return; }
       const { data: vp } = await supabase
         .from('vendor_profiles')
         .select('id, business_name, staff_pins')

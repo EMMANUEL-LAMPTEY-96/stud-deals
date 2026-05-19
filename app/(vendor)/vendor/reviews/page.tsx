@@ -323,7 +323,7 @@ export default function ReviewsPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login?role=vendor'); return; }
+      if (!user) { router.push('/sign-in'); return; }
       const { data: vp } = await supabase
         .from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }

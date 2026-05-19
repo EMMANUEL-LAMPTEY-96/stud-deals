@@ -264,7 +264,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) { router.push('/login'); return; }
+      if (!authUser) { router.push('/sign-in'); return; }
 
       const [profileRes, studentRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle(),

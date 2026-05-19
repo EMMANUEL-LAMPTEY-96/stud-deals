@@ -459,7 +459,7 @@ export default function CreateOfferPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login?role=vendor'); return; }
+      if (!user) { router.push('/sign-in'); return; }
       const { data: vp } = await supabase
         .from('vendor_profiles').select('id, business_name').eq('user_id', user.id).maybeSingle();
       if (vp) { setVendorId(vp.id); setBusinessName(vp.business_name); }
