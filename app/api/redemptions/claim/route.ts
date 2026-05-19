@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       .from('student_profiles')
       .select('id, verification_status, institution_id, institution_name_manual, graduation_year')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError || !studentProfile) {
       return NextResponse.json(
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         )
       `)
       .eq('id', offer_id)
-      .single();
+      .maybeSingle();
 
     if (offerError || !offer) {
       return NextResponse.json({ error: 'Offer not found.' }, { status: 404 });
@@ -290,7 +290,7 @@ export async function POST(request: NextRequest) {
           offer_category: offer.category,
         })
         .select('id, redemption_code, expires_at')
-        .single();
+        .maybeSingle();
 
       if (insertError) {
         if (insertError.code === '23505') {

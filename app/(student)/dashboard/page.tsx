@@ -267,8 +267,8 @@ export default function StudentDashboard() {
       if (!authUser) { router.push('/login'); return; }
 
       const [profileRes, studentRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', authUser.id).single(),
-        supabase.from('student_profiles').select('*').eq('user_id', authUser.id).single(),
+        supabase.from('profiles').select('*').eq('id', authUser.id).maybeSingle(),
+        supabase.from('student_profiles').select('*').eq('user_id', authUser.id).maybeSingle(),
       ]);
 
       setUser(profileRes.data);

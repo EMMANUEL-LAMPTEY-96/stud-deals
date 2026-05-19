@@ -132,7 +132,7 @@ function LoginForm() {
       .from('profiles')
       .select('role')
       .eq('id', data.user.id)
-      .single();
+      .maybeSingle();
 
     const actualRole = profile?.role ?? (data.user.user_metadata?.role as string) ?? 'student';
 
