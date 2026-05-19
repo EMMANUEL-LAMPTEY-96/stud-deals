@@ -380,6 +380,10 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  // mounted guard — prevents SSR/hydration mismatch from any Date.now() or
+  // other non-deterministic values rendered in the content area
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const check = async () => {
@@ -419,6 +423,11 @@ export default function AdminDashboard() {
       <Navbar />
       <AdminNav active="/admin" />
 
+      {!mounted ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 size={32} className="animate-spin text-purple-400" />
+        </div>
+      ) : (
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Header */}
@@ -741,6 +750,7 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
+      )} {/* end mounted guard */}
     </div>
   );
 }
