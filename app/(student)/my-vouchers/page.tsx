@@ -64,6 +64,9 @@ function timeAgo(isoString: string): string {
 }
 
 function VoucherCard({ v, onShow }: { v: VoucherRow; onShow: (v: VoucherRow) => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const isActive  = v.status === 'claimed' && new Date(v.expires_at) > new Date();
   const isUsed    = v.status === 'confirmed';
   const isExpired = v.status !== 'confirmed' && new Date(v.expires_at) <= new Date();
@@ -107,12 +110,12 @@ function VoucherCard({ v, onShow }: { v: VoucherRow; onShow: (v: VoucherRow) => 
           <div className="text-right">
             {isActive && (
               <span className="text-xs font-semibold text-purple-600 flex items-center gap-1">
-                <Clock size={10} /> {timeLeft(v.expires_at)}
+                <Clock size={10} /> {mounted ? timeLeft(v.expires_at) : ''}
               </span>
             )}
             {isUsed && (
               <span className="text-xs font-semibold text-green-600 flex items-center gap-1">
-                <CheckCircle size={10} /> Used {timeAgo(v.confirmed_at!)}
+                <CheckCircle size={10} /> {mounted ? `Used ${timeAgo(v.confirmed_at!)}` : 'Used'}
               </span>
             )}
             {isExpired && (
