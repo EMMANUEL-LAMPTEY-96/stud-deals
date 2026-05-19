@@ -17,7 +17,7 @@
 // =============================================================================
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 
 export async function GET() {
   const supabase = await createClient();
@@ -25,6 +25,9 @@ export async function GET() {
   // Must be authenticated (student or any role)
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Admin client used for cross-user aggregation (trending counts across all students)
+  const adminSupabase = createAdminClient();
 
   const now     = new Date();
   const in48h   = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
@@ -39,8 +42,8 @@ export async function GET() {
   `;
 
   // ── 1. Trending: count recent redemptions per offer ───────────────────────
-  // Fetch redemptions in the last 7 days and aggregate claim counts
-  const { data: recentRedemptions } = await supabase
+  // Use admin client to bypass RLS — trending needs counts across ALL students
+  const { data: recentRedemptions } = await adminSupabase
     .from('redemptions')
     .select('offer_id')
     .gte('created_at', ago7d)
