@@ -439,7 +439,7 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               {lastRefresh
-                ? <>Last updated {lastRefresh.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>
+                ? <>Last updated {lastRefresh.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>
                 : <>Loading…</>}
               <span className="ml-2 text-gray-400">· Auto-refreshes every 30s</span>
             </p>

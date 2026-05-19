@@ -43,7 +43,7 @@ const ROLE_CONFIG = {
     stats: [
       { val: '47,000+', label: 'Students saving' },
       { val: '2,400+',  label: 'Live deals' },
-      { val: '£340',    label: 'Avg. yearly saving' },
+      { val: '85 000 Ft', label: 'Avg. yearly saving' },
     ],
     perks: [
       { icon: <Tag size={16} />,    text: 'Exclusive student-only pricing' },
@@ -52,8 +52,8 @@ const ROLE_CONFIG = {
       { icon: <Zap size={16} />,    text: 'Instant access on sign-up' },
     ],
     testimonial: {
-      quote: "Saved £200 in my first semester alone. Absolute game changer.",
-      name: "Priya S.", role: "University of Manchester",
+      quote: "Saved 60 000 Ft in my first semester alone. Absolute game changer.",
+      name: "Bence K.", role: "ELTE Budapest",
     },
   },
   vendor: {

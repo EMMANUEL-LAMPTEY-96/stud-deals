@@ -96,7 +96,7 @@ function VerificationCard({ studentProfile }: { studentProfile: StudentData['stu
             Your student status is confirmed
             {studentProfile?.verification_method === 'edu_email' && ' via university email'}
             {studentProfile?.verification_method === 'id_upload' && ' via student ID'}
-            {studentProfile?.verified_at && ` on ${new Date(studentProfile.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}.
+            {studentProfile?.verified_at && ` on ${new Date(studentProfile.verified_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}`}.
           </p>
           {studentProfile?.student_email && (
             <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
@@ -310,7 +310,7 @@ export default function StudentProfilePage() {
   }
 
   const memberSince = data?.profile?.created_at
-    ? new Date(data.profile.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    ? new Date(data.profile.created_at).toLocaleDateString('hu-HU', { month: 'long', year: 'numeric' })
     : null;
 
   return (

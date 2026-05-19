@@ -112,7 +112,7 @@ function VendorCard({
               </a>
             )}
             <span className="flex items-center gap-1"><Tag size={11} />{vendor.active_offers} active offer{vendor.active_offers !== 1 ? 's' : ''}</span>
-            <span className="flex items-center gap-1"><Clock size={11} />Applied {new Date(vendor.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            <span className="flex items-center gap-1"><Clock size={11} />Applied {new Date(vendor.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
           </div>
         </div>
       </div>
@@ -179,8 +179,8 @@ function VendorCard({
         <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
           <p className="text-xs text-gray-400">
             {vendor.approval_status === 'approved'
-              ? `Approved on ${new Date(vendor.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-              : `Rejected on ${new Date(vendor.verified_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+              ? `Approved on ${new Date(vendor.verified_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}`
+              : `Rejected on ${new Date(vendor.verified_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}`}
           </p>
           {vendor.approval_status === 'rejected' && vendor.rejection_notes && (
             <div className="flex items-start gap-1.5 bg-red-50 border border-red-100 rounded-lg px-3 py-2">

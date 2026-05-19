@@ -257,7 +257,7 @@ export default function AdminRedemptionsPage() {
                         </span>
                       </td>
                       <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
-                        {new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                        {new Date(r.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: '2-digit' })}
                       </td>
                       <td className="px-5 py-3 text-right">
                         {!isVoided && (
