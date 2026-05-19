@@ -41,7 +41,7 @@ function timeUntil(isoString: string): string {
   if (days === 0) return 'Expires today';
   if (days === 1) return 'Expires tomorrow';
   if (days < 7) return `${days} days left`;
-  return `Expires ${new Date(isoString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+  return `Expires ${new Date(isoString).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short' })}`;
 }
 
 export default function OfferDetailPage() {

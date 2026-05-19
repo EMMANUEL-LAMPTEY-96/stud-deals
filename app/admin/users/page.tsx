@@ -286,7 +286,7 @@ export default function AdminUsersPage() {
                     )}
                   </div>
                   <div className="col-span-1 text-xs text-gray-400">
-                    {new Date(u.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                    {new Date(u.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: '2-digit' })}
                   </div>
                   <div className="col-span-1">
                     {u.role !== 'admin' && (

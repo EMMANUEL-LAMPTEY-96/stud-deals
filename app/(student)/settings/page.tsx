@@ -326,7 +326,7 @@ export default function StudentSettingsPage() {
             {dateOfBirth && (
               <p className="text-xs text-purple-400 text-center">
                 🎂 We&apos;ll surprise you on{' '}
-                {new Date(dateOfBirth + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+                {new Date(dateOfBirth + 'T00:00:00').toLocaleDateString('hu-HU', { day: 'numeric', month: 'long' })}
                 {' '}each year
               </p>
             )}

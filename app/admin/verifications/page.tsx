@@ -113,7 +113,7 @@ function StudentRow({
           </span>
           <span className="flex items-center gap-1">
             <Clock size={11} />
-            {new Date(student.created_at).toLocaleDateString('en-GB', {
+            {new Date(student.created_at).toLocaleDateString('hu-HU', {
               day: 'numeric', month: 'short', year: 'numeric',
             })}
           </span>

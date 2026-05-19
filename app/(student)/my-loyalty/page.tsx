@@ -376,7 +376,7 @@ export default function MyLoyaltyPage() {
 
                       {vp.last_stamp_at && (
                         <p className="text-xs text-gray-400 mt-2">
-                          Last stamp: {new Date(vp.last_stamp_at).toLocaleDateString('en-GB', {
+                          Last stamp: {new Date(vp.last_stamp_at).toLocaleDateString('hu-HU', {
                             day: 'numeric', month: 'short',
                           })}
                         </p>

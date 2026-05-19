@@ -68,7 +68,7 @@ function timeAgo(iso: string): string {
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days} days ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return new Date(iso).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short' });
 }
 
 function notifIcon(type: NotifType) {

@@ -299,7 +299,7 @@ function PlanPanel({ vendor, onUpdated }: { vendor: VendorDetail; onUpdated: () 
           />
           {vendor.trial_ends_at && (
             <span className="text-xs text-gray-400">
-              Current trial ends: {new Date(vendor.trial_ends_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              Current trial ends: {new Date(vendor.trial_ends_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
           )}
         </div>
@@ -444,11 +444,11 @@ export default function VendorDeepDivePage() {
                       <span className="flex items-center gap-1"><Key size={11} />PIN: {vendor.staff_pin}</span>
                     )}
                     <span className="flex items-center gap-1">
-                      <Clock size={11} />Joined {new Date(vendor.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <Clock size={11} />Joined {new Date(vendor.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                     {vendor.trial_ends_at && (
                       <span className="flex items-center gap-1 text-blue-500">
-                        <Crown size={11} />Trial ends {new Date(vendor.trial_ends_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        <Crown size={11} />Trial ends {new Date(vendor.trial_ends_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     )}
                   </div>

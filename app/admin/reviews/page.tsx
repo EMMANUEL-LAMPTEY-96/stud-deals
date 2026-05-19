@@ -233,7 +233,7 @@ export default function AdminReviewsPage() {
                         {r.city && <span className="text-gray-300"> · {r.city}</span>}
                       </span>
                       <span className="text-xs text-gray-300 ml-auto">
-                        {new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(r.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </div>
                     {r.review_text ? (
