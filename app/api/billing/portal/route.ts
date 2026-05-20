@@ -10,6 +10,7 @@
 // Returns: { url: string }
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error('[billing/portal]', err);
+    safeLog.error('[billing/portal]', err);
     return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 });
   }
 }

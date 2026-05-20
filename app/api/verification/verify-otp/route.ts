@@ -14,6 +14,7 @@
 //   - Clears verification_notes (removes the raw OTP from DB)
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
     .eq('id', sp.id);
 
   if (updateError) {
-    console.error('verify-otp update error:', updateError);
+    safeLog.error('verify-otp update error:', updateError);
     return NextResponse.json({ error: 'Failed to update verification status.' }, { status: 500 });
   }
 

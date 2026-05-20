@@ -16,6 +16,7 @@
 //      - verification_method = 'id_upload'
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
     });
 
   if (uploadError) {
-    console.error('ID upload error:', uploadError);
+    safeLog.error('ID upload error:', uploadError);
     return NextResponse.json({ error: 'Failed to upload file. Please try again.' }, { status: 500 });
   }
 
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
     .eq('id', sp.id);
 
   if (updateError) {
-    console.error('profile update error:', updateError);
+    safeLog.error('profile update error:', updateError);
     return NextResponse.json({ error: 'Upload succeeded but profile update failed.' }, { status: 500 });
   }
 

@@ -23,6 +23,7 @@
 // Rate limit: max 1 campaign per hour (checked via last promo notification)
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
     .order('claimed_at', { ascending: false });
 
   if (rdError) {
-    console.error('[/api/vendor/promote] Fetch error:', rdError.message);
+    safeLog.error('[/api/vendor/promote] Fetch error:', rdError.message);
     return NextResponse.json({ error: 'Failed to load customer data' }, { status: 500 });
   }
 
@@ -224,7 +225,7 @@ export async function POST(req: NextRequest) {
       .select('id', { count: 'exact', head: true });
 
     if (error) {
-      console.error('[/api/vendor/promote] Insert error:', error.message);
+      safeLog.error('[/api/vendor/promote] Insert error:', error.message);
       insertError = error.message;
       break;
     }

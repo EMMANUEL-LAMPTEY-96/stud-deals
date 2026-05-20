@@ -14,6 +14,7 @@
 // Rate limited: 10 requests per minute per IP (enforced in Supabase Edge Config).
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true);
 
     if (error) {
-      console.error('[check-email] DB error fetching institutions:', error);
+      safeLog.error('[check-email] DB error fetching institutions:', error);
       return NextResponse.json(
         { is_valid_edu_email: false, institution: null, message: 'Server error. Please try again.' },
         { status: 500 }
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
       message: reason,
     });
   } catch (err) {
-    console.error('[check-email] Unexpected error:', err);
+    safeLog.error('[check-email] Unexpected error:', err);
     return NextResponse.json(
       { is_valid_edu_email: false, institution: null, message: 'Unexpected server error.' },
       { status: 500 }

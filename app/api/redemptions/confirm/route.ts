@@ -29,6 +29,7 @@
 // Only a first name + last initial (e.g., "Emmanuel A.") for personal service.
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { isValidVoucherCodeFormat, normaliseVoucherCode, parseQrPayload } from '@/lib/utils/voucher';
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (fetchError) {
-      console.error('[confirm] DB error fetching redemption:', fetchError);
+      safeLog.error('[confirm] DB error fetching redemption:', fetchError);
       return NextResponse.json({ error: 'Server error looking up code.' }, { status: 500 });
     }
 
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
       .eq('status', 'claimed');    // Optimistic lock — prevents double-confirm race condition
 
     if (confirmError) {
-      console.error('[confirm] Update error:', confirmError);
+      safeLog.error('[confirm] Update error:', confirmError);
       return NextResponse.json({ error: 'Failed to confirm redemption. Please try again.' }, { status: 500 });
     }
 
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (err) {
-    console.error('[confirm] Unexpected error:', err);
+    safeLog.error('[confirm] Unexpected error:', err);
     return NextResponse.json({ error: 'Unexpected server error.' }, { status: 500 });
   }
 }

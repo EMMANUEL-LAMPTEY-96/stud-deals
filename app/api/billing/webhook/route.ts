@@ -18,6 +18,7 @@
 // raw bytes when you call request.text() or request.arrayBuffer().
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase/server';
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
   try {
     event = stripe.webhooks.constructEvent(body, signature, secret);
   } catch (err) {
-    console.error('[webhook] Signature verification failed:', err);
+    safeLog.error('[webhook] Signature verification failed:', err);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (err) {
-    console.error(`[webhook] Error handling ${event.type}:`, err);
+    safeLog.error(`[webhook] Error handling ${event.type}:`, err);
     // Return 200 so Stripe doesn't retry — log and investigate separately
     return NextResponse.json({ received: true, error: String(err) });
   }

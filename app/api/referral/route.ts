@@ -14,6 +14,7 @@
 //         Body: { referral_code: string }
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
     }, { onConflict: 'referrer_id,referred_id', ignoreDuplicates: true });
 
   if (refError) {
-    console.error('[referral] Error creating referral row:', refError);
+    safeLog.error('[referral] Error creating referral row:', refError);
   }
 
   // Notify the referrer
