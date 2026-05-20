@@ -436,6 +436,8 @@ export type Database = {
           student_id_number: string | null
           total_offers_saved: number
           total_redemptions: number
+          consent_updated_at: string | null
+          share_with_vendors: boolean
           total_savings_usd: number
           updated_at: string
           user_id: string
@@ -460,6 +462,8 @@ export type Database = {
           referred_by_id?: string | null
           student_email?: string | null
           student_id_number?: string | null
+          consent_updated_at?: string | null
+          share_with_vendors?: boolean | null
           total_offers_saved?: number | null
           total_redemptions?: number | null
           total_savings_usd?: number | null
@@ -475,6 +479,7 @@ export type Database = {
         }
         Update: {
           birthday_bonus_claimed_year?: number | null
+          consent_updated_at?: string | null
           created_at?: string | null
           date_of_birth?: string | null
           graduation_year?: number | null
@@ -484,6 +489,7 @@ export type Database = {
           major?: string | null
           referral_code?: string | null
           referred_by_id?: string | null
+          share_with_vendors?: boolean | null
           student_email?: string | null
           student_id_number?: string | null
           total_offers_saved?: number | null
@@ -525,6 +531,7 @@ export type Database = {
           plan_started_at: string | null
           plan_status: string
           plan_tier: string
+          rejection_notes: string | null
           postal_code: string | null
           staff_pins: string | null
           state: string | null
@@ -564,6 +571,7 @@ export type Database = {
           plan_status?: string | null
           plan_tier?: string | null
           postal_code?: string | null
+          rejection_notes?: string | null
           staff_pins?: string | null
           state?: string | null
           stripe_customer_id?: string | null
@@ -602,6 +610,7 @@ export type Database = {
           plan_status?: string | null
           plan_tier?: string | null
           postal_code?: string | null
+          rejection_notes?: string | null
           staff_pins?: string | null
           state?: string | null
           stripe_customer_id?: string | null
@@ -654,6 +663,57 @@ export type Database = {
           vendor_id?: string | null
           vendor_replied_at?: string | null
           vendor_reply?: string | null
+        }
+        Relationships: []
+      }
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action?: string | null
+          admin_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string | null
+          admin_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      platform_config: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Update: {
+          key?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json | null
         }
         Relationships: []
       }
@@ -731,12 +791,109 @@ export type TablesInsert<T extends keyof Database["public"]["Tables"]> = Databas
 export type TablesUpdate<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"]
 export type Enums<T extends keyof Database["public"]["Enums"]> = Database["public"]["Enums"][T]
 
-// Legacy alias used in some imports
+// =============================================================================
+// Convenience row aliases — map to the generated Database table row types.
+// These are the types imported throughout the app for Supabase query results.
+// =============================================================================
+
+export type Profile        = Tables<'profiles'>
+export type StudentProfile = Tables<'student_profiles'>
+export type VendorProfile  = Tables<'vendor_profiles'>
+export type Offer          = Tables<'offers'>
+export type Redemption     = Tables<'redemptions'>
+export type Institution    = Tables<'institutions'>
+
+// =============================================================================
+// Domain string-union types — narrower than `string` for offer/discount fields.
+// =============================================================================
+
+export type OfferCategory =
+  | 'food_drink'
+  | 'groceries'
+  | 'tech'
+  | 'books_stationery'
+  | 'fitness'
+  | 'fashion'
+  | 'entertainment'
+  | 'health_beauty'
+  | 'transport'
+  | 'services'
+  | 'other'
+
+export type DiscountType =
+  | 'percentage'
+  | 'fixed_amount'
+  | 'buy_x_get_y'
+  | 'free_item'
+  | 'loyalty_stamp'
+
+export type VerificationStatus =
+  | 'unverified'
+  | 'pending_email'
+  | 'pending_review'
+  | 'verified'
+  | 'rejected'
+  | 'expired'
+
+export type VerificationMethod = 'edu_email' | 'id_upload'
+
+// =============================================================================
+// Extended offer type that includes the joined vendor_profiles row.
+// Used by the student browse feed and OfferCard component.
+// =============================================================================
+
+export type OfferWithVendor = Offer & {
+  vendor: {
+    id: string
+    business_name: string
+    logo_url: string | null
+    city: string | null
+    address_line1: string | null
+    latitude: number | null
+    longitude: number | null
+  }
+}
+
+// =============================================================================
+// API request / response shapes for typed route handlers.
+// =============================================================================
+
+export type ClaimOfferRequest = {
+  offer_id: string
+  device_type?: 'mobile' | 'tablet' | 'desktop'
+}
+
+export type ConfirmRedemptionRequest = {
+  redemption_code: string
+}
+
+export type ConfirmRedemptionResponse = {
+  success: boolean
+  student_name: string | null
+  offer_title: string
+  discount_label: string
+}
+
+export type VerifyEduEmailRequest = {
+  email: string
+}
+
+export type VerifyEduEmailResponse = {
+  success: boolean
+  method: VerificationMethod | null
+  message: string
+  institution?: string | null
+}
+
+// Response shape returned by POST /api/redemptions/claim
 export type ClaimOfferResponse = {
+  success: boolean
+  redemption_id: string
   redemption_code: string
   expires_at: string
   qr_code_data_url: string | null
   offer: {
+    id: string
     title: string
     discount_label: string
     terms_and_conditions: string | null
