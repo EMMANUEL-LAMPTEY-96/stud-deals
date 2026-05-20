@@ -40,6 +40,7 @@ import {
   QrCode,
   Search,
   Settings,
+  Trophy,
 } from 'lucide-react';
 
 interface NavUser {
@@ -401,6 +402,16 @@ export default function Navbar() {
                       Account settings
                     </Link>
                   )}
+
+                  {/* Leaderboard — public, visible to all roles */}
+                  <Link
+                    href="/leaderboard"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    <Trophy size={15} className="text-gray-400" />
+                    University leaderboard
+                  </Link>
 
                   {/* Sign out */}
                   <button
