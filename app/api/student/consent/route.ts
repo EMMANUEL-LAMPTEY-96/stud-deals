@@ -48,10 +48,8 @@ export async function PATCH(request: NextRequest) {
     // ── Update consent ────────────────────────────────────────────────────────
     const now = new Date().toISOString();
 
-    // Cast required: share_with_vendors + consent_updated_at added in SQL migration
-    // after last type regeneration. Safe — columns exist in DB.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateError } = await (supabase.from('student_profiles') as any)
+    const { error: updateError } = await supabase
+      .from('student_profiles')
       .update({
         share_with_vendors,
         consent_updated_at: now,

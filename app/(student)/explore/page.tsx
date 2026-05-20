@@ -32,6 +32,7 @@ import { haversineKm, proximityLabel } from '@/lib/utils/distance';
 
 type SortOption = 'relevance' | 'newest' | 'distance' | 'discount';
 type ViewMode   = 'grid' | 'list';
+type ProcessedOffer = OfferWithVendor & { _distKm: number | null };
 
 interface CategoryConfig {
   label: string;
@@ -77,7 +78,7 @@ export default function ExplorePage() {
   // ── State ───────────────────────────────────────────────────────────────────
   const [profile, setProfile]               = useState<Profile | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
-  const [offers, setOffers]                 = useState<OfferWithVendor[]>([]);
+  const [offers, setOffers]                 = useState<ProcessedOffer[]>([]);
   const [savedIds, setSavedIds]             = useState<Set<string>>(new Set());
   const [loading, setLoading]               = useState(true);
   const [claimingId, setClaimingId]         = useState<string | null>(null);
@@ -123,8 +124,8 @@ export default function ExplorePage() {
           .select('latitude, longitude')
           .eq('id', sp.institution_id)
           .maybeSingle();
-        if (inst && (inst as any).latitude && (inst as any).longitude) {
-          setCampusCoords({ lat: (inst as any).latitude, lng: (inst as any).longitude });
+        if (inst && inst.latitude && inst.longitude) {
+          setCampusCoords({ lat: inst.latitude, lng: inst.longitude });
         }
       }
     };
@@ -134,15 +135,15 @@ export default function ExplorePage() {
   // ── Fetch saved offer IDs ────────────────────────────────────────────────────
   useEffect(() => {
     const fetchSaved = async () => {
-      if (!(studentProfile as any)?.id) return;
+      if (!studentProfile?.id) return;
       const { data } = await supabase
         .from('saved_offers')
         .select('offer_id')
-        .eq('student_id', (studentProfile as any).id);
-      if (data) setSavedIds(new Set((data as any[]).map((r) => r.offer_id)));
+        .eq('student_id', studentProfile.id);
+      if (data) setSavedIds(new Set(data.map((r) => r.offer_id)));
     };
     fetchSaved();
-  }, [(studentProfile as any)?.id]);
+  }, [studentProfile?.id]);
 
   // ── Fetch offers ─────────────────────────────────────────────────────────────
   const fetchOffers = useCallback(async () => {
@@ -173,8 +174,8 @@ export default function ExplorePage() {
       const raw = (data as OfferWithVendor[]) ?? [];
 
       // Attach distance if campus is known
-      let processed = raw.map((offer) => {
-        const v = (offer as any).vendor;
+      let processed: ProcessedOffer[] = raw.map((offer) => {
+        const v = offer.vendor;
         const distKm = campusCoords && v?.latitude && v?.longitude
           ? haversineKm(campusCoords.lat, campusCoords.lng, v.latitude, v.longitude)
           : null;
@@ -183,7 +184,7 @@ export default function ExplorePage() {
 
       // Near-campus filter: only show offers within 5 km
       if (nearCampus && campusCoords) {
-        processed = processed.filter((o) => (o as any)._distKm !== null && (o as any)._distKm <= 5);
+        processed = processed.filter((o) => o._distKm !== null && o._distKm <= 5);
       }
 
       // Sort
@@ -195,8 +196,8 @@ export default function ExplorePage() {
           break;
         case 'distance':
           processed.sort((a, b) => {
-            const da = (a as any)._distKm ?? Infinity;
-            const db = (b as any)._distKm ?? Infinity;
+            const da = a._distKm ?? Infinity;
+            const db = b._distKm ?? Infinity;
             return da - db;
           });
           break;
@@ -215,7 +216,7 @@ export default function ExplorePage() {
           }
       }
 
-      setOffers(processed as OfferWithVendor[]);
+      setOffers(processed);
       setTotalCount(processed.length);
     } finally {
       setLoading(false);
@@ -226,7 +227,7 @@ export default function ExplorePage() {
 
   // ── Claim offer ──────────────────────────────────────────────────────────────
   const handleClaim = async (offerId: string) => {
-    if ((studentProfile as any)?.verification_status !== 'verified') {
+    if (studentProfile?.verification_status !== 'verified') {
       router.push('/verification');
       return;
     }
@@ -255,7 +256,7 @@ export default function ExplorePage() {
     }
   };
 
-  const isVerified = (studentProfile as any)?.verification_status === 'verified';
+  const isVerified = studentProfile?.verification_status === 'verified';
   const activeSortLabel = SORT_OPTIONS.find(s => s.value === sort)?.label ?? 'Sort';
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -459,7 +460,7 @@ export default function ExplorePage() {
                 : 'grid-cols-1 max-w-2xl'
             }`}>
               {offers.map((offer) => {
-                const distKm = (offer as any)._distKm as number | null;
+                const distKm = offer._distKm;
                 const distLabel = distKm !== null && campusCoords
                   ? proximityLabel(distKm)
                   : null;
