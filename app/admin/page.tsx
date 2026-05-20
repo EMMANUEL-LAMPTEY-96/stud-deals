@@ -180,7 +180,7 @@ function GlobalSearch() {
     }, 300);
   }, [q]);
 
-  const total = results ? results.users.length + results.vendors.length + results.offers.length : 0;
+  const total = results ? (results.users?.length ?? 0) + (results.vendors?.length ?? 0) + (results.offers?.length ?? 0) : 0;
 
   return (
     <div ref={wrapRef} className="relative w-full max-w-md">
@@ -281,7 +281,7 @@ function FraudSignals() {
   }, []);
 
   const total = data
-    ? data.rate_limit_hits.length + data.velocity_spikes.length + data.at_risk_vendors.length
+    ? (data.rate_limit_hits?.length ?? 0) + (data.velocity_spikes?.length ?? 0) + (data.at_risk_vendors?.length ?? 0)
     : 0;
 
   if (!loading && total === 0) return null; // nothing suspicious — keep the overview clean
@@ -548,8 +548,8 @@ export default function AdminDashboard() {
                 </div>
                 {stats?.daily_stamps && <Sparkline data={stats.daily_stamps} />}
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>{stats?.daily_stamps[0]?.date.slice(5)}</span>
-                  <span>{stats?.daily_stamps[stats.daily_stamps.length - 1]?.date.slice(5)}</span>
+                  <span>{stats?.daily_stamps?.at(0)?.date.slice(5)}</span>
+                  <span>{stats?.daily_stamps?.at(-1)?.date.slice(5)}</span>
                 </div>
               </div>
             </div>
@@ -633,8 +633,8 @@ export default function AdminDashboard() {
                   <div className="h-24 flex items-center justify-center text-gray-300 text-sm">Loading…</div>
                 )}
                 <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>{stats?.daily_redemptions?.[0]?.date.slice(5)}</span>
-                  <span>{stats?.daily_redemptions?.[stats.daily_redemptions.length - 1]?.date.slice(5)}</span>
+                  <span>{stats?.daily_redemptions?.at(0)?.date.slice(5)}</span>
+                  <span>{stats?.daily_redemptions?.at(-1)?.date.slice(5)}</span>
                 </div>
               </div>
             </div>
