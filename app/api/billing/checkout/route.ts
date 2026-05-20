@@ -9,6 +9,7 @@
 // Returns: { url: string }  — the Checkout hosted page URL
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error('[billing/checkout]', err);
+    safeLog.error('[billing/checkout]', err);
     return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

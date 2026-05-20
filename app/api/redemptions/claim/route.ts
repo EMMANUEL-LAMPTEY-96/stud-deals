@@ -26,6 +26,7 @@
 // It runs on Vercel Edge Runtime for <50ms cold starts globally.
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { generateVoucherCode, computeVoucherExpiry, buildQrPayload } from '@/lib/utils/voucher';
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
       .in('status', ['claimed', 'confirmed']);   // 'expired' and 'cancelled' don't count
 
     if (countError) {
-      console.error('[claim] Error counting existing redemptions:', countError);
+      safeLog.error('[claim] Error counting existing redemptions:', countError);
       return NextResponse.json({ error: 'Server error. Please try again.' }, { status: 500 });
     }
 
@@ -298,7 +299,7 @@ export async function POST(request: NextRequest) {
           insertAttempt++;
           continue;
         }
-        console.error('[claim] Insert error:', insertError);
+        safeLog.error('[claim] Insert error:', insertError);
         return NextResponse.json({ error: 'Failed to generate voucher. Please try again.' }, { status: 500 });
       }
 
@@ -422,7 +423,7 @@ export async function POST(request: NextRequest) {
 
         } catch (err) {
           // Referral reward is non-critical — log but never surface to the student
-          console.error('[claim] Referral reward hook error:', err);
+          safeLog.error('[claim] Referral reward hook error:', err);
         }
       })();
 
@@ -453,7 +454,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (err) {
-    console.error('[claim] Unexpected error:', err);
+    safeLog.error('[claim] Unexpected error:', err);
     return NextResponse.json({ error: 'Unexpected server error.' }, { status: 500 });
   }
 }

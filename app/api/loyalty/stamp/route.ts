@@ -28,6 +28,7 @@
 //     The auth session is what ties the stamp to a specific student
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import {
@@ -367,7 +368,7 @@ export async function POST(request: NextRequest) {
     .insert(insertRows as never[]);
 
   if (insertError) {
-    console.error('stamp insert error:', insertError);
+    safeLog.error('stamp insert error:', insertError);
     return NextResponse.json({ error: 'Failed to record stamp' }, { status: 500 });
   }
 
@@ -419,7 +420,7 @@ export async function POST(request: NextRequest) {
   if (notifRows.length > 0) {
     // Fire-and-forget: notification failures must never block the stamp response
     admin.from('notifications').insert(notifRows as never[]).then(({ error: notifErr }) => {
-      if (notifErr) console.error('loyalty notification insert error:', notifErr.message);
+      if (notifErr) safeLog.error('loyalty notification insert error:', notifErr.message);
     });
   }
 

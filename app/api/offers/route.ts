@@ -6,6 +6,7 @@
 // so unverified students can still browse deals — they just can't claim them).
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
   const { data: rawData, error } = await query;
 
   if (error) {
-    console.error('offers API error:', error);
+    safeLog.error('offers API error:', error);
     return NextResponse.json({ error: 'Failed to fetch offers' }, { status: 500 });
   }
 
