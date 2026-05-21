@@ -69,7 +69,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // ── Vendor check ──────────────────────────────────────────────────────────
+  // ── VULN-17 fix: Explicit role check ──────────────────────────────────────
+  const { data: callerRole } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (callerRole?.role !== 'vendor') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // ── Vendor profile check ──────────────────────────────────────────────────
   const { data: vp } = await supabase
     .from('vendor_profiles')
     .select('id, business_name, is_approved')
@@ -125,9 +136,10 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Fetch all redemptions for this vendor ──────────────────────────────────
+  // VULN-09 fix: column is 'student_id', not 'student_profile_id'
   const { data: redemptions, error: rdError } = await supabase
     .from('redemptions')
-    .select('student_profile_id, status, claimed_at')
+    .select('student_id, status, claimed_at')
     .eq('vendor_id', vp.id)
     .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed'])
     .order('claimed_at', { ascending: false });
@@ -143,7 +155,7 @@ export async function POST(req: NextRequest) {
   const stampMap = new Map<string, { stamps: number; lastVisit: Date }>();
 
   for (const row of rows) {
-    const sid = row.student_profile_id;
+    const sid = row.student_id; // VULN-09 fix: was row.student_profile_id
     const existing = stampMap.get(sid);
     const visitDate = new Date(row.claimed_at);
 

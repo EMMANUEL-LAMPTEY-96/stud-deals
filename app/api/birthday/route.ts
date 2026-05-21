@@ -109,12 +109,21 @@ export async function POST() {
 
   const { data: sp } = await admin
     .from('student_profiles')
-    .select('id, date_of_birth, birthday_bonus_claimed_year')
+    .select('id, date_of_birth, birthday_bonus_claimed_year, verification_status')
     .eq('user_id', user.id)
     .maybeSingle();
 
   if (!sp)              return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   if (!sp.date_of_birth) return NextResponse.json({ error: 'No birthday set on your profile.' }, { status: 400 });
+
+  // ── VULN-07 fix: Verified students only ───────────────────────────────────
+  if (sp.verification_status !== 'verified') {
+    return NextResponse.json({
+      error: 'Student verification required to claim birthday bonus.',
+      verification_status: sp.verification_status,
+      redirect_to: '/verification',
+    }, { status: 403 });
+  }
 
   // Guard: must be birthday today
   if (!isBirthdayToday(sp.date_of_birth)) {

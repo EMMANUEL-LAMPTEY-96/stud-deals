@@ -47,12 +47,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized. Please log in.' }, { status: 401 });
     }
 
-    // ── 2. Rate limit: max 20 claims per student per hour ─────────────────
+    // ── 2. Fetch student profile early (needed for explicit rate-limit filter) ─
+    // VULN-12 fix: the rate limit query must include an explicit student_id filter
+    // as defense-in-depth — we cannot rely solely on RLS being correctly configured.
+    const { data: studentProfile, error: profileError } = await supabase
+      .from('student_profiles')
+      .select('id, verification_status, institution_id, institution_name_manual, graduation_year')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (profileError || !studentProfile) {
+      return NextResponse.json(
+        { error: 'Student profile not found. Please complete your registration.' },
+        { status: 404 }
+      );
+    }
+
+    // ── 3. Rate limit: max 20 claims per student per hour ─────────────────
     // Uses the redemptions table directly — no additional infrastructure needed.
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { count: claimsThisHour } = await supabase
       .from('redemptions')
       .select('id', { count: 'exact', head: true })
+      .eq('student_id', studentProfile.id) // explicit filter — defense-in-depth beyond RLS
       .eq('status', 'claimed')
       .gte('claimed_at', hourAgo);
 
@@ -70,7 +87,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── 3. Parse + validate request body ────────────────────────────────────
+    // ── 4. Parse + validate request body ────────────────────────────────────
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -85,21 +102,8 @@ export async function POST(request: NextRequest) {
 
     const { offer_id, device_type } = parsed.data;
 
-    // ── 3. Fetch student profile ──────────────────────────────────────────
-    const { data: studentProfile, error: profileError } = await supabase
-      .from('student_profiles')
-      .select('id, verification_status, institution_id, institution_name_manual, graduation_year')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (profileError || !studentProfile) {
-      return NextResponse.json(
-        { error: 'Student profile not found. Please complete your registration.' },
-        { status: 404 }
-      );
-    }
-
-    // ── 4. Guard: Student must be verified ───────────────────────────────
+    // ── 5. Guard: Student must be verified ───────────────────────────────
+    // (studentProfile fetched and validated earlier, before the rate limit check)
     if (studentProfile.verification_status !== 'verified') {
       const statusMessages: Record<string, string> = {
         unverified: 'Verify your student status to claim this discount.',

@@ -34,6 +34,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // ── VULN-17 fix: Explicit role check ──────────────────────────────────────
+  const { data: callerRole } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (callerRole?.role !== 'vendor') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   // ── Vendor profile ──────────────────────────────────────────────────────────
   const { data: vp } = await supabase
     .from('vendor_profiles')
@@ -96,14 +107,19 @@ export async function GET(req: NextRequest) {
     const profileMap = new Map<string, { first_name: string | null; display_name: string | null }>();
     (profiles ?? []).forEach(p => p && profileMap.set(p.id, p));
 
-    // Fetch auth users for emails (admin only)
+    // VULN-18 fix: fetch all auth users in parallel rather than a sequential N+1 loop.
+    // Each getUserById is still a separate Supabase Auth API call, but running them
+    // concurrently reduces total latency from O(N × RTT) to O(RTT) for this batch.
+    // Long-term fix: store email in profiles.email (sync via auth trigger).
     const emailMap = new Map<string, string>();
-    for (const uid of userIds) {
-      try {
-        const { data: au } = await admin.auth.admin.getUserById(uid);
-        if (au?.user?.email) emailMap.set(uid, au.user.email);
-      } catch (_) {}
-    }
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          const { data: au } = await admin.auth.admin.getUserById(uid);
+          if (au?.user?.email) emailMap.set(uid, au.user.email);
+        } catch (_) {}
+      })
+    );
 
     // ── Aggregate per student ─────────────────────────────────────────────────
     interface CustomerAgg {

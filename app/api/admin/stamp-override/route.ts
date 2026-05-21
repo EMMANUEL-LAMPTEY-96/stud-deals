@@ -66,15 +66,22 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // In-app notification to student
+  // VULN-08 fix: notifications.user_id expects profiles.id (auth UUID), NOT
+  // student_profiles.id. Look up the auth user_id from student_profiles first.
   try {
-    const { data: vp } = await admin
-      .from('vendor_profiles')
-      .select('business_name')
-      .eq('id', vendor_id)
-      .maybeSingle();
+    const [vpRes, spRes] = await Promise.all([
+      admin.from('vendor_profiles').select('business_name').eq('id', vendor_id).maybeSingle(),
+      admin.from('student_profiles').select('user_id').eq('id', student_id).maybeSingle(),
+    ]);
+    const vp = vpRes.data;
+    const notifUserId = spRes.data?.user_id;
 
+    if (!notifUserId) {
+      // Student profile not found — skip notification but don't fail the request
+      safeLog.error?.('[stamp-override] Could not resolve user_id for student_id:', student_id);
+    } else {
     await admin.from('notifications').insert({
-      user_id: student_id,
+      user_id: notifUserId,  // auth UUID — correct mapping to profiles.id
       title:   isCredit
         ? `${absDelta} stamp${absDelta > 1 ? 's' : ''} added by platform`
         : `${absDelta} stamp${absDelta > 1 ? 's' : ''} removed by platform`,
@@ -84,6 +91,7 @@ export async function POST(request: NextRequest) {
       type:    'stamp_override',
       is_read: false,
     });
+    } // end if (notifUserId)
   } catch { /* non-fatal */ }
 
   // Audit log
