@@ -34,10 +34,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ users: [], vendors: [], offers: [] });
   }
 
-  const pattern = `%${q}%`;
+  // ── VULN-05 fix: Sanitize input before interpolating into PostgREST filters ─
+  // Commas and parentheses in the user's query would break the .or() filter syntax.
+  // LIKE wildcards (%, _) are also escaped so they match literally, not as patterns.
+  // This prevents PostgREST injection and ensures the search behaves as expected.
+  const sanitizeForPostgREST = (input: string): string =>
+    input
+      .replace(/%/g, '\\%')   // escape LIKE wildcard
+      .replace(/_/g, '\\_')   // escape LIKE single-char wildcard
+      .replace(/,/g, ' ')     // comma would inject new .or() clause
+      .replace(/[()]/g, ' ')  // parentheses would break nested filter grouping
+      .replace(/\./g, ' ')    // dot could inject column references
+      .trim();
+
+  const safeQ   = sanitizeForPostgREST(q);
+  const pattern = `%${safeQ}%`;
 
   const [usersRes, vendorsRes, offersRes] = await Promise.all([
-    // Users by name
+    // Users by name — use individual .ilike() fields joined in .or() with a safe pattern
     admin
       .from('profiles')
       .select('id, role, first_name, last_name, display_name, city')
@@ -64,7 +78,7 @@ export async function GET(request: NextRequest) {
     role: p.role,
     name: p.first_name ? `${p.first_name} ${p.last_name ?? ''}`.trim() : p.display_name ?? 'Unknown',
     city: p.city,
-    href: `/admin/users?q=${encodeURIComponent(q)}`,
+    href: `/admin/users?q=${encodeURIComponent(safeQ)}`,
   }));
 
   const vendors = (vendorsRes.data ?? []).map((v) => ({
@@ -72,7 +86,7 @@ export async function GET(request: NextRequest) {
     business_name: v.business_name,
     city:          v.city,
     is_verified:   v.is_verified,
-    href:          `/admin/vendors?q=${encodeURIComponent(q)}`,
+    href:          `/admin/vendors?q=${encodeURIComponent(safeQ)}`,
   }));
 
   const offers = (offersRes.data ?? []).map((o) => ({
@@ -80,7 +94,7 @@ export async function GET(request: NextRequest) {
     title:     o.title,
     status:    o.status,
     vendor_id: o.vendor_id,
-    href:      `/admin/offers?q=${encodeURIComponent(q)}`,
+    href:      `/admin/offers?q=${encodeURIComponent(safeQ)}`,
   }));
 
   return NextResponse.json({ users, vendors, offers });

@@ -17,16 +17,13 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+// VULN-11 fix: use cryptographically secure random bytes instead of Math.random()
+import { randomBytes } from 'crypto';
 
-// Generate a cryptographically random 8-char uppercase alphanumeric code
 function generateReferralCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no O/0/I/1 to avoid confusion
-  let code = '';
-  // Use crypto.getRandomValues equivalent via Math.random for edge compat
-  for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+  const bytes = randomBytes(8);
+  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
 }
 
 // ── GET ───────────────────────────────────────────────────────────────────────

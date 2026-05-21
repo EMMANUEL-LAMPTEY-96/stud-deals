@@ -44,7 +44,17 @@ function mapStripeStatus(stripeStatus: string): PlanStatus {
 }
 
 // Map Stripe Price ID → our plan_tier
+// VULN-16 fix: throw on unrecognised price IDs instead of silently falling back
+// to 'free', which would incorrectly downgrade paying customers when env vars
+// are missing or misconfigured. The caller (webhook handler) catches this,
+// logs it, and returns HTTP 200 so Stripe doesn't retry — but the subscription
+// row is NOT updated, protecting paying customers from silent downgrades.
 function tierFromPriceId(priceId: string): PlanTier {
+  if (!priceId) {
+    safeLog.error('[webhook] tierFromPriceId called with empty or missing priceId');
+    throw new Error('Missing or empty Stripe price ID — cannot determine plan tier');
+  }
+
   if (
     priceId === process.env.STRIPE_PRO_PRICE_ID ||
     priceId === process.env.STRIPE_PRO_ANNUAL_PRICE_ID
@@ -55,7 +65,9 @@ function tierFromPriceId(priceId: string): PlanTier {
     priceId === process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID
   ) return 'growth';
 
-  return 'free';
+  // Unknown price ID — alert ops, do NOT silently downgrade to free
+  safeLog.error(`[webhook] Unknown Stripe price ID: "${priceId}" — check STRIPE_*_PRICE_ID env vars`);
+  throw new Error(`Unknown Stripe price ID: ${priceId}`);
 }
 
 async function updateVendorPlan(
@@ -160,8 +172,9 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     safeLog.error(`[webhook] Error handling ${event.type}:`, err);
-    // Return 200 so Stripe doesn't retry — log and investigate separately
-    return NextResponse.json({ received: true, error: String(err) });
+    // VULN-15 fix: Return 200 so Stripe doesn't retry, but do NOT include
+    // error details in the response body — they leak internal implementation details.
+    return NextResponse.json({ received: true });
   }
 
   return NextResponse.json({ received: true });

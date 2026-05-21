@@ -78,18 +78,25 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // VULN-19 fix: fetch profile ONCE for all rule checks instead of making two
+  // separate DB queries for the same user on every authenticated request.
+  // We include both 'role' and 'is_active' in the single SELECT so rules 2 & 3
+  // can share the same result without additional round-trips.
+  let sharedProfile: { role?: string; is_active?: boolean } | null = null;
+  if (user) {
+    const { data: p } = await supabase
+      .from('profiles')
+      .select('role, is_active')
+      .eq('id', user.id)
+      .maybeSingle();
+    sharedProfile = p as typeof sharedProfile;
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // RULE 2: Authenticated user on auth pages → redirect to their dashboard
   // ──────────────────────────────────────────────────────────────────────────
   if (user && AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
-    // Fetch role from profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const role = (profile as { role?: string } | null)?.role ?? 'student';
+    const role = sharedProfile?.role ?? 'student';
     const dashboardPath = role === 'vendor' ? '/vendor'
                         : role === 'admin'  ? '/admin'
                         : '/dashboard';
@@ -103,11 +110,7 @@ export async function middleware(request: NextRequest) {
   // Banned users (is_active = false) are redirected to /sign-in.
   // ──────────────────────────────────────────────────────────────────────────
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, is_active')
-      .eq('id', user.id)
-      .maybeSingle();
+    const profile = sharedProfile;
 
     // Blocked accounts — sign them out and redirect to login
     if (profile && (profile as { is_active?: boolean }).is_active === false) {
