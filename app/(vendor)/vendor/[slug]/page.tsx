@@ -58,11 +58,12 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug } = await params;
   const admin = createAdminClient();
-  const { data: vp } = await admin
+  const { data: vpMetaRaw } = await admin
     .from('vendor_profiles')
     .select('business_name, city, description')
     .or(`slug.eq.${slug},id.eq.${slug}`)
     .maybeSingle();
+  const vp = (vpMetaRaw as unknown) as { business_name: string; city: string | null; description: string | null } | null;
 
   if (!vp) return { title: 'Vendor not found — Studeals' };
 
@@ -197,7 +198,7 @@ export default async function VendorPublicProfilePage(
   const admin = createAdminClient();
   const supabase = await createClient();
 
-  const [{ data: vp }, { data: { user } }] = await Promise.all([
+  const [{ data: vpRaw }, { data: { user } }] = await Promise.all([
     admin
       .from('vendor_profiles')
       .select('id, business_name, logo_url, cover_photo_url, city, business_type, description, is_verified, slug')
@@ -205,6 +206,8 @@ export default async function VendorPublicProfilePage(
       .maybeSingle(),
     supabase.auth.getUser(),
   ]);
+  type VendorProfile = { id: string; business_name: string; logo_url: string | null; cover_photo_url: string | null; city: string | null; business_type: string | null; description: string | null; is_verified: boolean; slug: string | null };
+  const vp = (vpRaw as unknown) as VendorProfile | null;
 
   if (!vp) notFound();
 

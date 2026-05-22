@@ -389,7 +389,8 @@ export default function AdminDashboard() {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+      const { data: pRaw } = await supabase.from('profiles').select('role').eq('id', user.id as string).maybeSingle();
+      const p = (pRaw as unknown) as { role: string } | null;
       if (p?.role !== 'admin') { router.push('/dashboard'); return; }
     };
     check();

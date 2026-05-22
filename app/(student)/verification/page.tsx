@@ -96,11 +96,12 @@ export default function VerificationPage() {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: sp } = await supabase
+      const { data: spRaw } = await supabase
         .from('student_profiles')
         .select('verification_status, student_email')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id as string)
         .maybeSingle();
+      const sp = (spRaw as unknown) as { verification_status: string; student_email: string | null } | null;
       if (sp?.verification_status === 'verified') {
         setStep('success_verified');
       } else if (sp?.verification_status === 'pending_review') {

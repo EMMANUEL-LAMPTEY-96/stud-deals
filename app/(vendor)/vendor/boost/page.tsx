@@ -292,8 +292,9 @@ export default function BoostPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: vp } = await supabase
-        .from('vendor_profiles').select('id, business_name').eq('user_id', user.id).maybeSingle();
+      const { data: vpRaw } = await supabase
+        .from('vendor_profiles').select('id, business_name').eq('user_id', user.id as string).maybeSingle();
+      const vp = (vpRaw as unknown) as { id: string; business_name: string } | null;
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorId(vp.id);
       setBN(vp.business_name);

@@ -113,22 +113,23 @@ export default function StudentSettingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
 
-      const [{ data: p }, { data: sp }] = await Promise.all([
+      const [{ data: pRaw }, { data: spRaw }] = await Promise.all([
         supabase
           .from('profiles')
           .select('display_name, first_name, last_name')
-          .eq('id', user.id)
+          .eq('id', user.id as string)
           .maybeSingle(),
         supabase
           .from('student_profiles')
           .select('verification_status, share_with_vendors, consent_updated_at, institution_id, institution_name_manual, date_of_birth')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as string)
           .maybeSingle(),
       ]);
+      const p = (pRaw as unknown) as { display_name: string | null; first_name: string | null; last_name: string | null } | null;
 
       // Cast required: share_with_vendors / date_of_birth were added in SQL migrations
       // after the last Supabase type regeneration. Safe cast — columns exist in DB.
-      const spTyped = sp as unknown as StudentProfileData | null;
+      const spTyped = (spRaw as unknown) as StudentProfileData | null;
       setProfile({ ...(p ?? {}), email: user.email ?? null } as ProfileData);
       setStudentProfile(spTyped);
       setShareWithVendors(spTyped?.share_with_vendors ?? false);

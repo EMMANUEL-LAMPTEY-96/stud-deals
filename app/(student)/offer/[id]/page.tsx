@@ -82,20 +82,21 @@ export default function OfferDetailPage() {
 
       if (user) {
         // Check saved status
-        const { data: saved } = await supabase
+        const { data: savedRaw } = await supabase
           .from('saved_offers')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as string)
           .eq('offer_id', id)
           .maybeSingle();
-        setIsSaved(!!saved);
+        setIsSaved(!!(savedRaw as unknown as { id: string } | null));
 
         // Check verification status
-        const { data: sp } = await supabase
+        const { data: spRaw } = await supabase
           .from('student_profiles')
           .select('verification_status')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as string)
           .maybeSingle();
+        const sp = (spRaw as unknown) as { verification_status: string } | null;
         setVerifyStatus(sp?.verification_status ?? 'unverified');
       }
 

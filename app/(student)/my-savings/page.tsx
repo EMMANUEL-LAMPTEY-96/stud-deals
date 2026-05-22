@@ -104,11 +104,12 @@ export default function MySavingsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/sign-in'); return; }
 
-      const { data: sp } = await supabase
+      const { data: spRaw } = await supabase
         .from('student_profiles')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id as string)
         .maybeSingle();
+      const sp = (spRaw as unknown) as { id: string } | null;
 
       if (!sp) { router.replace('/dashboard'); return; }
 
