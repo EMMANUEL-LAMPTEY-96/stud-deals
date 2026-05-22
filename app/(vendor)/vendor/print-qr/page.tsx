@@ -60,11 +60,12 @@ export default function PrintQRKitPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: vp } = await supabase
+      const { data: vpRaw } = await supabase
         .from('vendor_profiles')
         .select('id, business_name, logo_url, city, business_type')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id as string)
         .maybeSingle();
+      const vp = (vpRaw as unknown) as { id: string; business_name: string; logo_url: string | null; city: string | null; business_type: string | null } | null;
       if (!vp) { router.push('/vendor/profile'); return; }
 
       setVendorId(vp.id);

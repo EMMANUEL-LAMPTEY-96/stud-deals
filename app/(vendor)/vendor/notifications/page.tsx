@@ -170,7 +170,7 @@ export default function NotificationsPage() {
 
     // B. Client-generated: offers expiring ≤ 48h
     const in48h = new Date(Date.now() + 48 * 3600000).toISOString();
-    const { data: expiringOffers } = await supabase
+    const { data: expiringOffersRaw } = await supabase
       .from('offers')
       .select('id, title, expires_at')
       .eq('vendor_id', vid)
@@ -178,6 +178,8 @@ export default function NotificationsPage() {
       .not('expires_at', 'is', null)
       .lte('expires_at', in48h)
       .gte('expires_at', now.toISOString());
+    type ExpiringOffer = { id: string; title: string; expires_at: string | null };
+    const expiringOffers = (expiringOffersRaw as unknown) as ExpiringOffer[] | null;
 
     const expiringItems: VendorNotif[] = (expiringOffers ?? []).map(o => {
       const hoursLeft = msToHours(new Date(o.expires_at!).getTime() - Date.now());
@@ -255,8 +257,9 @@ export default function NotificationsPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: vp } = await supabase
-        .from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle();
+      const { data: vpRaw } = await supabase
+        .from('vendor_profiles').select('id').eq('user_id', user.id as string).maybeSingle();
+      const vp = (vpRaw as unknown) as { id: string } | null;
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorId(vp.id);
       setUserId(user.id);

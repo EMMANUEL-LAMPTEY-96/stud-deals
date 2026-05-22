@@ -231,12 +231,13 @@ export default function StudentProfilePage() {
       if (!user) { router.push('/sign-in'); return; }
 
       // Fetch role to conditionally hide admin-irrelevant sections
-      const { data: profileRow } = await supabase
+      const { data: profileRowRaw } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', user.id as string)
         .maybeSingle();
-      if (profileRow?.role) setRole(profileRow.role);
+      const profileRow = (profileRowRaw as unknown) as { role: string } | null;
+      if (profileRow?.role) setRole(profileRow.role as 'student' | 'vendor' | 'admin');
 
       try {
         const res = await fetch('/api/student/profile');

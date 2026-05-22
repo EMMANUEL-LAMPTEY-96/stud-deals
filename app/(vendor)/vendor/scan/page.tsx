@@ -103,10 +103,11 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
     setError('');
 
     // Search all vendor_profiles for a matching staff PIN
-    const { data: vendors } = await supabase
+    const { data: vendorsRaw } = await supabase
       .from('vendor_profiles')
       .select('id, business_name, city, staff_pins')
       .not('staff_pins', 'is', null);
+    const vendors = (vendorsRaw as unknown) as { id: string; business_name: string; city: string | null; staff_pins: unknown }[] | null;
 
     let matched: StaffSession | null = null;
 
@@ -250,31 +251,37 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
 
   const load = useCallback(async () => {
     // Fetch pending rewards — reward_earned + tier_reward
-    const { data: reds } = await supabase
+    type RedRow = { id: string; status: string; created_at: string; offer_id: string };
+    const { data: redsRaw } = await supabase
       .from('redemptions')
       .select('id, status, created_at, offer_id')
       .eq('vendor_id', session.vendorId)
       .in('status', ['reward_earned', 'tier_reward'])
       .order('created_at', { ascending: false })
       .limit(20);
+    const reds = (redsRaw as unknown) as RedRow[] | null;
 
     if (!reds?.length) { setPending([]); setLoading(false); return; }
 
     // Resolve offer titles
     const offerIds = [...new Set(reds.map(r => r.offer_id))];
-    const { data: offers } = await supabase
+    type OfferRow = { id: string; title: string; terms_and_conditions: string | null; discount_label: string | null };
+    const { data: offersRaw } = await supabase
       .from('offers')
       .select('id, title, terms_and_conditions, discount_label')
       .in('id', offerIds);
+    const offers = (offersRaw as unknown) as OfferRow[] | null;
 
     const offerMap: Record<string, any> = {};
     (offers ?? []).forEach(o => { offerMap[o.id] = o; });
 
     // Resolve student names
-    const { data: profs } = await supabase
+    type ProfRow = { id: string; display_name: string | null };
+    const { data: profsRaw } = await supabase
       .from('student_profiles')
       .select('id, display_name')
       .in('id', reds.map(r => (r as any).student_profile_id).filter(Boolean));
+    const profs = (profsRaw as unknown) as ProfRow[] | null;
     const profMap: Record<string, string> = {};
     (profs ?? []).forEach(p => { profMap[p.id] = p.display_name ?? 'Student'; });
 

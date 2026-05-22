@@ -404,11 +404,12 @@ export default function VendorCustomersPage() {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: profile } = await supabase
+      const { data: profileRaw } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', user.id as string)
         .maybeSingle();
+      const profile = (profileRaw as unknown) as { role: string } | null;
       if (profile?.role !== 'vendor' && profile?.role !== 'admin') { router.push('/dashboard'); return; }
     };
     check();

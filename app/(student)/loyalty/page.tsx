@@ -228,11 +228,12 @@ export default function LoyaltyPage() {
         }
 
         // Student profile
-        const { data: sp } = await supabase
+        const { data: spRaw } = await supabase
           .from('student_profiles')
           .select('id, verification_status')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id as string)
           .maybeSingle();
+        const sp = (spRaw as unknown) as { id: string; verification_status: string } | null;
 
         if (cancelled) return;
 
@@ -282,18 +283,20 @@ export default function LoyaltyPage() {
         }
 
         // Fetch active punch card offers for those vendors
-        const { data: offers } = await supabase
+        type LoyaltyOffer = { id: string; vendor_id: string; title: string; required_visits: number; reward_label: string; is_active: boolean };
+        const { data: offersRaw } = await supabase
           .from('offers')
           .select('id, vendor_id, title, required_visits, reward_label, is_active')
           .in('vendor_id', vendorIds)
           .eq('offer_type', 'punch_card')
           .order('is_active', { ascending: false })
           .order('created_at', { ascending: false });
+        const offers = (offersRaw as unknown) as LoyaltyOffer[] | null;
 
         if (cancelled) return;
 
         // Map vendor → most relevant offer (prefer active)
-        const offerByVendor = new Map<string, typeof offers extends (infer T)[] | null ? T : never>();
+        const offerByVendor = new Map<string, LoyaltyOffer>();
         for (const o of offers ?? []) {
           if (!offerByVendor.has(o.vendor_id) || o.is_active) {
             offerByVendor.set(o.vendor_id, o);

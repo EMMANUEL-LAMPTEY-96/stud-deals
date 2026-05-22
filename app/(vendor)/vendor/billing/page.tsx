@@ -178,12 +178,12 @@ export default function BillingPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
+      const { data: billingRaw } = await supabase
         .from('vendor_profiles')
         .select('plan_tier, plan_status, trial_ends_at')
-        .eq('user_id', user.id)
+        .eq('user_id', user.id as string)
         .maybeSingle();
-      if (data) setPlan(data as VendorPlan);
+      if (billingRaw) setPlan((billingRaw as unknown) as VendorPlan);
       setLoading(false);
     })();
 

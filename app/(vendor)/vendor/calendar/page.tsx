@@ -204,8 +204,9 @@ export default function CalendarPage() {
     (async () => { try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: vp } = await supabase
-        .from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle();
+      const { data: vpRaw } = await supabase
+        .from('vendor_profiles').select('id').eq('user_id', user.id as string).maybeSingle();
+      const vp = (vpRaw as unknown) as { id: string } | null;
       if (!vp) { router.push('/vendor/profile'); return; }
 
       const { data } = await supabase
