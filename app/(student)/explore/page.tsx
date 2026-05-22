@@ -137,11 +137,12 @@ export default function ExplorePage() {
   useEffect(() => {
     const fetchSaved = async () => {
       if (!studentProfile?.id) return;
-      const { data } = await supabase
+      const { data: rawSaved } = await supabase
         .from('saved_offers')
         .select('offer_id')
-        .eq('student_id', studentProfile.id);
-      if (data) setSavedIds(new Set(data.map((r) => r.offer_id)));
+        .eq('student_id', studentProfile.id as string);
+      const savedData = (rawSaved as unknown) as { offer_id: string }[] | null;
+      if (savedData) setSavedIds(new Set(savedData.map((r) => r.offer_id)));
     };
     fetchSaved();
   }, [studentProfile?.id]);
