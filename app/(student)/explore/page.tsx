@@ -122,7 +122,7 @@ export default function ExplorePage() {
         const { data: inst } = await supabase
           .from('institutions')
           .select('latitude, longitude')
-          .eq('id', sp.institution_id)
+          .eq('id', sp.institution_id!)
           .maybeSingle();
         if (inst && inst.latitude && inst.longitude) {
           setCampusCoords({ lat: inst.latitude, lng: inst.longitude });
