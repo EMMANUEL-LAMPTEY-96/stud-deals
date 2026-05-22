@@ -58,7 +58,7 @@ export function hasAccess(vendor: VendorPlan, requiredTier: PlanTier): boolean {
  * Returns null if the vendor profile doesn't exist.
  */
 export async function getVendorPlan(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   supabase: any,
   userId: string
 ): Promise<VendorPlan | null> {
