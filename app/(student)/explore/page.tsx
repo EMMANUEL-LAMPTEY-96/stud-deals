@@ -119,12 +119,13 @@ export default function ExplorePage() {
       // Fetch campus coordinates if student has an institution
       const sp = studentRes.data as StudentProfile | null;
       if (sp?.institution_id) {
-        const { data: inst } = await supabase
+        const { data: instData } = await supabase
           .from('institutions')
           .select('latitude, longitude')
-          .eq('id', sp.institution_id!)
+          .eq('id', sp.institution_id as string)
           .maybeSingle();
-        if (inst && inst.latitude && inst.longitude) {
+        const inst = (instData as unknown) as { latitude: number | null; longitude: number | null } | null;
+        if (inst && inst.latitude != null && inst.longitude != null) {
           setCampusCoords({ lat: inst.latitude, lng: inst.longitude });
         }
       }
