@@ -302,52 +302,11 @@ export default function Navbar() {
                     )}
                   </div>
 
-                  {/* ── Vendor-only tool sections ── */}
+                  {/* ── Vendor shortcut (profile/settings only — rest is in VendorNav) ── */}
                   {role === 'vendor' && (
                     <>
                       <div className="px-3 pt-2.5 pb-1">
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">Manage</p>
-                        <Link href="/vendor/boost" onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
-                            <Zap size={12} className="text-amber-700" />
-                          </div>
-                          Boost &amp; flash deals
-                        </Link>
-                        <Link href="/vendor/calendar" onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <Calendar size={12} className="text-blue-700" />
-                          </div>
-                          Campaign calendar
-                        </Link>
-                        <Link href="/vendor/staff" onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <div className="w-6 h-6 rounded-md bg-pink-100 flex items-center justify-center flex-shrink-0">
-                            <UserCheck size={12} className="text-pink-700" />
-                          </div>
-                          Staff PINs
-                        </Link>
-                        <Link href="/vendor/reviews" onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <div className="w-6 h-6 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
-                            <Star size={12} className="text-green-700" />
-                          </div>
-                          Student reviews
-                        </Link>
-                      </div>
-
-                      <div className="border-t border-gray-100 mx-2 my-1" />
-
-                      <div className="px-3 pb-1">
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">Quick tools</p>
-                        <Link href="/vendor/print-qr" onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <div className="w-6 h-6 rounded-md bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <Printer size={12} className="text-emerald-700" />
-                          </div>
-                          Print QR poster
-                        </Link>
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">Quick access</p>
                         <Link href="/vendor/offers/templates" onClick={() => setProfileMenuOpen(false)}
                           className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                           <div className="w-6 h-6 rounded-md bg-violet-100 flex items-center justify-center flex-shrink-0">
@@ -355,16 +314,7 @@ export default function Navbar() {
                           </div>
                           Offer templates
                         </Link>
-                        <Link href="/vendor/scan" onClick={() => setProfileMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <div className="w-6 h-6 rounded-md bg-teal-100 flex items-center justify-center flex-shrink-0">
-                            <QrCode size={12} className="text-teal-700" />
-                          </div>
-                          <span className="flex-1">Counter mode</span>
-                          <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full leading-tight">Staff</span>
-                        </Link>
                       </div>
-
                       <div className="border-t border-gray-100 mx-2 my-1" />
                     </>
                   )}
