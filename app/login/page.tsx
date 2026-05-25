@@ -11,14 +11,14 @@
 // Students are barred from /vendor/* by middleware regardless.
 // =============================================================================
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   GraduationCap, Store, Mail, Lock, Loader2, AlertCircle,
   Eye, EyeOff, ArrowRight, CheckCircle, BarChart3, Tag,
-  QrCode, Shield, TrendingUp, Users, Star, Zap,
+  QrCode, Shield, TrendingUp, Users, Zap,
 } from 'lucide-react';
 
 // ── Panel copy per role ────────────────────────────────────────────────────────
@@ -40,21 +40,13 @@ const ROLE_CONFIG = {
     subline:       'Sign in to discover hundreds of verified student deals — show your QR code at the till and save instantly.',
     panelFooter:   'Free forever for students · No credit card required',
     destination:   '/dashboard',
-    stats: [
-      { val: '47,000+', label: 'Students saving' },
-      { val: '2,400+',  label: 'Live deals' },
-      { val: '85 000 Ft', label: 'Avg. yearly saving' },
-    ],
+    statsKeys: ['students', 'deals', 'vendors'] as const,
     perks: [
       { icon: <Tag size={16} />,    text: 'Exclusive student-only pricing' },
       { icon: <QrCode size={16} />, text: 'One-tap QR redemption at the till' },
       { icon: <Shield size={16} />, text: 'Verified & private — data never sold' },
       { icon: <Zap size={16} />,    text: 'Instant access on sign-up' },
     ],
-    testimonial: {
-      quote: "Saved 60 000 Ft in my first semester alone. Absolute game changer.",
-      name: "Bence K.", role: "ELTE Budapest",
-    },
   },
   vendor: {
     bg:            'from-[#0a1f0f] via-[#0d2e14] to-[#0a1f0f]',
@@ -73,21 +65,13 @@ const ROLE_CONFIG = {
     subline:       'Sign in to manage your offers, track redemptions and see exactly how many students you\'re bringing through the door.',
     panelFooter:   'Free to list · No upfront cost · Pay only when it grows',
     destination:   '/vendor',
-    stats: [
-      { val: '+34%',   label: 'Avg. footfall increase' },
-      { val: '380+',   label: 'Partner businesses' },
-      { val: '1,247',  label: 'Avg. monthly redemptions' },
-    ],
+    statsKeys: ['vendors', 'deals', 'students'] as const,
     perks: [
       { icon: <BarChart3 size={16} />, text: 'Live redemption & revenue analytics' },
       { icon: <Users size={16} />,     text: 'Reach thousands of verified students' },
       { icon: <Tag size={16} />,       text: 'Loyalty programs & punch cards' },
       { icon: <TrendingUp size={16} />,text: 'Track ROI down to the last redemption' },
     ],
-    testimonial: {
-      quote: "We saw a 40% increase in student footfall in the first month. The analytics are brilliant.",
-      name: "Marco R.", role: "Pizza Palace, London",
-    },
   },
 } as const;
 
@@ -106,6 +90,23 @@ function LoginForm() {
   const [showPw, setShowPw]     = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+
+  // Real stats from DB — no fake numbers
+  const [liveStats, setLiveStats] = useState({ students: 0, deals: 0, vendors: 0 });
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
+      supabase.from('offers').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('is_verified', true),
+    ]).then(([s, o, v]) => {
+      setLiveStats({
+        students: s.count ?? 0,
+        deals:    o.count ?? 0,
+        vendors:  v.count ?? 0,
+      });
+    });
+  }, []);
 
   const cfg = ROLE_CONFIG[role];
 
@@ -197,14 +198,39 @@ function LoginForm() {
             {cfg.subline}
           </p>
 
-          {/* Stats */}
+          {/* Stats — real numbers from DB */}
           <div className="grid grid-cols-3 gap-3 mb-10">
-            {cfg.stats.map(s => (
-              <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                <div className="text-xl font-black text-white">{s.val}</div>
-                <div className="text-white/50 text-xs mt-0.5">{s.label}</div>
-              </div>
-            ))}
+            {role === 'student' ? (
+              <>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  <div className="text-xl font-black text-white">{liveStats.students}</div>
+                  <div className="text-white/50 text-xs mt-0.5">Students</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  <div className="text-xl font-black text-white">{liveStats.deals}</div>
+                  <div className="text-white/50 text-xs mt-0.5">Live deals</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  <div className="text-xl font-black text-white">{liveStats.vendors}</div>
+                  <div className="text-white/50 text-xs mt-0.5">Vendors</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  <div className="text-xl font-black text-white">{liveStats.vendors}</div>
+                  <div className="text-white/50 text-xs mt-0.5">Businesses</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  <div className="text-xl font-black text-white">{liveStats.deals}</div>
+                  <div className="text-white/50 text-xs mt-0.5">Active offers</div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  <div className="text-xl font-black text-white">{liveStats.students}</div>
+                  <div className="text-white/50 text-xs mt-0.5">Students</div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Perks list */}
@@ -219,21 +245,17 @@ function LoginForm() {
             ))}
           </div>
 
-          {/* Testimonial */}
+          {/* Early access badge — honest positioning */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <div className="flex gap-0.5 mb-2">
-              {[1,2,3,4,5].map(i => <Star key={i} size={12} className="fill-amber-400 text-amber-400" />)}
+            <div className="flex items-center gap-2 mb-2">
+              <Zap size={14} className="text-amber-400" />
+              <span className="text-amber-400 text-xs font-bold uppercase tracking-wide">Early access</span>
             </div>
-            <p className="text-white/80 text-sm leading-relaxed mb-3">&ldquo;{cfg.testimonial.quote}&rdquo;</p>
-            <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${cfg.logo} flex items-center justify-center text-white text-xs font-bold`}>
-                {cfg.testimonial.name[0]}
-              </div>
-              <div>
-                <p className="text-white text-xs font-semibold">{cfg.testimonial.name}</p>
-                <p className="text-white/40 text-xs">{cfg.testimonial.role}</p>
-              </div>
-            </div>
+            <p className="text-white/80 text-sm leading-relaxed">
+              {role === 'student'
+                ? 'StudDeals is growing — be among the first students on campus to claim exclusive deals from local businesses.'
+                : 'StudDeals is growing — join as an early business partner and reach every verified student on campus from day one.'}
+            </p>
           </div>
         </div>
 
