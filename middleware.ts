@@ -73,7 +73,7 @@ export async function middleware(request: NextRequest) {
     if (PUBLIC_VENDOR_ROUTES.test(pathname)) {
       return supabaseResponse;
     }
-    const redirectUrl = new URL('/sign-in', request.url);
+    const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);   // Remember where they were going
     return NextResponse.redirect(redirectUrl);
   }
@@ -115,7 +115,7 @@ export async function middleware(request: NextRequest) {
     // Blocked accounts — sign them out and redirect to login
     if (profile && (profile as { is_active?: boolean }).is_active === false) {
       await supabase.auth.signOut();
-      const redirectUrl = new URL('/sign-in', request.url);
+      const redirectUrl = new URL('/login', request.url);
       redirectUrl.searchParams.set('error', 'account_suspended');
       return NextResponse.redirect(redirectUrl);
     }
