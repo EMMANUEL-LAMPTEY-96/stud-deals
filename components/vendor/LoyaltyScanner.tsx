@@ -6,28 +6,34 @@
 // components/vendor/LoyaltyScanner.tsx
 //
 // The vendor's in-store loyalty scanner.
-// This is the PRIMARY daily action for a vendor — when a student arrives,
-// the vendor opens this panel and scans the student's loyalty QR code.
+// The vendor opens this panel when a student arrives; they point their camera
+// at the student's phone screen which shows a time-based QR code.
+// The scan awards 1 stamp (or more with bonuses/double windows).
 //
-// Each scan = 1 stamp logged for that student.
-// When the student hits their punch card threshold, a reward is shown.
+// Flow:
+//   Student opens /loyalty → sees live QR (refreshes every 60s, expires in 90s)
+//   Vendor opens scanner → scans student's screen
+//   POST /api/loyalty/vendor-stamp with { qr_payload }
+//   Server validates HMAC + expiry → awards stamp
 //
-// Two input modes:
-//   CAMERA — uses device camera (BarcodeDetector API, Chrome/Edge only)
-//   MANUAL — vendor types the student's 8-char code (shown under their QR)
+// Why vendor-scans-student (vs old student-scans-vendor QR):
+//   - Frictionless: student just opens the app; no scanning, no navigating
+//   - Fraud-proof: HMAC + expiry prevents screenshot sharing or replay attacks
+//   - Familiar: mirrors contactless payment UX (student shows phone, vendor scans)
 //
-// Success states:
-//   STAMP ADDED  — shows green stamp count (e.g. "4 / 5 stamps")
-//   REWARD! 🎉   — full-screen celebration when threshold reached
+// Input modes:
+//   CAMERA  — BarcodeDetector API (Chrome/Edge). Reads STUDEALS_STAMP:v1:... payload.
+//   MANUAL  — Vendor pastes the QR payload string (fallback for Safari/Firefox).
 // =============================================================================
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  QrCode, Keyboard, CheckCircle, XCircle, Loader2,
-  RotateCcw, Camera, AlertTriangle, Star, Gift, Stamp,
+  Camera, Keyboard, CheckCircle, XCircle, Loader2,
+  RotateCcw, AlertTriangle, Star, Gift, Stamp,
+  Smartphone,
 } from 'lucide-react';
 
-type ScanMode = 'manual' | 'camera';
+type ScanMode = 'camera' | 'manual';
 type ScanState = 'idle' | 'loading' | 'stamp_added' | 'reward' | 'error';
 
 interface StampResult {
@@ -39,6 +45,9 @@ interface StampResult {
   reward_label: string;
   loyalty_mode: string;
   stamped_at: string;
+  is_first_visit: boolean;
+  double_stamp: boolean;
+  stamps_awarded: number;
 }
 
 // ── Stamp dots UI ─────────────────────────────────────────────────────────────
@@ -71,9 +80,10 @@ function StampDots({
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
 export default function LoyaltyScanner() {
-  const [mode, setMode] = useState<ScanMode>('manual');
-  const [input, setInput] = useState('');
+  const [mode, setMode] = useState<ScanMode>('camera');
+  const [manualInput, setManualInput] = useState('');
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [result, setResult] = useState<StampResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -81,15 +91,9 @@ export default function LoyaltyScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScannedRef = useRef<string>('');
 
-  // Auto-focus on mount / mode switch
-  useEffect(() => {
-    if (mode === 'manual') {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [mode]);
-
-  // ── Camera ─────────────────────────────────────────────────────────────────
+  // ── Camera lifecycle ───────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
     if (streamRef.current) {
@@ -110,23 +114,26 @@ export default function LoyaltyScanner() {
       }
 
       if ('BarcodeDetector' in window) {
-        const detector = new (window as Window & {
-          BarcodeDetector: typeof BarcodeDetector;
-        }).BarcodeDetector({ formats: ['qr_code'] });
+        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
 
         scanIntervalRef.current = setInterval(async () => {
           if (!videoRef.current || scanState === 'loading') return;
           try {
             const barcodes = await detector.detect(videoRef.current);
             if (barcodes.length > 0) {
-              const payload = barcodes[0].rawValue;
+              const payload = barcodes[0].rawValue as string;
+              // Deduplicate: only process once per unique payload
+              if (payload === lastScannedRef.current) return;
+              // Only process Studeals QR codes
+              if (!payload.startsWith('STUDEALS_STAMP:')) return;
+              lastScannedRef.current = payload;
               stopCamera();
-              await processStudentId(payload);
+              await processQRPayload(payload);
             }
-          } catch (_) { /* silent */ }
-        }, 500);
+          } catch { /* silent */ }
+        }, 400);
       }
-    } catch (_) {
+    } catch {
       setErrorMsg('Camera access denied. Use manual entry instead.');
       setScanState('error');
       setMode('manual');
@@ -138,20 +145,25 @@ export default function LoyaltyScanner() {
     return () => stopCamera();
   }, [mode, startCamera, stopCamera]);
 
-  // ── Core: call the stamp API ───────────────────────────────────────────────
-  const processStudentId = async (studentProfileId: string) => {
-    // Accept full UUID or 8-char short code (first 8 chars of UUID)
-    const id = studentProfileId.trim();
-    if (!id) return;
+  useEffect(() => {
+    if (mode === 'manual') {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [mode]);
+
+  // ── Core: call vendor-stamp API ────────────────────────────────────────────
+  const processQRPayload = useCallback(async (payload: string) => {
+    const trimmed = payload.trim();
+    if (!trimmed) return;
 
     setScanState('loading');
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/loyalty/stamp', {
+      const res = await fetch('/api/loyalty/vendor-stamp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_profile_id: id }),
+        body: JSON.stringify({ qr_payload: trimmed }),
       });
 
       const data = await res.json();
@@ -164,30 +176,32 @@ export default function LoyaltyScanner() {
 
       setResult(data as StampResult);
       setScanState(data.reward_triggered ? 'reward' : 'stamp_added');
-    } catch (_) {
+    } catch {
       setScanState('error');
-      setErrorMsg('Network error. Check your connection.');
+      setErrorMsg('Network error. Check your connection and try again.');
     }
-  };
+  }, []);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    processStudentId(input);
+    processQRPayload(manualInput);
   };
 
   const handleReset = () => {
-    setInput('');
+    setManualInput('');
     setResult(null);
     setScanState('idle');
     setErrorMsg('');
-    setTimeout(() => inputRef.current?.focus(), 100);
+    lastScannedRef.current = '';
+    // Restart camera if we were in camera mode
+    if (mode === 'camera') startCamera();
+    else setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   // ── REWARD STATE 🎉 ────────────────────────────────────────────────────────
   if (scanState === 'reward' && result) {
     return (
       <div className="flex flex-col items-center text-center py-6 px-4 animate-fade-in">
-        {/* Celebration */}
         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-5 shadow-lg animate-slide-up">
           <Gift size={40} className="text-white" />
         </div>
@@ -195,10 +209,9 @@ export default function LoyaltyScanner() {
         <div className="text-4xl mb-2">🎉</div>
         <h2 className="text-2xl font-black text-gray-900 mb-1">Reward Unlocked!</h2>
         <p className="text-gray-500 text-sm mb-6">
-          {result.student_name} has earned their reward.
+          {result.student_name} has completed their card.
         </p>
 
-        {/* Reward box */}
         <div className="w-full max-w-xs bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-5 mb-6">
           <div className="flex items-center gap-2 justify-center mb-2">
             <Star size={16} className="text-amber-500 fill-amber-500" />
@@ -212,7 +225,6 @@ export default function LoyaltyScanner() {
           </div>
         </div>
 
-        {/* Full stamp row completed */}
         <div className="mb-6">
           <StampDots filled={result.required_visits} total={result.required_visits} />
           <p className="text-xs text-gray-400 mt-2">Card complete — new card starts now</p>
@@ -234,10 +246,17 @@ export default function LoyaltyScanner() {
           <CheckCircle size={40} className="text-vendor-600" />
         </div>
 
-        <h2 className="text-2xl font-black text-gray-900 mb-1">Stamp Added!</h2>
+        <h2 className="text-2xl font-black text-gray-900 mb-1">
+          {result.stamps_awarded > 1 ? `${result.stamps_awarded}× Stamps Added!` : 'Stamp Added!'}
+        </h2>
+        {result.is_first_visit && (
+          <p className="text-xs text-brand-600 font-bold mb-1">⭐ First visit bonus!</p>
+        )}
+        {result.double_stamp && (
+          <p className="text-xs text-amber-600 font-bold mb-1">🔥 Double stamp window!</p>
+        )}
         <p className="text-gray-500 text-sm mb-5">{result.student_name}</p>
 
-        {/* Progress */}
         <div className="w-full max-w-xs bg-vendor-50 border border-vendor-200 rounded-2xl p-5 mb-5">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold text-vendor-700 uppercase tracking-wide">
@@ -271,15 +290,21 @@ export default function LoyaltyScanner() {
     <div className="space-y-5">
       {/* Mode toggle */}
       <div className="flex rounded-xl bg-gray-100 p-1">
-        {[
-          { mode: 'manual' as ScanMode, label: 'Enter ID', icon: <Keyboard size={14} /> },
-          { mode: 'camera' as ScanMode, label: 'Scan QR', icon: <Camera size={14} /> },
-        ].map((opt) => (
+        {([
+          { id: 'camera' as ScanMode, label: 'Scan QR', icon: <Camera size={14} /> },
+          { id: 'manual' as ScanMode, label: 'Paste code', icon: <Keyboard size={14} /> },
+        ] as const).map((opt) => (
           <button
-            key={opt.mode}
-            onClick={() => { setMode(opt.mode); setScanState('idle'); setInput(''); setErrorMsg(''); }}
+            key={opt.id}
+            onClick={() => {
+              setMode(opt.id);
+              setScanState('idle');
+              setManualInput('');
+              setErrorMsg('');
+              lastScannedRef.current = '';
+            }}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-              mode === opt.mode
+              mode === opt.id
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -290,66 +315,14 @@ export default function LoyaltyScanner() {
         ))}
       </div>
 
-      {/* ── MANUAL MODE ──────────────────────────────────────────────────── */}
-      {mode === 'manual' && (
-        <form onSubmit={handleManualSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-              Student loyalty card ID
-            </label>
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value.trim())}
-              placeholder="Paste or type student ID"
-              disabled={scanState === 'loading'}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              className={`w-full text-center text-sm font-mono
-                bg-gray-50 border-2 rounded-2xl px-4 py-4 focus:outline-none transition-colors
-                placeholder:text-gray-300
-                ${scanState === 'error'
-                  ? 'border-red-300 text-red-700 bg-red-50'
-                  : 'border-gray-200 text-gray-900 focus:border-vendor-400 focus:bg-white'
-                }`}
-            />
-          </div>
-
-          {/* Error */}
-          {scanState === 'error' && errorMsg && (
-            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm animate-fade-in">
-              <XCircle size={16} className="flex-shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={!input || scanState === 'loading'}
-            className={`w-full py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-2.5 transition-all duration-150 ${
-              !input || scanState === 'loading'
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-vendor-600 text-white hover:bg-vendor-700 active:scale-[0.98] shadow-sm'
-            }`}
-          >
-            {scanState === 'loading' ? (
-              <><Loader2 size={18} className="animate-spin" /> Logging stamp…</>
-            ) : (
-              <><Stamp size={18} /> Log Stamp</>
-            )}
-          </button>
-
-          <p className="text-center text-xs text-gray-400">
-            The student&apos;s ID code is shown beneath their QR code in the app.
-            Or switch to{' '}
-            <button type="button" onClick={() => setMode('camera')} className="underline text-vendor-600">
-              camera scan
-            </button>.
-          </p>
-        </form>
-      )}
+      {/* Instruction strip */}
+      <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+        <Smartphone size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-blue-700 leading-relaxed">
+          Ask the student to open their <strong>Loyalty</strong> page in the Studeals app.
+          Their personal QR code will appear — scan it with your camera.
+        </p>
+      </div>
 
       {/* ── CAMERA MODE ──────────────────────────────────────────────────── */}
       {mode === 'camera' && (
@@ -369,8 +342,9 @@ export default function LoyaltyScanner() {
                 playsInline
                 muted
               />
+              {/* Viewfinder overlay */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-52 h-52 rounded-2xl border-2 border-white/70 relative">
+                <div className="w-52 h-52 rounded-2xl border-2 border-white/40 relative">
                   {[
                     'top-0 left-0 border-t-4 border-l-4 rounded-tl-xl',
                     'top-0 right-0 border-t-4 border-r-4 rounded-tr-xl',
@@ -384,7 +358,7 @@ export default function LoyaltyScanner() {
               </div>
               <div className="absolute bottom-4 left-0 right-0 text-center">
                 <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
-                  Point camera at student&apos;s loyalty QR
+                  Point camera at student&apos;s Loyalty QR
                 </span>
               </div>
             </div>
@@ -393,22 +367,83 @@ export default function LoyaltyScanner() {
           {!('BarcodeDetector' in (typeof window !== 'undefined' ? window : {})) && (
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
               <AlertTriangle size={15} className="flex-shrink-0 mt-0.5" />
-              <span>Camera scanning requires Chrome or Edge. Use manual entry on Safari/Firefox.</span>
+              <span>
+                Camera scanning requires Chrome or Edge.
+                Switch to <button type="button" onClick={() => setMode('manual')} className="underline font-semibold">Paste code</button> for Safari/Firefox.
+              </span>
             </div>
           )}
 
           {scanState === 'error' && errorMsg && (
-            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm animate-fade-in">
+              <XCircle size={16} className="flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p>{errorMsg}</p>
+                <button
+                  onClick={handleReset}
+                  className="mt-2 text-xs underline font-semibold"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── MANUAL MODE ──────────────────────────────────────────────────── */}
+      {mode === 'manual' && (
+        <form onSubmit={handleManualSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+              Student QR payload
+            </label>
+            <textarea
+              ref={inputRef as any}
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              placeholder="STUDEALS_STAMP:v1:..."
+              rows={3}
+              disabled={scanState === 'loading'}
+              autoComplete="off"
+              spellCheck={false}
+              className={`w-full text-xs font-mono resize-none
+                bg-gray-50 border-2 rounded-2xl px-4 py-3 focus:outline-none transition-colors
+                placeholder:text-gray-300
+                ${scanState === 'error'
+                  ? 'border-red-300 text-red-700 bg-red-50'
+                  : 'border-gray-200 text-gray-900 focus:border-vendor-400 focus:bg-white'
+                }`}
+            />
+            <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+              Ask the student to copy the QR payload from their Loyalty page and share it with you
+              (e.g. by messaging or reading it aloud). Alternatively, use the Camera tab on Chrome/Edge.
+            </p>
+          </div>
+
+          {scanState === 'error' && errorMsg && (
+            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm animate-fade-in">
               <XCircle size={16} className="flex-shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
 
-          <button onClick={handleReset} className="btn-secondary w-full">
-            <RotateCcw size={15} />
-            Reset
+          <button
+            type="submit"
+            disabled={!manualInput.trim() || scanState === 'loading'}
+            className={`w-full py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-2.5 transition-all duration-150 ${
+              !manualInput.trim() || scanState === 'loading'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-vendor-600 text-white hover:bg-vendor-700 active:scale-[0.98] shadow-sm'
+            }`}
+          >
+            {scanState === 'loading' ? (
+              <><Loader2 size={18} className="animate-spin" /> Logging stamp…</>
+            ) : (
+              <><Stamp size={18} /> Log Stamp</>
+            )}
           </button>
-        </div>
+        </form>
       )}
     </div>
   );

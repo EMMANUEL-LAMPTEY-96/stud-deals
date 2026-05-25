@@ -19,16 +19,17 @@
 // Auth: requires verified student
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import {
   Stamp, Trophy, Coffee, MapPin, ArrowRight,
   Loader2, AlertCircle, Sparkles, Star, Gift,
-  CheckCircle2, QrCode, GraduationCap,
+  CheckCircle2, QrCode, GraduationCap, RefreshCw, Smartphone,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -90,6 +91,166 @@ function PunchDots({ filled, total, small = false }: { filled: number; total: nu
           +{total - 12}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Stamp QR Panel ────────────────────────────────────────────────────────────
+// Shows the student's live time-based QR that the vendor scans to award a stamp.
+// Auto-refreshes every 60 seconds (QR expires at 90s, giving 30s buffer).
+
+const QR_REFRESH_INTERVAL = 60; // seconds between refreshes
+
+function StampQRPanel() {
+  const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number>(0);
+  const [secondsLeft, setSecondsLeft] = useState<number>(QR_REFRESH_INTERVAL);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchQR = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/loyalty/student-qr');
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error ?? 'Failed to load QR code.');
+        return;
+      }
+      const data = await res.json();
+      setQrPayload(data.payload);
+      setExpiresAt(data.expiresAt);
+      setSecondsLeft(QR_REFRESH_INTERVAL);
+    } catch {
+      setError('Network error. Check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch + auto-refresh every QR_REFRESH_INTERVAL seconds
+  useEffect(() => {
+    fetchQR();
+    const interval = setInterval(fetchQR, QR_REFRESH_INTERVAL * 1000);
+    return () => clearInterval(interval);
+  }, [fetchQR]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!qrPayload) return;
+    const tick = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(tick);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [qrPayload, expiresAt]);
+
+  // Expiry progress ring  (circumference ≈ 2π × 24 = 150.8)
+  const ringTotal = 150.8;
+  const ringProgress = (secondsLeft / QR_REFRESH_INTERVAL) * ringTotal;
+  const isExpiringSoon = secondsLeft <= 15;
+
+  return (
+    <div className="bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl p-5 mb-6 text-white shadow-lg shadow-brand-200">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-1">
+        <Smartphone size={15} className="opacity-80" />
+        <span className="text-xs font-bold uppercase tracking-wide opacity-80">Your stamp QR</span>
+      </div>
+      <p className="text-sm text-white/70 mb-4 leading-snug">
+        Show this screen to your vendor — they scan it to give you a stamp.
+      </p>
+
+      {/* QR + countdown ring */}
+      <div className="flex flex-col items-center gap-4">
+        {loading ? (
+          <div className="w-44 h-44 rounded-2xl bg-white/10 flex items-center justify-center">
+            <Loader2 size={32} className="animate-spin text-white/50" />
+          </div>
+        ) : error ? (
+          <div className="w-full bg-white/10 rounded-2xl px-4 py-5 text-center">
+            <AlertCircle size={24} className="mx-auto mb-2 opacity-60" />
+            <p className="text-xs opacity-70 mb-3">{error}</p>
+            <button
+              onClick={fetchQR}
+              className="flex items-center gap-1.5 mx-auto bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+            >
+              <RefreshCw size={12} /> Retry
+            </button>
+          </div>
+        ) : qrPayload ? (
+          <div className="relative flex items-center justify-center">
+            {/* Countdown ring */}
+            <svg
+              width="192"
+              height="192"
+              className="absolute inset-0"
+              style={{ transform: 'rotate(-90deg)' }}
+            >
+              <circle
+                cx="96" cy="96" r="89"
+                fill="none"
+                stroke="white"
+                strokeOpacity="0.15"
+                strokeWidth="4"
+              />
+              <circle
+                cx="96" cy="96" r="24"
+                fill="none"
+                stroke={isExpiringSoon ? '#FCD34D' : 'white'}
+                strokeOpacity={isExpiringSoon ? '0.9' : '0.6'}
+                strokeWidth="4"
+                strokeDasharray={`${ringTotal} ${ringTotal}`}
+                strokeDashoffset={ringTotal - ringProgress}
+                strokeLinecap="round"
+                style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+              />
+            </svg>
+
+            {/* QR code */}
+            <div className="w-44 h-44 bg-white rounded-2xl p-3 flex items-center justify-center shadow-xl">
+              <QRCodeSVG
+                value={qrPayload}
+                size={152}
+                level="M"
+                includeMargin={false}
+                fgColor="#1E1B4B"
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {/* Countdown + refresh */}
+        {!loading && !error && (
+          <div className="flex items-center gap-3 text-xs">
+            <span
+              className={`font-mono font-bold text-base ${
+                isExpiringSoon ? 'text-amber-300' : 'text-white/80'
+              }`}
+            >
+              {secondsLeft}s
+            </span>
+            <span className="text-white/50">·</span>
+            <button
+              onClick={fetchQR}
+              className="flex items-center gap-1 text-white/60 hover:text-white transition-colors"
+            >
+              <RefreshCw size={11} /> Refresh early
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Tip */}
+      <p className="text-center text-[11px] text-white/40 mt-4">
+        Code refreshes every 60 s — can&apos;t be shared or reused
+      </p>
     </div>
   );
 }
@@ -184,12 +345,9 @@ function LoyaltyCardItem({ card }: { card: LoyaltyCard }) {
 
       {/* Earn stamp CTA */}
       {card.is_active ? (
-        <Link
-          href={`/stamp/${card.vendor_id}`}
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-600 text-white text-sm font-bold rounded-xl hover:bg-brand-700 transition-colors"
-        >
-          <QrCode size={15} /> Earn stamp at {card.vendor_name.split(' ')[0]}
-        </Link>
+        <div className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-50 text-brand-700 text-sm font-semibold rounded-xl border border-brand-200">
+          <Smartphone size={15} /> Show your QR above to earn a stamp
+        </div>
       ) : (
         <div className="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-100 text-gray-400 text-sm rounded-xl">
           <AlertCircle size={15} /> Programme ended
@@ -483,6 +641,9 @@ export default function LoyaltyPage() {
             <p className="text-gray-400 text-sm">Collect stamps at your favourite student spots</p>
           </div>
 
+          {/* Live Stamp QR — shown to verified students */}
+          {isVerified && <StampQRPanel />}
+
           {/* Stats strip */}
           {cards.length > 0 && (
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -509,7 +670,7 @@ export default function LoyaltyPage() {
               </div>
               <h2 className="text-xl font-black text-gray-900 mb-2">No stamps yet</h2>
               <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto leading-relaxed">
-                Scan a venue's QR code to earn your first stamp and start building loyalty.
+                Visit a partner venue and show the vendor your QR code to earn your first stamp.
               </p>
               <Link
                 href="/dashboard"
