@@ -17,7 +17,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   GraduationCap, Shield, Bell, Trash2, ArrowLeft,
   CheckCircle, Loader2, AlertCircle, User, Mail,
-  ChevronRight, RefreshCw, Lock, Cake,
+  ChevronRight, RefreshCw, Lock, Cake, Download, ExternalLink,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -102,6 +102,7 @@ export default function StudentSettingsPage() {
   const [consentError, setConsentError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [savingBirthday, setSavingBirthday] = useState(false);
@@ -199,6 +200,36 @@ export default function StudentSettingsPage() {
       showToast((err as Error).message, 'error');
     } finally {
       setSavingBirthday(false);
+    }
+  }
+
+  // ── GDPR data export ──────────────────────────────────────────────────────
+  async function handleDataExport() {
+    setExportingData(true);
+    try {
+      const res = await fetch('/api/account/export');
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error ?? 'Export failed. Please try again.');
+      }
+      // Trigger browser file download
+      const blob     = await res.blob();
+      const url      = URL.createObjectURL(blob);
+      const filename = res.headers.get('Content-Disposition')
+        ?.match(/filename="([^"]+)"/)?.[1]
+        ?? 'studeals-data-export.json';
+      const anchor   = document.createElement('a');
+      anchor.href    = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+      showToast('Your data export has been downloaded.', 'success');
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setExportingData(false);
     }
   }
 
@@ -416,6 +447,73 @@ export default function StudentSettingsPage() {
             </div>
             <ChevronRight className="w-4 h-4 text-purple-400 group-hover:text-white transition-colors" />
           </Link>
+        </div>
+
+        {/* ── Data & Privacy (GDPR) ── */}
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Shield className="w-5 h-5 text-purple-400" />
+            <div>
+              <h2 className="font-semibold text-white">Data &amp; Privacy</h2>
+              <p className="text-xs text-purple-400 mt-0.5">Your GDPR rights under Article 15–21</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {/* Download my data */}
+            <div className="bg-white/5 rounded-xl px-4 py-4">
+              <p className="text-sm font-medium text-white mb-1">Download my data</p>
+              <p className="text-xs text-purple-400 leading-relaxed mb-3">
+                Export a complete copy of your personal data — profile, stamps, redemptions, reviews,
+                and notifications — as a JSON file. <span className="text-purple-300">(GDPR Art. 20)</span>
+              </p>
+              <button
+                onClick={handleDataExport}
+                disabled={exportingData}
+                className="flex items-center gap-2 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {exportingData ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Preparing export…</>
+                ) : (
+                  <><Download className="w-4 h-4" /> Download my data</>
+                )}
+              </button>
+            </div>
+
+            {/* Links to legal docs */}
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href="/privacy"
+                className="flex items-center justify-between px-3 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
+              >
+                <span className="text-xs text-purple-300 group-hover:text-white transition-colors">Privacy policy</span>
+                <ExternalLink className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-300 transition-colors" />
+              </a>
+              <a
+                href="/terms"
+                className="flex items-center justify-between px-3 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
+              >
+                <span className="text-xs text-purple-300 group-hover:text-white transition-colors">Terms of service</span>
+                <ExternalLink className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-300 transition-colors" />
+              </a>
+              <a
+                href="/privacy?lang=hu"
+                className="flex items-center justify-between px-3 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
+              >
+                <span className="text-xs text-purple-300 group-hover:text-white transition-colors">Adatvédelmi tájékoztató</span>
+                <ExternalLink className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-300 transition-colors" />
+              </a>
+              <a
+                href="https://naih.hu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
+              >
+                <span className="text-xs text-purple-300 group-hover:text-white transition-colors">NAIH (panasz)</span>
+                <ExternalLink className="w-3.5 h-3.5 text-purple-500 group-hover:text-purple-300 transition-colors" />
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* ── Danger zone ── */}
