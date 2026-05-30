@@ -55,14 +55,20 @@ function tierFromPriceId(priceId: string): PlanTier {
     throw new Error('Missing or empty Stripe price ID — cannot determine plan tier');
   }
 
+  // Match both NEXT_PUBLIC_ prefixed and server-only env var names so this
+  // works regardless of how the price IDs were declared in .env.local.
   if (
     priceId === process.env.STRIPE_PRO_PRICE_ID ||
-    priceId === process.env.STRIPE_PRO_ANNUAL_PRICE_ID
+    priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ||
+    priceId === process.env.STRIPE_PRO_ANNUAL_PRICE_ID ||
+    priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID
   ) return 'pro';
 
   if (
     priceId === process.env.STRIPE_GROWTH_PRICE_ID ||
-    priceId === process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID
+    priceId === process.env.NEXT_PUBLIC_STRIPE_GROWTH_PRICE_ID ||
+    priceId === process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID ||
+    priceId === process.env.NEXT_PUBLIC_STRIPE_GROWTH_ANNUAL_PRICE_ID
   ) return 'growth';
 
   // Unknown price ID — alert ops, do NOT silently downgrade to free

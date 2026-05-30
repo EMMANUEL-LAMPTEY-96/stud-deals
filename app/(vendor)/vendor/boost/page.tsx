@@ -27,8 +27,10 @@ import VendorNav from '@/components/vendor/VendorNav';
 import {
   Zap, Clock, Tag, Gift, Star, Users, TrendingUp, CheckCircle,
   AlertCircle, Loader2, X, ChevronDown, ChevronUp, Flame,
-  ArrowRight, Eye, RefreshCw, PlusCircle, Megaphone, Award,
+  ArrowRight, Eye, RefreshCw, PlusCircle, Megaphone, Award, Lock,
 } from 'lucide-react';
+import { hasAccess } from '@/lib/utils/plan-tier';
+import type { VendorPlan, PlanTier, PlanStatus } from '@/lib/utils/plan-tier';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -248,6 +250,7 @@ export default function BoostPage() {
   const [launching, setLaunching] = useState(false);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [businessName, setBN] = useState('');
+  const [vendorPlan, setVendorPlan] = useState<VendorPlan>({ plan_tier: 'free', plan_status: 'free', trial_ends_at: null });
   const [activeBoosts, setActiveBoosts] = useState<ActiveBoost[]>([]);
   const [historyBoosts, setHistoryBoosts] = useState<ActiveBoost[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -293,11 +296,12 @@ export default function BoostPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
       const { data: vpRaw } = await supabase
-        .from('vendor_profiles').select('id, business_name').eq('user_id', user.id as string).maybeSingle();
-      const vp = (vpRaw as unknown) as { id: string; business_name: string } | null;
+        .from('vendor_profiles').select('id, business_name, plan_tier, plan_status, trial_ends_at').eq('user_id', user.id as string).maybeSingle();
+      const vp = (vpRaw as unknown) as { id: string; business_name: string; plan_tier: PlanTier; plan_status: PlanStatus; trial_ends_at: string | null } | null;
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorId(vp.id);
       setBN(vp.business_name);
+      setVendorPlan({ plan_tier: vp.plan_tier ?? 'free', plan_status: vp.plan_status ?? 'free', trial_ends_at: vp.trial_ends_at ?? null });
       await load(vp.id);
       setLoading(false);
     })();
@@ -393,6 +397,51 @@ export default function BoostPage() {
       </div>
     </>
   );
+
+  // ── Plan gate: show upgrade wall for Free-tier vendors ────────────────────
+  if (!hasAccess(vendorPlan, 'growth')) {
+    return (
+      <>
+        <Navbar />
+        <VendorNav />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+          <div className="max-w-md w-full bg-white rounded-3xl border border-gray-100 shadow-lg p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-5">
+              <Lock size={28} className="text-amber-600" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 mb-2">Boost is a Growth feature</h1>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Flash campaigns, double-stamp events, and audience targeting are available on the <strong>Growth</strong> and <strong>Pro</strong> plans. Upgrade to start driving footfall in seconds.
+            </p>
+
+            {/* Feature preview */}
+            <div className="grid grid-cols-2 gap-3 mb-7 text-left">
+              {[
+                { icon: <Zap size={15} className="text-amber-500" />, label: 'Flash Sale templates' },
+                { icon: <Star size={15} className="text-amber-500" />, label: 'Double Stamps events' },
+                { icon: <Users size={15} className="text-amber-500" />, label: 'Audience targeting' },
+                { icon: <TrendingUp size={15} className="text-amber-500" />, label: 'Live boost analytics' },
+              ].map(f => (
+                <div key={f.label} className="flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-2.5">
+                  {f.icon}
+                  <span className="text-xs font-semibold text-gray-700">{f.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => router.push('/vendor/billing')}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm shadow-md hover:from-amber-600 hover:to-orange-600 transition-all"
+            >
+              <Zap size={16} />
+              Upgrade to Growth — 13 990 Ft/mo
+            </button>
+            <p className="text-xs text-gray-400 mt-3">Cancel anytime · No lock-in</p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

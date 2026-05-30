@@ -29,6 +29,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
+import { hasAccess } from '@/lib/utils/plan-tier';
+import type { VendorPlan } from '@/lib/utils/plan-tier';
 
 const PromoteBodySchema = z.object({
   target: z.enum(['all', 'loyal', 'lapsed']),
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
   // ── Vendor profile check ──────────────────────────────────────────────────
   const { data: vp } = await supabase
     .from('vendor_profiles')
-    .select('id, business_name, is_approved')
+    .select('id, business_name, is_approved, plan_tier, plan_status, trial_ends_at')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -93,6 +95,19 @@ export async function POST(req: NextRequest) {
 
   if (!vp.is_approved) {
     return NextResponse.json({ error: 'Vendor account not yet approved' }, { status: 403 });
+  }
+
+  // ── Plan tier gate: Promotional campaigns require Growth or Pro ────────────
+  const vendorPlan: VendorPlan = {
+    plan_tier:    vp.plan_tier    ?? 'free',
+    plan_status:  vp.plan_status  ?? 'free',
+    trial_ends_at: vp.trial_ends_at ?? null,
+  };
+  if (!hasAccess(vendorPlan, 'growth')) {
+    return NextResponse.json(
+      { error: 'upgrade_required', tier: 'growth', message: 'Promotional campaigns require the Growth or Pro plan.' },
+      { status: 403 }
+    );
   }
 
   // ── Parse + validate body ──────────────────────────────────────────────────

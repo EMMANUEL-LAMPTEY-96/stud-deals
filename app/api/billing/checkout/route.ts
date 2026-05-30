@@ -18,11 +18,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
   apiVersion: '2025-04-30.basil',
 });
 
+// Accept both NEXT_PUBLIC_ and server-only variants of price IDs so the same
+// value works whether it was declared public (for the billing page client read)
+// or private (server-only). In practice .env.local uses NEXT_PUBLIC_ names.
 const ALLOWED_PRICE_IDS = new Set([
   process.env.STRIPE_GROWTH_PRICE_ID,
+  process.env.NEXT_PUBLIC_STRIPE_GROWTH_PRICE_ID,
   process.env.STRIPE_PRO_PRICE_ID,
+  process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
   process.env.STRIPE_GROWTH_ANNUAL_PRICE_ID,
+  process.env.NEXT_PUBLIC_STRIPE_GROWTH_ANNUAL_PRICE_ID,
   process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
+  process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID,
 ].filter(Boolean));
 
 export async function POST(request: NextRequest) {
@@ -75,7 +82,9 @@ export async function POST(request: NextRequest) {
         .eq('id', vendor.id);
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://studeals.vercel.app';
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://studeals.vercel.app';
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
