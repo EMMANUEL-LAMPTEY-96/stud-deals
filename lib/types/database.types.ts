@@ -1254,3 +1254,55 @@ export const Constants = {
     },
   },
 } as const
+
+// =============================================================================
+// App-level convenience types — not generated, maintained manually
+// =============================================================================
+
+type DBTables = Database['public']['Tables']
+type DBEnums  = Database['public']['Enums']
+
+// Row shortcuts
+export type Profile        = DBTables['profiles']['Row']
+export type StudentProfile = DBTables['student_profiles']['Row']
+export type VendorProfile  = DBTables['vendor_profiles']['Row']
+export type Offer          = DBTables['offers']['Row']
+export type Redemption     = DBTables['redemptions']['Row']
+export type Notification   = DBTables['notifications']['Row']
+export type SavedOffer     = DBTables['saved_offers']['Row']
+export type VendorReview   = DBTables['vendor_reviews']['Row']
+
+// Enum shortcuts
+export type OfferCategory      = DBEnums['offer_category']
+export type OfferStatus        = DBEnums['offer_status']
+export type RedemptionStatus   = DBEnums['redemption_status']
+export type UserRole           = DBEnums['user_role']
+export type VendorPlanEnum     = DBEnums['vendor_plan']
+export type VerificationStatus = DBEnums['verification_status']
+export type VerificationMethod = DBEnums['verification_method']
+
+// Offer with nested vendor (used on student dashboard / offer cards)
+export interface OfferWithVendor extends Offer {
+  vendor: {
+    id: string
+    business_name: string
+    logo_url: string | null
+    city: string
+    address_line1: string | null
+    latitude: number | null
+    longitude: number | null
+  }
+}
+
+// API response shape returned by POST /api/redemptions/claim
+export interface ClaimOfferResponse {
+  redemption_id:        string
+  redemption_code:      string
+  qr_code_data_url:     string | null
+  expires_at:           string
+  offer_title:          string
+  discount_label:       string
+  vendor_name:          string
+  vendor_address:       string
+  terms_and_conditions: string | null
+}
