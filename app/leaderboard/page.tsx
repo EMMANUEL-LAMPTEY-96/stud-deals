@@ -64,18 +64,12 @@ export default function LeaderboardPage() {
     }
 
     try {
-      // Get all confirmed redemptions with institution data
+      // Use denormalized institution columns already on redemptions — no join needed
       let query = supabase
         .from('redemptions')
-        .select(`
-          savings_amount_huf,
-          confirmed_at,
-          student_profiles!inner(
-            institution_id,
-            institutions(id, name, city)
-          )
-        `)
-        .eq('status', 'confirmed');
+        .select('student_institution_id, student_institution_name, vendor_city, discount_value_applied, confirmed_at')
+        .eq('status', 'confirmed')
+        .not('student_institution_id', 'is', null);
 
       if (fromDate) {
         query = query.gte('confirmed_at', fromDate);
@@ -92,22 +86,17 @@ export default function LeaderboardPage() {
       // Aggregate by institution
       const map: Record<string, {
         name: string; city: string;
-        totalSavings: number; totalRedemptions: number; students: Set<string>;
+        totalSavings: number; totalRedemptions: number;
       }> = {};
 
       for (const r of redemptions) {
-        const sp = Array.isArray(r.student_profiles) ? r.student_profiles[0] : r.student_profiles;
-        if (!sp?.institution_id || !sp.institutions) continue;
-        const inst = Array.isArray(sp.institutions) ? sp.institutions[0] : sp.institutions;
-        if (!inst) continue;
-
-        const id = sp.institution_id;
+        if (!r.student_institution_id || !r.student_institution_name) continue;
+        const id = r.student_institution_id;
         if (!map[id]) {
-          map[id] = { name: inst.name, city: inst.city, totalSavings: 0, totalRedemptions: 0, students: new Set() };
+          map[id] = { name: r.student_institution_name, city: r.vendor_city ?? '', totalSavings: 0, totalRedemptions: 0 };
         }
-        map[id].totalSavings += r.savings_amount_huf ?? 0;
+        map[id].totalSavings += r.discount_value_applied ?? 0;
         map[id].totalRedemptions += 1;
-        // We can't identify unique students without PII — use redemption count as proxy
       }
 
       const ranked: InstitutionStat[] = Object.entries(map)
@@ -117,7 +106,7 @@ export default function LeaderboardPage() {
           city: d.city,
           total_redemptions: d.totalRedemptions,
           total_savings_huf: d.totalSavings,
-          active_students: d.students.size,
+          active_students: d.totalRedemptions, // proxy — no PII available
           rank: 0,
         }))
         .sort((a, b) => b.total_savings_huf - a.total_savings_huf)
