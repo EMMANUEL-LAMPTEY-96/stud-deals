@@ -91,22 +91,25 @@ function LoginForm() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
 
-  // Real stats from DB — no fake numbers
-  const [liveStats, setLiveStats] = useState({ students: 0, deals: 0, vendors: 0 });
+  // Live stats from /api/stats (cached 5 min on Vercel CDN — no per-visitor DB hits)
+  const [liveStats, setLiveStats]     = useState({ students: 0, deals: 0, vendors: 0, redemptions: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   useEffect(() => {
-    const supabase = createClient();
-    Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
-      supabase.from('offers').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('is_verified', true),
-    ]).then(([s, o, v]) => {
-      setLiveStats({
-        students: s.count ?? 0,
-        deals:    o.count ?? 0,
-        vendors:  v.count ?? 0,
-      });
-    });
+    fetch('/api/stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setLiveStats(data);
+      })
+      .finally(() => setStatsLoading(false));
   }, []);
+
+  /** Format a count for display: "0" → "Be first!", 1–999 → raw, 1000+ → "1.2K" */
+  function fmtStat(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString('hu-HU');
+  }
 
   const cfg = ROLE_CONFIG[role];
 
@@ -198,39 +201,33 @@ function LoginForm() {
             {cfg.subline}
           </p>
 
-          {/* Stats — real numbers from DB */}
+          {/* Stats — live from /api/stats with loading skeleton */}
           <div className="grid grid-cols-3 gap-3 mb-10">
-            {role === 'student' ? (
-              <>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                  <div className="text-xl font-black text-white">{liveStats.students}</div>
-                  <div className="text-white/50 text-xs mt-0.5">Students</div>
+            {(() => {
+              const tiles = role === 'student'
+                ? [
+                    { value: liveStats.students,    label: 'Students' },
+                    { value: liveStats.deals,        label: 'Live deals' },
+                    { value: liveStats.vendors,      label: 'Businesses' },
+                  ]
+                : [
+                    { value: liveStats.vendors,      label: 'Businesses' },
+                    { value: liveStats.deals,        label: 'Active offers' },
+                    { value: liveStats.students,     label: 'Students' },
+                  ];
+              return tiles.map(({ value, label }) => (
+                <div key={label} className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
+                  {statsLoading ? (
+                    <div className="h-6 w-10 bg-white/10 rounded animate-pulse mx-auto mb-1" />
+                  ) : (
+                    <div className="text-xl font-black text-white">
+                      {value === 0 ? '—' : fmtStat(value)}
+                    </div>
+                  )}
+                  <div className="text-white/50 text-xs mt-0.5">{label}</div>
                 </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                  <div className="text-xl font-black text-white">{liveStats.deals}</div>
-                  <div className="text-white/50 text-xs mt-0.5">Live deals</div>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                  <div className="text-xl font-black text-white">{liveStats.vendors}</div>
-                  <div className="text-white/50 text-xs mt-0.5">Vendors</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                  <div className="text-xl font-black text-white">{liveStats.vendors}</div>
-                  <div className="text-white/50 text-xs mt-0.5">Businesses</div>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                  <div className="text-xl font-black text-white">{liveStats.deals}</div>
-                  <div className="text-white/50 text-xs mt-0.5">Active offers</div>
-                </div>
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 text-center">
-                  <div className="text-xl font-black text-white">{liveStats.students}</div>
-                  <div className="text-white/50 text-xs mt-0.5">Students</div>
-                </div>
-              </>
-            )}
+              ));
+            })()}
           </div>
 
           {/* Perks list */}
@@ -245,7 +242,7 @@ function LoginForm() {
             ))}
           </div>
 
-          {/* Early access badge — honest positioning */}
+          {/* Early access / social proof badge */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-2">
               <Zap size={14} className="text-amber-400" />
@@ -254,7 +251,15 @@ function LoginForm() {
             <p className="text-white/80 text-sm leading-relaxed">
               {role === 'student'
                 ? 'StudDeals is growing — be among the first students on campus to claim exclusive deals from local businesses.'
-                : 'StudDeals is growing — join as an early business partner and reach every verified student on campus from day one.'}
+                : <>
+                    StudDeals is growing — join as an early business partner and reach every verified student on campus from day one.
+                    {!statsLoading && liveStats.redemptions > 0 && (
+                      <span className="block mt-1.5 text-white/50 text-xs">
+                        {fmtStat(liveStats.redemptions)} deal{liveStats.redemptions === 1 ? '' : 's'} already claimed by students.
+                      </span>
+                    )}
+                  </>
+              }
             </p>
           </div>
         </div>
