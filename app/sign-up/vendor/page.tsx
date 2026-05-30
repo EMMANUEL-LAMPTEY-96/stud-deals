@@ -2,6 +2,9 @@
 
 // =============================================================================
 // app/sign-up/vendor/page.tsx — Business Registration
+//
+// Age gate: vendors must be 18+ (Hungarian civil law — 2013. évi V. törvény,
+// Polgári Törvénykönyv § 12–23 — full legal capacity to enter contracts).
 // =============================================================================
 
 import { useState } from 'react';
@@ -10,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
   Building2, Mail, Lock, User, Tag,
-  AlertCircle, Loader2, ArrowLeft, Eye, EyeOff
+  AlertCircle, Loader2, ArrowLeft, Eye, EyeOff, Shield
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -35,6 +38,8 @@ export default function VendorSignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Age gate — Hungarian civil law (Ptk. § 12-23): must be 18+ to enter contracts
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +48,13 @@ export default function VendorSignUpPage() {
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
+      setLoading(false);
+      return;
+    }
+
+    // Age gate — Ptk. § 12: full legal capacity (cselekvőképesség) requires 18+
+    if (!ageConfirmed) {
+      setError('You must confirm you are at least 18 years old to create a business account.');
       setLoading(false);
       return;
     }
@@ -198,9 +210,32 @@ export default function VendorSignUpPage() {
               )}
             </div>
 
+            {/* Age confirmation — Hungarian civil law (Ptk. § 12–23): 18+ required for contracts */}
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="mt-0.5 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={e => setAgeConfirmed(e.target.checked)}
+                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer accent-blue-600"
+                />
+              </div>
+              <span className="text-sm text-purple-200 leading-snug">
+                Megerősítem, hogy betöltöttem a 18. életévemet és jogosult vagyok vállalkozói szerződést kötni.{' '}
+                <span className="text-purple-400 font-normal">I confirm I am at least 18 years old and have legal capacity to enter into business contracts.</span>
+              </span>
+            </label>
+
+            {ageConfirmed && (
+              <p className="flex items-center gap-1.5 text-xs text-blue-400">
+                <Shield className="w-3 h-3 flex-shrink-0" />
+                Legal capacity confirmed — you can create and manage business agreements
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !ageConfirmed}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
