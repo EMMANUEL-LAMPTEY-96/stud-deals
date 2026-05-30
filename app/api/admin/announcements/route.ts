@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // GET  /api/admin/announcements  → preview recipient count
 // POST /api/admin/announcements  → send announcement to all users of target role

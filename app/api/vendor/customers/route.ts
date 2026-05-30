@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { safeLog } from '@/lib/utils/safe-logger';

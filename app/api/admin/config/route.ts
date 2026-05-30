@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // GET  /api/admin/config → returns all platform config key/value pairs
 // PATCH /api/admin/config → updates one or more config keys

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 // =============================================================================
 // app/api/verification/check-email/route.ts
 // POST /api/verification/check-email

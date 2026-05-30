@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 // =============================================================================
 // app/vendor/[slug]/page.tsx — Public Vendor Profile (React Server Component)
 //

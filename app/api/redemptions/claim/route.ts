@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 // =============================================================================
 // app/api/redemptions/claim/route.ts
 // POST /api/redemptions/claim
