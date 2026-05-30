@@ -48,6 +48,8 @@ function StudentSignUpForm() {
   const [error, setError] = useState('');
   const [isUniEmail, setIsUniEmail] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
+  // Hungarian GDPR Art. 8 — minimum age 16 for digital services
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   useEffect(() => {
     if (emailTouched) setIsUniEmail(isUniversityEmail(email));
@@ -62,6 +64,21 @@ function StudentSignUpForm() {
       setError('Password must be at least 8 characters.');
       setLoading(false);
       return;
+    }
+
+    // Age gate — GDPR Art. 8 / Hungarian law: must be 16+
+    if (!ageConfirmed) {
+      setError('You must confirm you are at least 16 years old to create an account.');
+      setLoading(false);
+      return;
+    }
+    if (dateOfBirth) {
+      const minAgeDate = new Date(Date.now() - 16 * 365.25 * 24 * 3600 * 1000);
+      if (new Date(dateOfBirth) > minAgeDate) {
+        setError('You must be at least 16 years old to use Studeals (GDPR Art. 8).');
+        setLoading(false);
+        return;
+      }
     }
 
     const supabase = createClient();
@@ -303,9 +320,25 @@ function StudentSignUpForm() {
               </div>
             )}
 
+            {/* Age confirmation — GDPR Art. 8 / Hungarian digital services law */}
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="mt-0.5 flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={e => setAgeConfirmed(e.target.checked)}
+                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer accent-purple-600"
+                />
+              </div>
+              <span className="text-sm text-purple-200 leading-snug">
+                Megerősítem, hogy betöltöttem a 16. életévemet.{' '}
+                <span className="text-purple-400 font-normal">I confirm I am at least 16 years old.</span>
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !ageConfirmed}
               className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (

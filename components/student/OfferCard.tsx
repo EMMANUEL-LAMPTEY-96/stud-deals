@@ -195,6 +195,9 @@ export default function OfferCard({ offer, isSaved = false, onSaveToggle }: Offe
             )}
           </div>
         )}
+
+        {/* ÁFA disclosure — Hungarian consumer law (2008. évi XLVII. tv.) */}
+        <p className="mt-1.5 text-[10px] text-gray-300 leading-none">Az árak ÁFÁ-t tartalmaznak</p>
       </div>
     </Link>
   );
