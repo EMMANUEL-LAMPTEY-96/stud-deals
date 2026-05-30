@@ -21,6 +21,8 @@
 // Schema migration required (run once in Supabase SQL editor):
 //   ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS business_hours jsonb;
 //   ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS gallery_photos  text[];
+//   ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
+//   CREATE INDEX IF NOT EXISTS vendor_profiles_slug_idx ON vendor_profiles(slug);
 // =============================================================================
 
 import { useState, useEffect, useRef } from 'react';
@@ -32,7 +34,7 @@ import {
   Building2, Phone, Globe, MapPin, Camera, CheckCircle,
   AlertCircle, Loader2, Shield, ArrowUpRight, AlertTriangle,
   Upload, X, Zap, Star, User, Clock, Image as ImageIcon,
-  Plus, Trash2,
+  Plus, Trash2, Link as LinkIcon, ExternalLink,
 } from 'lucide-react';
 import type { VendorProfile } from '@/lib/types/database.types';
 
@@ -410,6 +412,7 @@ export default function VendorProfilePage() {
   // Extended fields
   const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_HOURS);
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
+  const [slug, setSlug] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -453,6 +456,9 @@ export default function VendorProfilePage() {
       if (Array.isArray(anyData.gallery_photos)) {
         setGalleryPhotos(anyData.gallery_photos);
       }
+      if (typeof anyData.slug === 'string') {
+        setSlug(anyData.slug);
+      }
 
       setLoading(false);
     })();
@@ -489,6 +495,10 @@ export default function VendorProfilePage() {
       cover_image_url: coverUrl,
       business_hours: businessHours,
       gallery_photos: galleryPhotos,
+      // Slug: sanitise to lowercase URL-safe chars; null if empty so UNIQUE constraint allows multiple nulls
+      slug: slug.trim()
+        ? slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+        : null,
     };
 
     const { data: savedData, error } = await supabase
@@ -593,6 +603,48 @@ export default function VendorProfilePage() {
                     maxLength={300}
                   />
                   <p className="text-xs text-gray-400 text-right">{description.length}/300</p>
+                </Field>
+
+                {/* Public profile URL (slug) */}
+                <Field
+                  label="Public profile URL"
+                  hint="Letters, numbers and hyphens only. Your shareable link will be studeals.vercel.app/vendor/[slug]."
+                >
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <LinkIcon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        className={`${INPUT_CLS} pl-8`}
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-{2,}/g, '-'))}
+                        placeholder="e.g. my-coffee-shop"
+                        maxLength={60}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const generated = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        setSlug(generated);
+                      }}
+                      className="flex-shrink-0 px-3 py-2 text-xs font-semibold rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                      title="Auto-generate slug from business name"
+                    >
+                      Auto-fill
+                    </button>
+                  </div>
+                  {slug && (
+                    <a
+                      href={`/vendor/${slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-vendor-600 font-semibold hover:underline mt-1"
+                    >
+                      <ExternalLink size={11} />
+                      Preview: studeals.vercel.app/vendor/{slug}
+                    </a>
+                  )}
                 </Field>
               </div>
             </Section>
