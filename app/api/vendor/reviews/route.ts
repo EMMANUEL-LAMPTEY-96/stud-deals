@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 // app/api/vendor/reviews/route.ts
 // GET  /api/vendor/reviews        - fetch all reviews for the signed-in vendor
 // PATCH /api/vendor/reviews       - vendor adds/updates a reply

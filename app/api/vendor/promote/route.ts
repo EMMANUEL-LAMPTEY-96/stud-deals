@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 // =============================================================================
 // app/api/vendor/promote/route.ts — Vendor Promotional Notification Sender
 //

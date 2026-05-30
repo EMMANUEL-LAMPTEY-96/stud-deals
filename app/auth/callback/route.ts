@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 // =============================================================================
 // app/auth/callback/route.ts
 // Handles the email verification redirect from Supabase.
