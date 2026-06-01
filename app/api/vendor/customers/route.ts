@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { safeLog } from '@/lib/utils/safe-logger';
+import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
 
 // =============================================================================
 // app/api/vendor/customers/route.ts — Vendor Customer Directory
@@ -55,6 +56,15 @@ export async function GET(req: NextRequest) {
   }
 
   const vendorId = vp.id;
+
+  // ── Plan gate: Customer Directory requires Growth or Pro ───────────────────
+  const plan = await getVendorPlan(supabase, user.id);
+  if (!plan || !hasAccess(plan, 'growth')) {
+    return NextResponse.json(
+      { error: 'upgrade_required', message: 'The Customer Directory requires a Growth or Pro plan.', tier: 'growth' },
+      { status: 403 }
+    );
+  }
 
   // ── Query params ────────────────────────────────────────────────────────────
   const { searchParams } = new URL(req.url);

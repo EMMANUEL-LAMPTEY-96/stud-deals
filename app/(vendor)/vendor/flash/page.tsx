@@ -343,7 +343,7 @@ export default function VendorFlashPage() {
                   </>
                 )}
               </button>
-              <p className="text-center text-xs text-gray-400 mt-2">Free plan: up to 2 flash deals per 24 hours</p>
+              <p className="text-center text-xs text-gray-400 mt-2">Growth &amp; Pro plans · up to 2 flash deals per 24 hours</p>
             </div>
           </form>
         </div>
