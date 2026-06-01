@@ -23,7 +23,7 @@ import {
   Users, Search, Mail, Building2, Star, Clock, Gift,
   Download, Send, ChevronDown, ChevronUp, Eye, EyeOff,
   Loader2, RefreshCw, X, CheckCircle, AlertCircle,
-  TrendingUp, UserX, Crown, Megaphone,
+  TrendingUp, UserX, Crown, Megaphone, Lock, Zap,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -391,6 +391,7 @@ export default function VendorCustomersPage() {
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [planBlocked, setPlanBlocked] = useState(false);
   const [sort, setSort] = useState<SortMode>('stamps');
   const [segment, setSegment] = useState<Segment>('all');
   const [search, setSearch] = useState('');
@@ -417,13 +418,19 @@ export default function VendorCustomersPage() {
     setLoading(true);
     try {
       const res = await fetch(`/api/vendor/customers?sort=${sort}`);
+      const data = await res.json();
+      if (res.status === 403 && data.error === 'upgrade_required') {
+        setPlanBlocked(true);
+        setLoading(false);
+        return;
+      }
       if (!res.ok) {
         setFetchError('Failed to load customers. Please refresh the page.');
         setLoading(false);
         return;
       }
       setFetchError(null);
-      const data = await res.json();
+      setPlanBlocked(false);
       setCustomers(data.customers ?? []);
     } finally {
       setLoading(false);
@@ -512,32 +519,62 @@ export default function VendorCustomersPage() {
               Students who have earned stamps at your venue
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchCustomers}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-            <button
-              onClick={exportCSV}
-              disabled={filtered.length === 0}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <Download size={14} />
-              Export CSV
-            </button>
-            <button
-              onClick={() => setShowPromoModal(true)}
-              disabled={customers.length === 0}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-vendor-600 text-white text-sm font-bold hover:bg-vendor-700 transition-colors disabled:opacity-50"
-            >
-              <Megaphone size={14} />
-              Promote
-            </button>
-          </div>
+          {!planBlocked && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchCustomers}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+              <button
+                onClick={exportCSV}
+                disabled={filtered.length === 0}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <Download size={14} />
+                Export CSV
+              </button>
+              <button
+                onClick={() => setShowPromoModal(true)}
+                disabled={customers.length === 0}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-vendor-600 text-white text-sm font-bold hover:bg-vendor-700 transition-colors disabled:opacity-50"
+              >
+                <Megaphone size={14} />
+                Promote
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* ── Plan upgrade gate ── */}
+        {planBlocked && (
+          <div className="bg-gradient-to-br from-vendor-600 to-vendor-800 rounded-2xl p-8 text-center mb-6 text-white shadow-lg">
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Lock size={24} className="text-white" />
+            </div>
+            <h2 className="text-xl font-black mb-2">Customer Directory is a Growth feature</h2>
+            <p className="text-white/75 text-sm max-w-sm mx-auto mb-6">
+              See who your loyal students are, track stamp history, and send targeted promotions — all on the Growth plan.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <a
+                href="/vendor/billing"
+                className="inline-flex items-center justify-center gap-2 bg-white text-vendor-700 font-bold px-6 py-3 rounded-xl hover:bg-vendor-50 transition-colors text-sm"
+              >
+                <Zap size={15} />
+                Upgrade to Growth
+              </a>
+              <a
+                href="/vendor"
+                className="inline-flex items-center justify-center gap-2 border border-white/30 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition-colors text-sm"
+              >
+                Back to dashboard
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* ── Fetch error banner ── */}
         {fetchError && (
