@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
@@ -19,8 +20,10 @@ import {
   TrendingUp, Users, Eye, Tag, BarChart3, ArrowUpRight,
   ArrowDownRight, Loader2, Star, Zap, Clock, Award, Target,
   ShoppingBag, Gift, ChevronDown, ChevronUp, Stamp,
-  Download, Trophy, AlertCircle, CheckCircle2,
+  Download, Trophy, AlertCircle, CheckCircle2, Lock,
 } from 'lucide-react';
+import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
+import type { VendorPlan } from '@/lib/utils/plan-tier';
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -242,6 +245,8 @@ export default function VendorAnalyticsPage() {
     newMembers: number; stampsIssued: number; rewardsGiven: number;
     topOffer: string; busiestDay: string;
   } | null>(null);
+  const [vendorPlan, setVendorPlan] = useState<VendorPlan | null>(null);
+  const isGrowth = vendorPlan ? hasAccess(vendorPlan, 'growth') : false;
 
   useEffect(() => {
     (async () => {
@@ -250,6 +255,9 @@ export default function VendorAnalyticsPage() {
       const { data: vp } = await supabase.from('vendor_profiles').select('id,business_name').eq('user_id', user.id).maybeSingle();
       if (!vp) { router.push('/vendor/profile'); return; }
       setVendorId(vp.id); setBN(vp.business_name);
+      // Fetch plan tier for gating advanced analytics features
+      const plan = await getVendorPlan(supabase, user.id);
+      setVendorPlan(plan);
       await load(vp.id, 30);
       setLoading(false);
     })();
@@ -522,12 +530,21 @@ export default function VendorAnalyticsPage() {
               <p className="text-gray-500 text-sm mt-0.5">{businessName} — performance overview</p>
             </div>
             <div className="flex bg-white border border-gray-200 rounded-xl p-1 gap-1 shadow-sm">
-              {([7,30,90,365] as const).map(d=>(
-                <button key={d} onClick={()=>setRange(d)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${range===d?'bg-vendor-600 text-white shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
-                  {d===365?'1 Year':`${d}d`}
-                </button>
-              ))}
+              {([7,30,90,365] as const).map(d=>{
+                const locked = !isGrowth && d > 30;
+                return (
+                  <button key={d}
+                    onClick={()=>{ if (!locked) setRange(d); }}
+                    title={locked ? 'Requires Growth plan' : undefined}
+                    className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      locked ? 'text-gray-300 cursor-not-allowed' :
+                      range===d ? 'bg-vendor-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}>
+                    {d===365?'1 Year':`${d}d`}
+                    {locked && <Lock size={8} className="inline ml-0.5 -mt-0.5"/>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -557,35 +574,50 @@ export default function VendorAnalyticsPage() {
             )}
           </Card>
 
-          {/* Day + Hour */}
-          <div className="grid md:grid-cols-2 gap-5 mt-5">
-            <Card title="Best day of week" sub={peakDay.count>0?`Busiest: ${peakDay.day} (${peakDay.count} redemptions)`:'No data yet'}>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={days}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-                  <XAxis dataKey="day" tick={{fontSize:11,fill:'#9ca3af'}}/>
-                  <YAxis tick={{fontSize:10,fill:'#9ca3af'}} allowDecimals={false}/>
-                  <Tooltip content={<CT/>}/>
-                  <Bar dataKey="count" name="Redemptions" radius={[6,6,0,0]}>
-                    {days.map((e:any,i:number)=><Cell key={i} fill={e.day===peakDay.day?'#16a34a':'#bbf7d0'}/>)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-            <Card title="Peak hours" sub={peakHour.count>0?`Busiest: ${peakHour.hour} (${peakHour.count} redemptions)`:'No data yet'}>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={hours}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
-                  <XAxis dataKey="hour" tick={{fontSize:9,fill:'#9ca3af'}} interval={2}/>
-                  <YAxis tick={{fontSize:10,fill:'#9ca3af'}} allowDecimals={false}/>
-                  <Tooltip content={<CT/>}/>
-                  <Bar dataKey="count" name="Redemptions" radius={[4,4,0,0]}>
-                    {hours.map((e:any,i:number)=><Cell key={i} fill={e.hour===peakHour.hour?'#16a34a':'#bbf7d0'}/>)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
+          {/* Day + Hour heatmaps — Growth+ only */}
+          {isGrowth ? (
+            <div className="grid md:grid-cols-2 gap-5 mt-5">
+              <Card title="Best day of week" sub={peakDay.count>0?`Busiest: ${peakDay.day} (${peakDay.count} redemptions)`:'No data yet'}>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={days}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                    <XAxis dataKey="day" tick={{fontSize:11,fill:'#9ca3af'}}/>
+                    <YAxis tick={{fontSize:10,fill:'#9ca3af'}} allowDecimals={false}/>
+                    <Tooltip content={<CT/>}/>
+                    <Bar dataKey="count" name="Redemptions" radius={[6,6,0,0]}>
+                      {days.map((e:any,i:number)=><Cell key={i} fill={e.day===peakDay.day?'#16a34a':'#bbf7d0'}/>)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+              <Card title="Peak hours" sub={peakHour.count>0?`Busiest: ${peakHour.hour} (${peakHour.count} redemptions)`:'No data yet'}>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={hours}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                    <XAxis dataKey="hour" tick={{fontSize:9,fill:'#9ca3af'}} interval={2}/>
+                    <YAxis tick={{fontSize:10,fill:'#9ca3af'}} allowDecimals={false}/>
+                    <Tooltip content={<CT/>}/>
+                    <Bar dataKey="count" name="Redemptions" radius={[4,4,0,0]}>
+                      {hours.map((e:any,i:number)=><Cell key={i} fill={e.hour===peakHour.hour?'#16a34a':'#bbf7d0'}/>)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            </div>
+          ) : (
+            <div className="mt-5 bg-gradient-to-r from-vendor-50 to-white border border-vendor-100 rounded-2xl p-6 flex items-center gap-5">
+              <div className="w-12 h-12 bg-vendor-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Lock size={20} className="text-vendor-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-gray-900 text-sm">Day &amp; Hour heatmaps — Growth plan</p>
+                <p className="text-xs text-gray-500 mt-0.5">See exactly which days and times drive the most footfall. Available on Growth and Pro.</p>
+              </div>
+              <Link href="/vendor/billing" className="flex-shrink-0 bg-vendor-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-vendor-700 transition-colors">
+                Upgrade
+              </Link>
+            </div>
+          )}
 
           {/* Punch Card Funnel */}
           {punchStats.length > 0 && (
@@ -741,7 +773,7 @@ export default function VendorAnalyticsPage() {
           </div>
 
           {/* ── Peer Benchmark ──────────────────────────────────────────── */}
-          {benchmark && benchmark.peerCount > 0 && (
+          {isGrowth && benchmark && benchmark.peerCount > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-5">
               <div className="flex items-center gap-2 mb-1">
                 <Trophy size={16} className="text-amber-500" />
@@ -841,7 +873,7 @@ export default function VendorAnalyticsPage() {
           <div className="mt-5 mb-8 grid sm:grid-cols-2 gap-5">
 
             {/* Monthly summary */}
-            {monthReport && (
+            {isGrowth && monthReport && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-1">
                   <BarChart3 size={16} className="text-vendor-600" />

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import CookieConsent from '@/components/shared/CookieConsent'
 import LegalFooter from '@/components/shared/LegalFooter'
+import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar'
 
 export const metadata: Metadata = {
   title: 'Studeals — Exkluzív diákkedvezmények | Student Discounts',
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <LegalFooter />
         <CookieConsent />
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   )
