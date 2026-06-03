@@ -52,6 +52,62 @@ export type Database = {
           },
         ]
       }
+      flash_deals: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_text: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          max_redemptions: number
+          radius_km: number
+          redeemed_count: number
+          starts_at: string
+          target_cities: string[] | null
+          title: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_text: string
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number
+          radius_km?: number
+          redeemed_count?: number
+          starts_at?: string
+          target_cities?: string[] | null
+          title: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_text?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number
+          radius_km?: number
+          redeemed_count?: number
+          starts_at?: string
+          target_cities?: string[] | null
+          title?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_deals_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institutions: {
         Row: {
           abbreviation: string | null
@@ -108,6 +164,67 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: []
+      }
+      loyalty_cards: {
+        Row: {
+          completed_cycles: number
+          created_at: string
+          current_stamps: number
+          id: string
+          last_stamp_at: string | null
+          offer_id: string | null
+          student_id: string
+          total_stamps: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          completed_cycles?: number
+          created_at?: string
+          current_stamps?: number
+          id?: string
+          last_stamp_at?: string | null
+          offer_id?: string | null
+          student_id: string
+          total_stamps?: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          completed_cycles?: number
+          created_at?: string
+          current_stamps?: number
+          id?: string
+          last_stamp_at?: string | null
+          offer_id?: string | null
+          student_id?: string
+          total_stamps?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_cards_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_cards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_cards_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -200,13 +317,6 @@ export type Database = {
             foreignKeyName: "offer_views_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "offer_views_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
@@ -292,13 +402,6 @@ export type Database = {
           view_count?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "offers_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
           {
             foreignKeyName: "offers_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -482,13 +585,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "redemptions_confirmed_by_vendor_user_id_fkey"
-            columns: ["confirmed_by_vendor_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "redemptions_offer_id_fkey"
             columns: ["offer_id"]
             isOneToOne: false
@@ -508,13 +604,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "institutions"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "redemptions_vendor_id_fkey"
@@ -582,13 +671,6 @@ export type Database = {
             foreignKeyName: "referrals_reward_vendor_id_fkey"
             columns: ["reward_vendor_id"]
             isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "referrals_reward_vendor_id_fkey"
-            columns: ["reward_vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
@@ -651,9 +733,7 @@ export type Database = {
           user_id: string
           verification_document_url: string | null
           verification_expires_at: string | null
-          verification_method:
-            | Database["public"]["Enums"]["verification_method"]
-            | null
+          verification_method: Database["public"]["Enums"]["verification_method"] | null
           verification_notes: string | null
           verification_status: Database["public"]["Enums"]["verification_status"]
           verified_at: string | null
@@ -679,9 +759,7 @@ export type Database = {
           user_id: string
           verification_document_url?: string | null
           verification_expires_at?: string | null
-          verification_method?:
-            | Database["public"]["Enums"]["verification_method"]
-            | null
+          verification_method?: Database["public"]["Enums"]["verification_method"] | null
           verification_notes?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified_at?: string | null
@@ -707,9 +785,7 @@ export type Database = {
           user_id?: string
           verification_document_url?: string | null
           verification_expires_at?: string | null
-          verification_method?:
-            | Database["public"]["Enums"]["verification_method"]
-            | null
+          verification_method?: Database["public"]["Enums"]["verification_method"] | null
           verification_notes?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
           verified_at?: string | null
@@ -926,13 +1002,6 @@ export type Database = {
             foreignKeyName: "vendor_reviews_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "vendor_reviews_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
@@ -952,22 +1021,7 @@ export type Database = {
           unique_students: number | null
           vendor_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_redemptions_by_day_of_week: {
         Row: {
@@ -977,22 +1031,7 @@ export type Database = {
           total_confirmed: number | null
           vendor_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_redemptions_by_hour: {
         Row: {
@@ -1001,22 +1040,7 @@ export type Database = {
           total_confirmed: number | null
           vendor_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_redemptions_by_institution: {
         Row: {
@@ -1027,29 +1051,7 @@ export type Database = {
           unique_students: number | null
           vendor_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "redemptions_student_institution_id_fkey"
-            columns: ["student_institution_id"]
-            isOneToOne: false
-            referencedRelation: "institutions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "v_vendor_performance_summary"
-            referencedColumns: ["vendor_id"]
-          },
-          {
-            foreignKeyName: "redemptions_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_vendor_performance_summary: {
         Row: {
@@ -1089,7 +1091,7 @@ export type Database = {
       offer_status: "draft" | "active" | "paused" | "expired" | "depleted"
       redemption_status: "claimed" | "confirmed" | "expired" | "cancelled"
       user_role: "student" | "vendor" | "admin"
-      vendor_plan: "free" | "starter" | "growth"
+      vendor_plan: "free" | "starter" | "growth" | "pro"
       verification_method: "edu_email" | "id_upload" | "admin_override"
       verification_status:
         | "unverified"
@@ -1106,7 +1108,6 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
@@ -1227,29 +1228,17 @@ export const Constants = {
     Enums: {
       discount_type: ["percentage", "fixed_amount", "buy_x_get_y", "free_item"],
       offer_category: [
-        "food_drink",
-        "groceries",
-        "tech",
-        "fashion",
-        "health_beauty",
-        "entertainment",
-        "transport",
-        "books_stationery",
-        "fitness",
-        "other",
+        "food_drink", "groceries", "tech", "fashion", "health_beauty",
+        "entertainment", "transport", "books_stationery", "fitness", "other",
       ],
       offer_status: ["draft", "active", "paused", "expired", "depleted"],
       redemption_status: ["claimed", "confirmed", "expired", "cancelled"],
       user_role: ["student", "vendor", "admin"],
-      vendor_plan: ["free", "starter", "growth"],
+      vendor_plan: ["free", "starter", "growth", "pro"],
       verification_method: ["edu_email", "id_upload", "admin_override"],
       verification_status: [
-        "unverified",
-        "pending_email",
-        "pending_review",
-        "verified",
-        "rejected",
-        "expired",
+        "unverified", "pending_email", "pending_review",
+        "verified", "rejected", "expired",
       ],
     },
   },
