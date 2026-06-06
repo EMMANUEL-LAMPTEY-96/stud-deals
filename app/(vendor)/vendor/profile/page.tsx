@@ -580,6 +580,51 @@ export default function VendorProfilePage() {
 
           <div className="space-y-5">
 
+            {/* ── Public profile card — the viral sharing loop ── */}
+            {slug && (
+              <div className="bg-gradient-to-r from-vendor-600 to-vendor-800 rounded-2xl p-5 text-white shadow-lg">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-vendor-200 uppercase tracking-wider mb-1">Your public profile</p>
+                    <p className="font-black text-lg leading-tight truncate">
+                      studeals.vercel.app/vendor/{slug}
+                    </p>
+                    <p className="text-vendor-200 text-xs mt-1">
+                      Share this link on Instagram, TikTok or print the QR code to attract more students.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(`https://studeals.vercel.app/vendor/${slug}`);
+                        setFlash({ type: 'success', msg: 'Profile link copied to clipboard!' });
+                        setTimeout(() => setFlash(null), 3000);
+                      }}
+                      className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+                    >
+                      <LinkIcon size={13} /> Copy link
+                    </button>
+                    <a
+                      href={`/vendor/${slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 bg-white text-vendor-700 hover:bg-vendor-50 px-3 py-2 rounded-xl text-sm font-bold transition-colors"
+                    >
+                      <ExternalLink size={13} /> View
+                    </a>
+                    <a
+                      href="/vendor/print-qr"
+                      className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+                      title="Print your QR code to display in-store"
+                    >
+                      Print QR
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 1. Business identity */}
             <Section title="Business identity" icon={<Building2 size={14} />}>
               <div className="space-y-4">
