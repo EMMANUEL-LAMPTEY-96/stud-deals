@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile, StudentProfile } from '@/lib/types/database.types';
+import LangSwitcher from '@/components/shared/LangSwitcher';
 
 // Lucide icons (tree-shakeable)
 import {
@@ -158,6 +159,7 @@ export default function Navbar() {
             </div>
 
             <div className="hidden md:flex items-center gap-3">
+              <LangSwitcher variant="pill" />
               <Link href="/login" className="btn-secondary text-sm px-4 py-2">
                 Log in
               </Link>
@@ -183,6 +185,8 @@ export default function Navbar() {
           <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-3 animate-fade-in">
             <Link href="/#how-it-works" className="block py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>How it works</Link>
             <Link href="/for-vendors" className="block py-2 text-gray-700 font-medium" onClick={() => setMobileOpen(false)}>For businesses</Link>
+            <hr className="border-gray-100" />
+            <LangSwitcher variant="text" />
             <hr className="border-gray-100" />
             <Link href="/login" className="block w-full btn-secondary text-center" onClick={() => setMobileOpen(false)}>Log in</Link>
             <Link href="/register/student" className="block w-full btn-primary text-center" onClick={() => setMobileOpen(false)}>Get student deals</Link>
@@ -250,8 +254,12 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right side: notifications + profile */}
+          {/* Right side: lang switcher + notifications + profile */}
           <div className="flex items-center gap-2">
+            {/* Language switcher — desktop only */}
+            <div className="hidden md:block">
+              <LangSwitcher variant="pill" />
+            </div>
             {/* Notifications bell */}
             <button className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors">
               <Bell size={18} />
@@ -404,6 +412,9 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          <div className="pt-2 border-t border-gray-100">
+            <LangSwitcher variant="text" />
+          </div>
         </div>
       )}
     </nav>

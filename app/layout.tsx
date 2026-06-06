@@ -3,10 +3,11 @@ import './globals.css'
 import CookieConsent from '@/components/shared/CookieConsent'
 import LegalFooter from '@/components/shared/LegalFooter'
 import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar'
+import { I18nProvider } from '@/lib/i18n'
 
 export const metadata: Metadata = {
-  title: 'Studeals — Exkluzív diákkedvezmények | Student Discounts',
-  description: 'Ellenőrzött diákkedvezmények a kampuszod közelében lévő üzletekben. Verified student discounts at local businesses near your campus.',
+  title: 'Studeals — Exclusive Student Discounts in Hungary',
+  description: 'Verified student discounts at local businesses near your campus. Save money every day with exclusive deals for Hungarian university students.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -18,11 +19,13 @@ export const metadata: Metadata = {
     apple: '/icons/icon-192.png',
   },
   openGraph: {
-    title: 'Studeals — Exkluzív diákkedvezmények',
-    description: 'Ellenőrzött diákkedvezmények a kampuszod közelében lévő üzletekben.',
+    title: 'Studeals — Exclusive Student Discounts',
+    description: 'Verified student discounts at local businesses near your campus. Save money every day.',
     type: 'website',
-    locale: 'hu_HU',
+    locale: 'en_US',
+    alternateLocale: ['hu_HU'],
   },
+  keywords: ['student discounts', 'Hungary', 'university', 'diákkedvezmény', 'campus deals', 'studeals'],
 }
 
 export const viewport: Viewport = {
@@ -34,8 +37,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // lang="hu" — required by WCAG 3.1.1 and correct for Hungarian-first service
-    <html lang="hu">
+    // lang is set dynamically by the locale cookie (defaults to "en")
+    // Next-intl reads it from cookies; this fallback satisfies SSR before hydration
+    <html lang="en">
       <head>
         {/* PWA — iOS specific */}
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -55,12 +59,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Ugrás a főtartalomhoz / Skip to main content
         </a>
 
-        <div id="main-content">
-          {children}
-        </div>
+        <I18nProvider>
+          <div id="main-content">
+            {children}
+          </div>
 
-        <LegalFooter />
-        <CookieConsent />
+          <LegalFooter />
+          <CookieConsent />
+        </I18nProvider>
         <ServiceWorkerRegistrar />
       </body>
     </html>
