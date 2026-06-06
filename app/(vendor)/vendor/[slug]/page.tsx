@@ -23,6 +23,7 @@ import {
   MapPin, Star, Tag, Gift, Clock, ChevronRight,
   Store, CheckCircle, Users, ArrowRight, Zap,
   Coffee, ShoppingBag, Laptop, Dumbbell, Book, Shirt, Sparkles,
+  Globe, Phone, Mail, Navigation,
 } from 'lucide-react';
 import type { Metadata } from 'next';
 
@@ -199,12 +200,39 @@ export default async function VendorPublicProfilePage(
   const [{ data: vpRaw }, { data: { user } }] = await Promise.all([
     admin
       .from('vendor_profiles')
-      .select('id, business_name, logo_url, cover_photo_url, city, business_type, description, is_verified, slug')
+      .select(`
+        id, business_name, logo_url, cover_image_url, city,
+        business_type, description, is_verified, slug,
+        website_url, business_phone, business_email,
+        address_line1, address_line2, postal_code,
+        business_hours, gallery_photos,
+        total_lifetime_redemptions, total_active_offers
+      `)
       .or(`slug.eq.${slug},id.eq.${slug}`)
       .maybeSingle(),
     supabase.auth.getUser(),
   ]);
-  type VendorProfile = { id: string; business_name: string; logo_url: string | null; cover_photo_url: string | null; city: string | null; business_type: string | null; description: string | null; is_verified: boolean; slug: string | null };
+  type VendorProfile = {
+    id: string;
+    business_name: string;
+    logo_url: string | null;
+    cover_image_url: string | null;
+    city: string | null;
+    business_type: string | null;
+    description: string | null;
+    is_verified: boolean;
+    slug: string | null;
+    website_url: string | null;
+    business_phone: string | null;
+    business_email: string | null;
+    address_line1: string | null;
+    address_line2: string | null;
+    postal_code: string | null;
+    business_hours: Record<string, { open: string; close: string; closed?: boolean }> | null;
+    gallery_photos: string[] | null;
+    total_lifetime_redemptions: number;
+    total_active_offers: number;
+  };
   const vp = (vpRaw as unknown) as VendorProfile | null;
 
   if (!vp) notFound();
@@ -246,9 +274,9 @@ export default async function VendorPublicProfilePage(
 
         {/* Hero */}
         <div className="relative bg-gradient-to-br from-brand-600 to-brand-800 pb-16 pt-8">
-          {vp.cover_photo_url && (
+          {vp.cover_image_url && (
             <img
-              src={vp.cover_photo_url}
+              src={vp.cover_image_url}
               alt="cover"
               className="absolute inset-0 w-full h-full object-cover opacity-20"
             />
@@ -301,11 +329,21 @@ export default async function VendorPublicProfilePage(
             </div>
 
             {/* Stats */}
-            <div className="flex gap-6 mt-5">
+            <div className="flex gap-6 mt-5 flex-wrap">
               <div className="text-center">
                 <p className="text-lg font-black text-white">{offers.length}</p>
                 <p className="text-[11px] text-white/60 font-medium">Active deals</p>
               </div>
+              {vp.total_lifetime_redemptions > 0 && (
+                <div className="text-center">
+                  <p className="text-lg font-black text-white">
+                    {vp.total_lifetime_redemptions >= 1000
+                      ? `${(vp.total_lifetime_redemptions / 1000).toFixed(1)}K`
+                      : vp.total_lifetime_redemptions}
+                  </p>
+                  <p className="text-[11px] text-white/60 font-medium">Redemptions</p>
+                </div>
+              )}
               {loyaltyConfig && (
                 <div className="text-center">
                   <p className="text-lg font-black text-white">{loyaltyConfig.required_visits}</p>
@@ -319,11 +357,57 @@ export default async function VendorPublicProfilePage(
                 </div>
               )}
             </div>
+
+            {/* Contact / location row */}
+            {(vp.address_line1 || vp.website_url || vp.business_phone) && (
+              <div className="flex flex-wrap gap-4 mt-4">
+                {vp.address_line1 && (
+                  <span className="flex items-center gap-1.5 text-white/60 text-xs">
+                    <Navigation size={12} />
+                    {vp.address_line1}{vp.postal_code ? `, ${vp.postal_code}` : ''}
+                  </span>
+                )}
+                {vp.website_url && (
+                  <a
+                    href={vp.website_url.startsWith('http') ? vp.website_url : `https://${vp.website_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs transition-colors"
+                  >
+                    <Globe size={12} />
+                    {vp.website_url.replace(/^https?:\/\//, '').split('/')[0]}
+                  </a>
+                )}
+                {vp.business_phone && (
+                  <a
+                    href={`tel:${vp.business_phone}`}
+                    className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs transition-colors"
+                  >
+                    <Phone size={12} />
+                    {vp.business_phone}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Content */}
         <div className="max-w-3xl mx-auto px-4 sm:px-6 -mt-8 pb-12">
+
+          {/* Gallery strip */}
+          {vp.gallery_photos && vp.gallery_photos.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 mb-6 scrollbar-hide">
+              {vp.gallery_photos.slice(0, 6).map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt={`${vp.business_name} photo ${i + 1}`}
+                  className="h-28 w-40 rounded-xl object-cover flex-shrink-0 border border-gray-100 shadow-sm"
+                />
+              ))}
+            </div>
+          )}
 
           {/* Loyalty teaser */}
           {loyaltyConfig && (
@@ -398,7 +482,7 @@ export default async function VendorPublicProfilePage(
 
           {/* Reviews */}
           {reviews.length > 0 && (
-            <div>
+            <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-black text-gray-900">Student reviews</h2>
                 {avgRating !== null && (
@@ -410,6 +494,30 @@ export default async function VendorPublicProfilePage(
               </div>
               <div className="space-y-4">
                 {reviews.map(r => <ReviewCard key={r.id} review={r} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Business hours */}
+          {vp.business_hours && Object.keys(vp.business_hours).length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="text-base font-black text-gray-900 mb-4">Opening hours</h2>
+              <div className="space-y-2">
+                {(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const).map(day => {
+                  const hours = vp.business_hours?.[day];
+                  if (!hours) return null;
+                  const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() === day;
+                  return (
+                    <div key={day} className={`flex items-center justify-between text-sm ${isToday ? 'font-bold text-brand-700' : 'text-gray-600'}`}>
+                      <span className="capitalize w-28">{day}</span>
+                      {hours.closed ? (
+                        <span className="text-gray-400">Closed</span>
+                      ) : (
+                        <span>{hours.open} – {hours.close}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
