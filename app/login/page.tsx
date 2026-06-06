@@ -13,6 +13,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useT } from '@/lib/i18n';
 import {
   GraduationCap, Store, Mail, Lock, Loader2, AlertCircle,
   Eye, EyeOff, ArrowRight, CheckCircle, BarChart3, Tag,
@@ -79,6 +80,7 @@ type LoginRole = 'student' | 'vendor';
 function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
+  const t            = useT();
   const redirectTo   = searchParams.get('redirect') ?? '';
   const roleParam    = (searchParams.get('role') as LoginRole) ?? 'student';
 
@@ -375,10 +377,10 @@ function LoginForm() {
               className={`w-full ${cfg.btn} disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-sm`}
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.loading')}</>
               ) : (
                 <>
-                  {role === 'vendor' ? 'Access Business Dashboard' : 'Sign in to StudDeals'}
+                  {role === 'vendor' ? t('auth.accessDashboard', 'Access Business Dashboard') : t('auth.signInButton')}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

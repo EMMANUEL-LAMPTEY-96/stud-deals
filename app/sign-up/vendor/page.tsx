@@ -11,6 +11,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useT } from '@/lib/i18n';
 import {
   Building2, Mail, Lock, User, Tag,
   AlertCircle, Loader2, ArrowLeft, Eye, EyeOff, Shield
@@ -30,6 +31,7 @@ const CATEGORIES = [
 
 export default function VendorSignUpPage() {
   const router = useRouter();
+  const t = useT();
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState('food_drink');
@@ -100,8 +102,8 @@ export default function VendorSignUpPage() {
             </div>
             <span className="text-white font-bold text-xl">Studeals</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Business sign up</h1>
-          <p className="text-purple-300 mt-1">Reach thousands of verified students</p>
+          <h1 className="text-2xl font-bold text-white">{t('auth.signUpTitle')}</h1>
+          <p className="text-purple-300 mt-1">{t('auth.vendorSignUpSubtitle', 'Reach thousands of verified students')}</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
@@ -239,18 +241,18 @@ export default function VendorSignUpPage() {
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.loading')}</>
               ) : (
-                'Create business account'
+                t('auth.signUpButton')
               )}
             </button>
           </form>
         </div>
 
         <p className="text-center text-purple-300 mt-6 text-sm">
-          Already have an account?{' '}
+          {t('auth.haveAccount')}{' '}
           <Link href="/sign-in" className="text-purple-400 hover:text-white font-medium transition-colors">
-            Sign in
+            {t('auth.signInLink')}
           </Link>
         </p>
       </div>

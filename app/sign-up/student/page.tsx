@@ -17,6 +17,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useT } from '@/lib/i18n';
 import {
   GraduationCap, Mail, Lock, User, CheckCircle,
   AlertCircle, Loader2, Upload, Shield, ArrowLeft, Eye, EyeOff, Gift, Cake
@@ -36,6 +37,7 @@ function isUniversityEmail(email: string): boolean {
 function StudentSignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useT();
   const referralCode = (searchParams.get('ref') ?? '').trim().toUpperCase().slice(0, 8);
 
   const [fullName, setFullName] = useState('');
@@ -165,8 +167,8 @@ function StudentSignUpForm() {
             </div>
             <span className="text-white font-bold text-xl">Studeals</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Student sign up</h1>
-          <p className="text-purple-300 mt-1">Free access to exclusive student deals</p>
+          <h1 className="text-2xl font-bold text-white">{t('auth.signUpTitle')}</h1>
+          <p className="text-purple-300 mt-1">{t('auth.signUpSubtitle')}</p>
         </div>
 
         {/* Referral banner — shown only when a valid ref code is present */}
@@ -190,7 +192,7 @@ function StudentSignUpForm() {
 
             {/* Full name */}
             <div>
-              <label className="block text-sm font-medium text-purple-200 mb-1.5">Full name</label>
+              <label className="block text-sm font-medium text-purple-200 mb-1.5">{t('auth.fullNameLabel', 'Full name')}</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
                 <input
@@ -342,18 +344,18 @@ function StudentSignUpForm() {
               className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> {t('common.loading')}</>
               ) : (
-                'Create student account'
+                t('auth.signUpButton')
               )}
             </button>
           </form>
         </div>
 
         <p className="text-center text-purple-300 mt-6 text-sm">
-          Already have an account?{' '}
+          {t('auth.haveAccount')}{' '}
           <Link href="/sign-in" className="text-purple-400 hover:text-white font-medium transition-colors">
-            Sign in
+            {t('auth.signInLink')}
           </Link>
         </p>
       </div>
