@@ -23,7 +23,7 @@ npm run build    # Production build — must pass before merging
 npm run start    # Start production server locally
 ```
 
-There are no tests or lint scripts currently configured. TypeScript errors surface via `npm run build`.
+`npm test` runs Jest (`__tests__/`). `npm run build` type-checks (`ignoreBuildErrors` is off — `npx tsc --noEmit` must stay clean). ESLint is skipped during builds.
 
 ---
 
@@ -34,6 +34,11 @@ Required in `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=      # Never expose to browser. Used only in server/admin clients.
+STAMP_QR_SECRET=                # Required in production — signs vendor stamp QR tokens (lib/utils/stamp-qr.ts)
+OTP_HMAC_SECRET=                # Optional — keys the email-OTP hash (falls back to the service role key)
+STAFF_SESSION_SECRET=           # Optional — signs staff PIN sessions / PIN hashes (falls back to the service role key)
+RESEND_API_KEY=                 # Sends OTP + vendor emails; OTP sending fails without it in production
+STRIPE_SECRET_KEY= / STRIPE_WEBHOOK_SECRET=
 ```
 
 ---
@@ -138,17 +143,14 @@ Student verification uses 3 methods (see `app/(student)/verification/`):
 
 Rate limiting for document uploads is backed by a `verification_attempts` table (not visible in the main 10-table list — created in migration `004`). The `lib/utils/rate-limit.ts` utility handles this.
 
-### Known Issues / Merge Conflicts
+### Security model (security-lockdown branch)
 
-**⚠️ There are unresolved Git merge conflict markers (`<<<<<<< HEAD`) in 6 files:**
-- `app/(vendor)/vendor/page.tsx`
-- `app/(vendor)/vendor/analytics/page.tsx`
-- `app/(vendor)/vendor/offers/page.tsx`
-- `app/(vendor)/vendor/offers/create/page.tsx`
-- `app/(vendor)/vendor/offers/[id]/page.tsx`
-- `app/(vendor)/vendor/profile/page.tsx`
-
-These files have both `<<<<<<< HEAD` and `>>>>>>> <hash>` markers. The build still passes on Vercel (Next.js bundles the conflicted text as literal string content inside TSX which doesn't always cause a compile error), but the pages may render incorrectly. **Resolve these conflicts before touching any of those files.**
+- Other vendors' data is read through the view `vendor_profiles_public` (public columns, verified vendors only). Never read another vendor's row from `vendor_profiles` with a user session — that policy was removed in migration 016.
+- Staff scan mode: `/vendor/scan?v=<vendorId>` → `POST /api/staff/login` (hashed PINs, rate-limited) → HttpOnly `staff_session` cookie. Staff data goes through `/api/staff/*`; owners manage PINs via `/api/vendor/staff`.
+- Vendor stamp QR carries a server-signed token from `/api/vendor/stamp-qr`; `/api/loyalty/stamp` rejects anything else.
+- Handing over a loyalty reward never changes its status — it sets `redemptions.metadata.reward_claimed_at` (`lib/utils/reward-claim.ts`).
+- `redemptions.student_id` is `student_profiles.id`, not the auth user id. `notifications` columns: `title, body, related_entity_type, related_entity_id`.
+- Migrations live in `supabase/migrations/`. 015a is applied; 015b–019 must be applied (in order) before deploying this branch. `lib/types/database.types.ts` includes hand-added types for 016–018 — regenerate after applying.
 
 ### Components
 
