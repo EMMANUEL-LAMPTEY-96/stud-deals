@@ -1,27 +1,32 @@
 // =============================================================================
 // POST /api/verification/send-otp
 //
-// Sends a 6-digit OTP to the student's university email.
-// The code is stored (hashed) in student_profiles.verification_notes
-// alongside the email and expiry. Expires in 15 minutes.
+// Emails a 6-digit OTP to the student's university email.
 //
 // Steps:
 //   1. Auth check — must be a logged-in student
-//   2. Validate the email looks like a Hungarian university email
-//   3. Check institution table for a matching domain
-//   4. Generate 6-digit code, store it with expiry in verification_notes
-//   5. Send via Supabase Auth (signInWithOtp) — sends a magic-link+OTP email
-//   6. Update student_profiles: student_email, verification_status = pending_email
+//   2. The email domain must belong to an active Hungarian institution
+//      (anything else goes through document upload instead)
+//   3. Rate limit: OTP_MAX_SENDS_PER_WINDOW codes per OTP_SEND_WINDOW_MINUTES
+//   4. Store an HMAC of the code (never the code itself) in
+//      student_profiles.verification_notes, with expiry + attempt counter
+//   5. Email the code via Resend
 // =============================================================================
 
+import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-
-const OTP_EXPIRY_MINUTES = 15;
-
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { sendEmail } from '@/lib/email/resend';
+import { verificationOtpEmail } from '@/lib/email/templates';
+import {
+  OTP_EXPIRY_MINUTES,
+  OTP_MAX_SENDS_PER_WINDOW,
+  OTP_SEND_WINDOW_MINUTES,
+  generateOtp,
+  hashOtp,
+  parseStoredOtp,
+  type StoredOtp,
+} from '@/lib/utils/otp';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
   // ── Get student profile ───────────────────────────────────────────────────
   const { data: sp } = await admin
     .from('student_profiles')
-    .select('id, verification_status')
+    .select('id, verification_status, verification_notes')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Your account is already verified.' }, { status: 400 });
   }
 
-  // ── Check domain against institutions ────────────────────────────────────
+  // ── Domain must belong to a known Hungarian institution ──────────────────
   const domain = uniEmail.split('@')[1];
   const { data: institutions } = await admin
     .from('institutions')
@@ -63,62 +68,75 @@ export async function POST(request: NextRequest) {
   const matched = (institutions ?? []).find((inst) =>
     Array.isArray(inst.email_domains) &&
     (inst.email_domains as string[]).some(
-      (d) => domain === d || domain.endsWith('.' + d)
+      (d) => domain === d.toLowerCase() || domain.endsWith('.' + d.toLowerCase())
     )
   );
 
-  // ── Generate OTP ─────────────────────────────────────────────────────────
-  const otp = generateOTP();
-  const expiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
-  const notesPayload = JSON.stringify({
-    otp_email: uniEmail,
-    otp_code: otp,          // In production: store a bcrypt hash
-    otp_expires_at: expiry,
-    institution_id: matched?.id ?? null,
-    institution_name: matched?.name ?? null,
-  });
+  if (!matched) {
+    return NextResponse.json(
+      { error: "We don't recognise this university email domain. Please verify by uploading your student ID instead." },
+      { status: 400 }
+    );
+  }
 
-  // ── Store OTP in student_profiles ─────────────────────────────────────────
-  await admin
+  // ── Rate limit sends ──────────────────────────────────────────────────────
+  const previous = parseStoredOtp(sp.verification_notes);
+  const now = Date.now();
+  const windowMs = OTP_SEND_WINDOW_MINUTES * 60 * 1000;
+  const windowActive = previous && now - new Date(previous.otp_window_started_at).getTime() < windowMs;
+  const sendCount = windowActive ? previous!.otp_send_count : 0;
+
+  if (sendCount >= OTP_MAX_SENDS_PER_WINDOW) {
+    return NextResponse.json(
+      { error: 'Too many codes requested. Please wait an hour and try again.' },
+      { status: 429 }
+    );
+  }
+
+  // ── Generate + store hashed OTP ──────────────────────────────────────────
+  const otp = generateOtp();
+  const stored: StoredOtp = {
+    otp_email: uniEmail,
+    otp_hash: hashOtp(user.id, uniEmail, otp),
+    otp_expires_at: new Date(now + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString(),
+    otp_attempts: 0,
+    otp_send_count: sendCount + 1,
+    otp_window_started_at: windowActive ? previous!.otp_window_started_at : new Date(now).toISOString(),
+    institution_id: matched.id,
+    institution_name: matched.name,
+  };
+
+  const { error: updateError } = await admin
     .from('student_profiles')
     .update({
-      student_email: uniEmail,
-      institution_id: matched?.id ?? null,
-      institution_name_manual: matched ? null : domain,
       verification_status: 'pending_email',
       verification_method: 'edu_email',
-      verification_notes: notesPayload,
+      verification_notes: JSON.stringify(stored),
     })
     .eq('id', sp.id);
 
-  // ── Send OTP via Supabase Auth ────────────────────────────────────────────
-  // We use the admin client to send a sign-in OTP to the university email.
-  // The student enters the 6-digit code on the next screen.
-  // shouldCreateUser: false — only sends to existing users, prevents new accounts.
-  // If that fails (email not registered), we fall back to the raw OTP we stored.
-  let emailSent = false;
-  try {
-    // Attempt Supabase OTP (will email the code from Supabase's mailer)
-    const { error: otpError } = await admin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: uniEmail,
-      options: {
-        data: { verification_otp: otp, student_id: sp.id },
-      },
-    });
+  if (updateError) {
+    safeLog.error('send-otp update error:', updateError);
+    return NextResponse.json({ error: 'Failed to start verification.' }, { status: 500 });
+  }
 
-    if (!otpError) emailSent = true;
-  } catch (_) { /* fall through */ }
+  // ── Email the code ────────────────────────────────────────────────────────
+  const { subject, html } = verificationOtpEmail(otp, OTP_EXPIRY_MINUTES);
+  const emailSent = await sendEmail({ to: uniEmail, subject, html });
 
-  // If Supabase couldn't send the email, we still have the OTP stored in DB.
-  // In production you'd integrate Resend/SendGrid here.
+  if (!emailSent && process.env.NODE_ENV !== 'development') {
+    return NextResponse.json(
+      { error: "We couldn't send the code right now. Please try again in a few minutes." },
+      { status: 502 }
+    );
+  }
 
   return NextResponse.json({
     success: true,
     email_sent: emailSent,
-    university_matched: !!matched,
-    institution_name: matched?.name ?? null,
-    // In dev: return OTP so we can test without email
-    ...(process.env.NODE_ENV === 'development' ? { dev_otp: otp } : {}),
+    university_matched: true,
+    institution_name: matched.name,
+    // Local dev without RESEND_API_KEY: return the code so the flow is testable.
+    ...(process.env.NODE_ENV === 'development' && !emailSent ? { dev_otp: otp } : {}),
   });
 }
