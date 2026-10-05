@@ -133,9 +133,11 @@ interface PricingCardProps {
   annual: boolean;
   onUpgrade: (tier: 'growth' | 'pro', annual: boolean) => void;
   loading: boolean;
+  /** True when this deployment has no Stripe key (portfolio demo). */
+  paymentsDisabled: boolean;
 }
 
-function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade, loading }: PricingCardProps) {
+function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade, loading, paymentsDisabled }: PricingCardProps) {
   const isGrowth  = tier === 'growth';
   const isCurrent = currentTier === tier && (currentStatus === 'active' || currentStatus === 'trialing' || currentStatus === 'past_due');
   const isUpgrade = currentTier === 'growth' && tier === 'pro';
@@ -206,10 +208,12 @@ function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade, load
 
       <button
         onClick={() => onUpgrade(tier, annual)}
-        disabled={loading || isCurrent}
+        disabled={loading || isCurrent || paymentsDisabled}
         className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2
           ${isCurrent
             ? isGrowth ? 'bg-blue-100 text-blue-500 cursor-default' : 'bg-purple-100 text-purple-500 cursor-default'
+            : paymentsDisabled
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : isGrowth
             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
             : 'bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg'
@@ -223,6 +227,7 @@ function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade, load
               Current plan
             </>
           )
+          : paymentsDisabled ? 'Payments disabled (demo)'
           : isUpgrade ? (
             <>Upgrade to Pro <ChevronRight className="w-4 h-4" /></>
           )
@@ -274,6 +279,8 @@ export default function BillingPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading]   = useState(false);
   const [toast, setToast]                 = useState<{ msg: string; ok: boolean } | null>(null);
+  // null = still checking; false = demo deployment without Stripe
+  const [billingEnabled, setBillingEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -288,6 +295,11 @@ export default function BillingPage() {
       setLoading(false);
     })();
 
+    fetch('/api/billing/status')
+      .then(r => r.json())
+      .then(d => setBillingEnabled(d.enabled === true))
+      .catch(() => setBillingEnabled(false));
+
     // Success / cancelled flash from Stripe redirect
     const params = new URLSearchParams(window.location.search);
     if (params.get('success'))   setToast({ msg: '🎉 Subscription activated! Welcome to Studeals paid.', ok: true });
@@ -295,7 +307,10 @@ export default function BillingPage() {
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
+  const paymentsDisabled = billingEnabled !== true;
+
   const handleUpgrade = async (tier: 'growth' | 'pro', isAnnual: boolean) => {
+    if (paymentsDisabled) return;
     setCheckoutLoading(true);
     try {
       const priceId = isAnnual
@@ -321,6 +336,7 @@ export default function BillingPage() {
   };
 
   const handlePortal = async () => {
+    if (paymentsDisabled) return;
     setPortalLoading(true);
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' });
@@ -385,7 +401,7 @@ export default function BillingPage() {
             {isManageable && (
               <button
                 onClick={handlePortal}
-                disabled={portalLoading}
+                disabled={portalLoading || paymentsDisabled}
                 className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 border border-gray-200 bg-white rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
               >
                 {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
@@ -396,6 +412,13 @@ export default function BillingPage() {
 
           {/* Status banner */}
           <StatusBanner plan={currentPlan} />
+
+          {billingEnabled === false && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span className="font-bold">Demo — payments disabled.</span>{' '}
+              This is a portfolio deployment without a payment provider, so subscribing and the billing portal are turned off.
+            </div>
+          )}
 
           {/* Monthly / Annual toggle */}
           <div className="flex items-center justify-center gap-3 mb-8">
@@ -422,6 +445,7 @@ export default function BillingPage() {
               annual={annual}
               onUpgrade={handleUpgrade}
               loading={checkoutLoading}
+              paymentsDisabled={paymentsDisabled}
             />
             <PricingCard
               tier="pro"
@@ -430,6 +454,7 @@ export default function BillingPage() {
               annual={annual}
               onUpgrade={handleUpgrade}
               loading={checkoutLoading}
+              paymentsDisabled={paymentsDisabled}
             />
           </div>
 
@@ -442,7 +467,7 @@ export default function BillingPage() {
               </p>
               <button
                 onClick={handlePortal}
-                disabled={portalLoading}
+                disabled={portalLoading || paymentsDisabled}
                 className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors"
               >
                 {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}

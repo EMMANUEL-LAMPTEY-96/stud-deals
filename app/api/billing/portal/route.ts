@@ -13,13 +13,13 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import Stripe from 'stripe';
+import { getStripe, billingDisabledResponse } from '@/lib/billing/stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-  apiVersion: '2025-02-24.acacia',
-});
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripe();
+  if (!stripe) return billingDisabledResponse();
+
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
