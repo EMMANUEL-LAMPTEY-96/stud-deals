@@ -10,14 +10,17 @@
 // voucher-confirmation trigger. The hand-over is recorded in metadata instead.
 // =============================================================================
 
-export const REWARD_STATUSES = ['reward_earned', 'tier_reward'] as const;
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database, Json } from '@/lib/types/database.types';
+
+export const REWARD_STATUSES: Database['public']['Enums']['redemption_status'][] = ['reward_earned', 'tier_reward'];
 
 export type RewardClaimResult =
   | { ok: true; claimed_at: string }
   | { ok: false; status: number; error: string };
 
 export async function markRewardHandedOver(
-  admin: any,
+  admin: SupabaseClient<Database>,
   vendorId: string,
   redemptionId: string,
   claimedBy: { user_id?: string; staff_id?: string }
@@ -27,11 +30,11 @@ export async function markRewardHandedOver(
     .select('id, metadata')
     .eq('id', redemptionId)
     .eq('vendor_id', vendorId)
-    .in('status', REWARD_STATUSES as unknown as string[])
+    .in('status', REWARD_STATUSES)
     .maybeSingle();
 
   if (!row) return { ok: false, status: 404, error: 'Reward not found.' };
-  const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+  const metadata = (row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {}) as Record<string, Json | undefined>;
   if (metadata.reward_claimed_at) return { ok: false, status: 409, error: 'Reward already claimed.' };
 
   const claimed_at = new Date().toISOString();

@@ -111,15 +111,15 @@ export async function getStaffSession(request: NextRequest): Promise<StaffSessio
     .maybeSingle();
   if (!vp) return null;
 
-  const member = parseStaffPins((vp as any).staff_pins).find((p) => p.id === parsed.staffId && p.active);
+  const member = parseStaffPins(vp.staff_pins).find((p) => p.id === parsed.staffId && p.active);
   if (!member) return null;
 
   return {
-    vendorId: (vp as any).id,
+    vendorId: vp.id,
     staffId: member.id,
     staffName: member.name,
-    businessName: (vp as any).business_name,
-    city: (vp as any).city ?? null,
+    businessName: vp.business_name,
+    city: vp.city ?? null,
   };
 }
 

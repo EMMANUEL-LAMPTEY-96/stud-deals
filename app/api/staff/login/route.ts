@@ -11,6 +11,7 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import type { Json } from '@/lib/types/database.types';
 import {
   STAFF_COOKIE,
   hashStaffPin,
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data: own } = await admin.from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle();
-      vendorId = (own as any)?.id ?? null;
+      vendorId = own?.id ?? null;
     }
   }
   if (!vendorId) {
@@ -87,10 +88,10 @@ export async function POST(request: NextRequest) {
     .eq('id', vendorId)
     .maybeSingle();
 
-  const pins = parseStaffPins((vp as any)?.staff_pins);
+  const pins = parseStaffPins(vp?.staff_pins);
   const member = vp ? pins.find((p) => p.active && staffPinMatches(vendorId!, pin, p)) : undefined;
 
-  await admin.from('staff_login_attempts').insert({ vendor_id: vendorId, ip, success: !!member } as any);
+  await admin.from('staff_login_attempts').insert({ vendor_id: vendorId, ip, success: !!member });
 
   if (!vp || !member) {
     return NextResponse.json({ error: 'Incorrect PIN.' }, { status: 401 });
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       const { pin: _plain, ...rest } = p;
       return { ...rest, pin_hash: hashStaffPin(vendorId!, pin) };
     });
-    await admin.from('vendor_profiles').update({ staff_pins: upgraded } as any).eq('id', vendorId);
+    await admin.from('vendor_profiles').update({ staff_pins: upgraded as unknown as Json }).eq('id', vendorId);
   }
 
   const cookie = signStaffCookie(vendorId, member.id);
@@ -112,8 +113,8 @@ export async function POST(request: NextRequest) {
     session: {
       vendorId,
       staffName: member.name,
-      businessName: (vp as any).business_name,
-      city: (vp as any).city ?? null,
+      businessName: vp.business_name,
+      city: vp.city ?? null,
     },
   });
   res.cookies.set(STAFF_COOKIE, cookie.value, { ...staffCookieOptions, maxAge: cookie.maxAge });

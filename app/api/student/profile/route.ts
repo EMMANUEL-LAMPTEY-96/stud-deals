@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const { error } = await admin
       .from('student_profiles')
-      .update({ share_with_vendors, consent_updated_at: now, updated_at: now } as any)
+      .update({ share_with_vendors, consent_updated_at: now, updated_at: now })
       .eq('user_id', user.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
