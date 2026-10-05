@@ -408,7 +408,7 @@ export default function LoyaltyPage() {
             vendor_id,
             status,
             claimed_at,
-            vendor_profiles!inner (
+            vendor_profiles:vendor_profiles_public!inner (
               id,
               business_name,
               city,

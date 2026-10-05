@@ -408,7 +408,7 @@ export default function VendorAnalyticsPage() {
 
     if (thisVP?.business_type && thisVP?.city) {
       const { data: peers } = await supabase
-        .from('vendor_profiles')
+        .from('vendor_profiles_public')
         .select('total_lifetime_views, total_lifetime_redemptions')
         .eq('business_type', thisVP.business_type)
         .eq('city', thisVP.city)

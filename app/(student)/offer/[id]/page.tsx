@@ -66,7 +66,7 @@ export default function OfferDetailPage() {
         .from('offers')
         .select(`
           *,
-          vendor:vendor_profiles (
+          vendor:vendor_profiles_public (
             id, business_name, city, state, address_line1,
             logo_url, cover_image_url, is_verified, description,
             business_type, website_url

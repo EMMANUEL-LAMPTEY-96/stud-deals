@@ -122,7 +122,7 @@ export default function MySavingsPage() {
             title,
             discount_type,
             discount_value,
-            vendor_profiles ( business_name, logo_url )
+            vendor_profiles:vendor_profiles_public ( business_name, logo_url )
           )
         `)
         .eq('student_id', sp.id)

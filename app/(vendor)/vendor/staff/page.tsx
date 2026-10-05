@@ -4,13 +4,10 @@
 // app/(vendor)/vendor/staff/page.tsx — Staff Account Manager
 //
 // Lets vendors manage staff PIN codes for the scan-only interface.
-// Staff PINs stored in vendor_profiles.staff_pins JSONB array:
-//   [{ id: uuid, name: string, pin: string, role: "scanner", active: boolean, created_at: string }]
+// Staff PINs are managed through /api/vendor/staff, which stores only an HMAC
+// of each PIN in vendor_profiles.staff_pins. A PIN is shown once, when created.
 //
-// Schema migration (run once):
-//   ALTER TABLE vendor_profiles ADD COLUMN IF NOT EXISTS staff_pins jsonb DEFAULT '[]';
-//
-// The /vendor/scan page uses these PINs to grant scan-only access.
+// The /vendor/scan?v=<vendorId> page uses these PINs to grant scan-only access.
 // Staff see only: QR scanner + reward claim UI — no analytics, offers, customers.
 // =============================================================================
 
@@ -28,14 +25,9 @@ import {
 interface StaffMember {
   id: string;
   name: string;
-  pin: string;
   role: string;
   active: boolean;
   created_at: string;
-}
-
-function randomId() {
-  return Math.random().toString(36).slice(2, 10);
 }
 
 function StaffRow({
@@ -47,15 +39,6 @@ function StaffRow({
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
 }) {
-  const [showPin, setShowPin] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const copyPin = () => {
-    navigator.clipboard.writeText(member.pin);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
       member.active ? 'bg-white border-gray-100' : 'bg-gray-50 border-gray-100 opacity-60'
@@ -85,15 +68,9 @@ function StaffRow({
       {/* PIN display */}
       <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
         <Lock size={12} className="text-gray-400" />
-        <span className="text-sm font-mono font-bold text-gray-800 tracking-widest min-w-[40px]">
-          {showPin ? member.pin : '••••'}
+        <span className="text-sm font-mono font-bold text-gray-800 tracking-widest min-w-[40px]" title="PINs are stored securely and can't be shown again. Remove and re-add to change.">
+          ••••
         </span>
-        <button onClick={() => setShowPin(v => !v)} className="text-gray-400 hover:text-gray-600">
-          {showPin ? <EyeOff size={13} /> : <Eye size={13} />}
-        </button>
-        <button onClick={copyPin} className={`text-gray-400 hover:text-gray-600 transition-colors ${copied ? 'text-green-500' : ''}`}>
-          {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
-        </button>
       </div>
 
       {/* Actions */}
@@ -138,18 +115,13 @@ export default function StaffPage() {
     (async () => { try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
-      const { data: vpRaw } = await supabase
-        .from('vendor_profiles')
-        .select('id, business_name, staff_pins')
-        .eq('user_id', user.id as string)
-        .maybeSingle();
-      const vp = (vpRaw as unknown) as { id: string; business_name: string; staff_pins: string[] | null } | null;
-      if (!vp) { router.push('/vendor/profile'); return; }
+      const res = await fetch('/api/vendor/staff');
+      if (!res.ok) { router.push('/vendor/profile'); return; }
+      const data = await res.json();
 
-      setVendorId(vp.id);
-      setBN(vp.business_name);
-      const pins = (vp as any).staff_pins;
-      setStaff(Array.isArray(pins) ? pins : []);
+      setVendorId(data.vendor_id);
+      setBN(data.business_name);
+      setStaff(Array.isArray(data.staff) ? data.staff : []);
       setLoading(false);
     } catch (_) { setLoading(false); }
     })();
@@ -160,60 +132,64 @@ export default function StaffPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const persist = async (updated: StaffMember[]) => {
-    if (!vendorId) return;
+  /** Returns the error message, or null on success. */
+  const persist = async (payload: Record<string, string>): Promise<string | null> => {
+    if (!vendorId) return 'Vendor profile not loaded.';
     setSaving(true);
-    const { error } = await supabase
-      .from('vendor_profiles')
-      .update({ staff_pins: updated } as any)
-      .eq('id', vendorId);
-    setSaving(false);
-    if (error) showToast('err', error.message);
-    else setStaff(updated);
+    try {
+      const res = await fetch('/api/vendor/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) return data.error ?? 'Could not save staff.';
+      setStaff(data.staff ?? []);
+      return null;
+    } catch (_) {
+      return 'Could not save staff.';
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAdd = async () => {
     setPinError('');
     if (!newName.trim()) { setPinError('Staff name is required.'); return; }
     if (!/^\d{4}$/.test(newPin)) { setPinError('PIN must be exactly 4 digits.'); return; }
-    if (staff.some(s => s.pin === newPin)) { setPinError('That PIN is already in use. Choose another.'); return; }
 
-    const member: StaffMember = {
-      id: randomId(),
-      name: newName.trim(),
-      pin: newPin,
-      role: 'scanner',
-      active: true,
-      created_at: new Date().toISOString(),
-    };
-
-    await persist([...staff, member]);
+    const name = newName.trim();
+    const pin = newPin;
+    const err = await persist({ action: 'add', name, pin });
+    if (err) { setPinError(err); return; }
     setNewName('');
     setNewPin('');
     setShowForm(false);
-    showToast('ok', `${member.name} added. Share PIN: ${member.pin}`);
+    showToast('ok', `${name} added. Share PIN: ${pin} (it won't be shown again)`);
   };
 
   const handleDelete = async (id: string) => {
     const name = staff.find(s => s.id === id)?.name ?? 'Staff member';
     if (!confirm(`Remove ${name}? They will immediately lose scan access.`)) return;
-    await persist(staff.filter(s => s.id !== id));
-    showToast('ok', `${name} removed.`);
+    const err = await persist({ action: 'delete', id });
+    showToast(err ? 'err' : 'ok', err ?? `${name} removed.`);
   };
 
   const handleToggle = async (id: string) => {
-    await persist(staff.map(s => s.id === id ? { ...s, active: !s.active } : s));
+    const err = await persist({ action: 'toggle', id });
+    if (err) showToast('err', err);
   };
 
   const generatePin = () => {
-    const pin = String(Math.floor(1000 + Math.random() * 9000));
-    setNewPin(pin);
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    setNewPin(String(1000 + (buf[0] % 9000)));
     setPinError('');
   };
 
   const scanUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/vendor/scan`
-    : '/vendor/scan';
+    ? `${window.location.origin}/vendor/scan?v=${vendorId ?? ''}`
+    : `/vendor/scan?v=${vendorId ?? ''}`;
 
   if (loading) return (
     <><Navbar /><VendorNav />
@@ -265,7 +241,7 @@ export default function StaffPage() {
             <div>
               <p className="text-sm font-semibold text-blue-900 mb-1">How staff access works</p>
               <p className="text-xs text-blue-700 leading-relaxed">
-                Staff open <strong className="font-bold">/vendor/scan</strong> on any device and enter their 4-digit PIN.
+                Staff open the link below on any device and enter their 4-digit PIN.
                 They get access to the QR scanner and reward claim — but not analytics, offers, or customer data.
                 The owner account is always separate and fully protected.
               </p>
@@ -385,7 +361,7 @@ export default function StaffPage() {
           {/* Go to scan page */}
           {staff.length > 0 && (
             <a
-              href="/vendor/scan"
+              href={`/vendor/scan?v=${vendorId ?? ''}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 flex items-center justify-between p-4 bg-vendor-600 text-white rounded-2xl hover:bg-vendor-700 transition-colors group"

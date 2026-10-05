@@ -74,7 +74,7 @@ export default function SavedPage() {
           saved_at,
           offer:offers (
             id, title, discount_label, category, expires_at, status,
-            vendor:vendor_profiles ( business_name, city, logo_url )
+            vendor:vendor_profiles_public ( business_name, city, logo_url )
           )
         `)
         .eq('student_id', sp.id)

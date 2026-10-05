@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         starts_at, max_uses_per_student, max_total_redemptions,
         redemption_count, discount_type, discount_value, category,
         target_institution_ids,
-        vendor:vendor_profiles (
+        vendor:vendor_profiles_public (
           id, business_name, address_line1, city, is_verified
         )
       `)
