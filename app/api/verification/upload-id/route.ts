@@ -28,6 +28,7 @@ import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
+import { checkRateLimit, markVerificationSuccess, rateLimitResponse } from '@/lib/utils/rate-limit';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -116,6 +117,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Your account is already verified.' }, { status: 400 });
   }
 
+  // ── Rate limit: 3 ID uploads per 24h (shared with submit-document) ──────
+  const rl = await checkRateLimit(user.id, 'doc_upload', { maxAttempts: 3, windowHours: 24 });
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   // ── VULN-04 fix: UUID filename — never use user-supplied file.name ────────
   // VULN-03 fix: Store the path, not a public URL (bucket must be PRIVATE)
   const fileId   = randomUUID();
@@ -150,6 +155,8 @@ export async function POST(request: NextRequest) {
     safeLog.error('profile update error:', updateError);
     return NextResponse.json({ error: 'Upload succeeded but profile update failed.' }, { status: 500 });
   }
+
+  await markVerificationSuccess(user.id, 'doc_upload');
 
   return NextResponse.json({
     success: true,

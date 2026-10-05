@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/utils/rate-limit';
+import { checkRateLimit, markVerificationSuccess, rateLimitResponse } from '@/lib/utils/rate-limit';
 import { safeLog } from '@/lib/utils/safe-logger';
 
 const MAX_FILE_SIZE_MB = 10;
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Rate limit: 3 submissions per 24 hrs ─────────────────────────────────
-    const rl = await checkRateLimit(user.id, 'doc_submit', { maxAttempts: 3, windowHours: 24 });
+    const rl = await checkRateLimit(user.id, 'doc_upload', { maxAttempts: 3, windowHours: 24 });
     if (!rl.allowed) return rateLimitResponse(rl);
 
     // ── Parse multipart form data ─────────────────────────────────────────────
@@ -114,16 +114,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Log to verification_attempts ─────────────────────────────────────────
-    await supabase.from('verification_attempts').insert({
-      user_id: user.id,
-      attempt_type: 'id_upload',
-      attempted_at: new Date().toISOString(),
-      success: true,
-      notes: `Uploaded ${docType} — ${storagePath}`,
-    }).throwOnError().catch(() => {
-      // Non-fatal if the table has different columns — best effort
-    });
+    await markVerificationSuccess(user.id, 'doc_upload');
 
     safeLog.info('[submit-document] Document submitted for review', { userId: user.id });
 
