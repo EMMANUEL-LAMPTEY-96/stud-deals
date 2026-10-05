@@ -84,8 +84,8 @@ export async function GET() {
       status,
       reward_granted_at,
       created_at,
-      referred:referred_id (
-        user:profiles ( first_name, last_name )
+      referred:student_profiles!referrals_referred_id_fkey (
+        user:profiles!student_profiles_user_id_fkey ( first_name, last_name )
       )
     `)
     .eq('referrer_id', sp.id)

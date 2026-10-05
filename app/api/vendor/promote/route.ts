@@ -260,8 +260,7 @@ export async function POST(req: NextRequest) {
     const batch = notifRows.slice(i, i + BATCH_SIZE);
     const { error } = await admin
       .from('notifications')
-      .insert(batch)
-      .select('id', { count: 'exact', head: true });
+      .insert(batch);
 
     if (error) {
       safeLog.error('[/api/vendor/promote] Insert error:', error.message);

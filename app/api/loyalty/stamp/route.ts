@@ -29,6 +29,7 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import type { TablesInsert } from '@/lib/types/database.types';
 import { randomBytes } from 'crypto';
 import {
   parseLoyaltyConfig,
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
   if (recentStamp) {
     const nextAllowed = new Date(
-      new Date(recentStamp.confirmed_at).getTime() + STAMP_COOLDOWN_HOURS * 60 * 60 * 1000
+      new Date(recentStamp.confirmed_at ?? Date.now()).getTime() + STAMP_COOLDOWN_HOURS * 60 * 60 * 1000
     );
     const hoursLeft = Math.ceil((nextAllowed.getTime() - Date.now()) / (1000 * 60 * 60));
     return NextResponse.json({
@@ -230,7 +231,7 @@ export async function POST(request: NextRequest) {
   // We only count stamps within the current "active window" (since the last expiry reset).
   let effectiveStampCount = allStamps.length;
 
-  if (loyaltyConfig?.stamp_expiry_days && allStamps.length > 0) {
+  if (loyaltyConfig?.stamp_expiry_days && allStamps.length > 0 && allStamps[0].confirmed_at) {
     const mostRecentStampDate = new Date(allStamps[0].confirmed_at);
     const daysSinceLastStamp = (Date.now() - mostRecentStampDate.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -307,7 +308,7 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   const mainStatus = rewardTriggered ? 'reward_earned' : 'stamp';
 
-  const insertRows: object[] = [];
+  const insertRows: TablesInsert<'redemptions'>[] = [];
 
   // Helper: generate a cryptographically random stamp code
   const secureStampCode = (prefix: string) =>
@@ -370,7 +371,7 @@ export async function POST(request: NextRequest) {
 
   const { error: insertError } = await admin
     .from('redemptions')
-    .insert(insertRows as never[]);
+    .insert(insertRows);
 
   if (insertError) {
     safeLog.error('stamp insert error:', insertError);
@@ -381,7 +382,7 @@ export async function POST(request: NextRequest) {
   // All inserts use user.id (auth UUID) as notifications.user_id since that
   // maps to profiles.id, matching how flash-deal and review notifications work.
 
-  const notifRows: object[] = [];
+  const notifRows: TablesInsert<'notifications'>[] = [];
   const vendorName = vendorProfile.business_name ?? 'Your loyalty business';
 
   // 15a. "Almost there" — exactly 1 stamp away from completing the cycle.
@@ -427,7 +428,7 @@ export async function POST(request: NextRequest) {
 
   if (notifRows.length > 0) {
     // Fire-and-forget: notification failures must never block the stamp response
-    admin.from('notifications').insert(notifRows as never[]).then(({ error: notifErr }) => {
+    admin.from('notifications').insert(notifRows).then(({ error: notifErr }) => {
       if (notifErr) safeLog.error('loyalty notification insert error:', notifErr.message);
     });
   }
