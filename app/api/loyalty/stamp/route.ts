@@ -540,7 +540,8 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
 
   // ── VULN-01 fix: Ownership check ──────────────────────────────────────────
-  // Determine the caller's role — only one DB query needed.
+  // Applies to every combination of params — a vendor_id alone must not
+  // return other students' stamps.
   const { data: callerProfile } = await admin
     .from('profiles')
     .select('role')
@@ -548,29 +549,27 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   const isAdmin = callerProfile?.role === 'admin';
+  let studentFilter: string | null = student_profile_id;
 
-  if (!isAdmin && student_profile_id) {
-    // Get caller's own student_profile id (if they are a student)
-    const { data: callerStudentProfile } = await admin
-      .from('student_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+  if (!isAdmin) {
+    const [{ data: callerStudentProfile }, { data: callerVendorProfile }] = await Promise.all([
+      admin.from('student_profiles').select('id').eq('user_id', user.id).maybeSingle(),
+      admin.from('vendor_profiles').select('id').eq('user_id', user.id).maybeSingle(),
+    ]);
 
-    // Get caller's vendor profile id (if they are a vendor)
-    const { data: callerVendorProfile } = await admin
-      .from('vendor_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // A vendor may see stamps at their own venue (optionally for one student).
+    const isVendorQueryingOwnVenue =
+      !!callerVendorProfile && !!vendor_id && vendor_id === callerVendorProfile.id;
 
-    const isOwnProfile = callerStudentProfile?.id === student_profile_id;
-    // Vendor may query a student's progress at their own venue
-    const isVendorQueryingOwnCustomer =
-      callerVendorProfile !== null && vendor_id === callerVendorProfile.id;
-
-    if (!isOwnProfile && !isVendorQueryingOwnCustomer) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!isVendorQueryingOwnVenue) {
+      // Everyone else only ever sees their own stamps.
+      if (!callerStudentProfile) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      if (student_profile_id && student_profile_id !== callerStudentProfile.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      studentFilter = callerStudentProfile.id;
     }
   }
 
@@ -579,7 +578,7 @@ export async function GET(request: NextRequest) {
     .select('id, student_id, vendor_id, offer_id, status, stamped_at:confirmed_at, offer:offers(id, title, terms_and_conditions, vendor:vendor_profiles(id, business_name, logo_url))')
     .in('status', ['stamp', 'reward_earned', 'tier_reward']);
 
-  if (student_profile_id) query = query.eq('student_id', student_profile_id);
+  if (studentFilter) query = query.eq('student_id', studentFilter);
   if (vendor_id) query = query.eq('vendor_id', vendor_id);
 
   const { data, error } = await query.order('confirmed_at', { ascending: false });
