@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
 import { checkRateLimit, markVerificationSuccess, rateLimitResponse } from '@/lib/utils/rate-limit';
+import { isDemoUser, demoForbiddenResponse } from '@/lib/utils/demo';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (await isDemoUser(user.id)) return demoForbiddenResponse('upload ID documents');
 
   let formData: FormData;
   try {

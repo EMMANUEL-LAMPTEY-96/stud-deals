@@ -39,6 +39,7 @@ import { validateStampPayload } from '@/lib/utils/stamp-qr';
 import { sendEmail } from '@/lib/email/resend';
 import { rewardEarnedEmail } from '@/lib/email/templates';
 import { z } from 'zod';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 const STAMP_COOLDOWN_HOURS = 8;
 
@@ -136,6 +137,17 @@ export async function POST(request: NextRequest) {
       { error: 'Vendor profile not found.' },
       { status: 404 }
     );
+  }
+
+  // The demo vendor (public login) may only stamp demo students.
+  if (await isDemoUser(user.id)) {
+    const demoStudents = await getDemoStudentProfileIds();
+    if (!demoStudents.includes(studentProfile.id)) {
+      return NextResponse.json(
+        { error: 'The demo café can only stamp demo student accounts.', demo: true },
+        { status: 403 }
+      );
+    }
   }
 
   if (!vendorProfile.is_verified) {

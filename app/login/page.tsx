@@ -113,6 +113,28 @@ function LoginForm() {
 
   const cfg = ROLE_CONFIG[role];
 
+  // One-click demo logins (portfolio). Hidden unless the public demo password is configured.
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+  const [demoLoading, setDemoLoading] = useState<LoginRole | null>(null);
+
+  async function handleDemoLogin(demoRole: LoginRole) {
+    if (!demoPassword) return;
+    setDemoLoading(demoRole);
+    setError('');
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: demoRole === 'vendor' ? 'demo-vendor@studeals.demo' : 'demo-student@studeals.demo',
+      password: demoPassword,
+    });
+    if (signInError) {
+      setError('The demo account is unavailable right now. Please try again later.');
+      setDemoLoading(null);
+      return;
+    }
+    router.push(demoRole === 'vendor' ? '/vendor' : '/dashboard');
+    router.refresh();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -386,6 +408,30 @@ function LoginForm() {
               )}
             </button>
           </form>
+
+          {/* One-click demo accounts */}
+          {demoPassword && (
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs font-bold text-amber-900 mb-1">Just looking around?</p>
+              <p className="text-xs text-amber-800 mb-3">
+                Explore with a demo account — sample data only, no sign-up needed.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(['student', 'vendor'] as const).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => handleDemoLogin(r)}
+                    disabled={demoLoading !== null || loading}
+                    className="flex items-center justify-center gap-1.5 rounded-lg bg-white border border-amber-300 py-2 text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60 transition-colors"
+                  >
+                    {demoLoading === r ? <Loader2 size={13} className="animate-spin" /> : null}
+                    {r === 'student' ? 'Try as Student' : 'Try as Vendor'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">

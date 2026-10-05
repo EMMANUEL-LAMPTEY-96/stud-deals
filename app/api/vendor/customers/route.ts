@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { safeLog } from '@/lib/utils/safe-logger';
 import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 // =============================================================================
 // app/api/vendor/customers/route.ts — Vendor Customer Directory
@@ -89,7 +90,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to load customers' }, { status: 500 });
     }
 
-    const rows = reds ?? [];
+    // The demo vendor's login is public — it may only ever see demo students.
+    let rows = reds ?? [];
+    if (await isDemoUser(user.id)) {
+      const demoStudents = new Set(await getDemoStudentProfileIds());
+      rows = rows.filter((r) => demoStudents.has(r.student_id));
+    }
     if (rows.length === 0) {
       return NextResponse.json({ customers: [], meta: { total: 0, total_stamps: 0, total_rewards: 0 } });
     }

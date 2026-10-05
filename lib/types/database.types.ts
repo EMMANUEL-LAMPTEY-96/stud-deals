@@ -470,6 +470,7 @@ export type Database = {
           first_name: string | null
           id: string
           is_active: boolean
+          is_demo: boolean
           last_name: string | null
           last_seen_at: string | null
           phone: string | null
@@ -486,6 +487,7 @@ export type Database = {
           first_name?: string | null
           id: string
           is_active?: boolean
+          is_demo?: boolean
           last_name?: string | null
           last_seen_at?: string | null
           phone?: string | null
@@ -502,6 +504,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_active?: boolean
+          is_demo?: boolean
           last_name?: string | null
           last_seen_at?: string | null
           phone?: string | null
@@ -1401,7 +1404,7 @@ export const Constants = {
 } as const
 
 // NOTE: the generated block above was extended by hand with objects from
-// migrations 016–018 (vendor_profiles_public, staff_login_attempts,
+// migrations 016–018 and 020 (profiles.is_demo, vendor_profiles_public, staff_login_attempts,
 // student_profiles.share_with_vendors/consent_updated_at,
 // verification_attempts, deletion_audit). Regenerate once they're applied.
 

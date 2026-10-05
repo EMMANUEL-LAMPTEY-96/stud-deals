@@ -17,6 +17,7 @@ import { safeLog } from '@/lib/utils/safe-logger';
 
 // Supabase admin client uses SERVICE_ROLE to bypass RLS for cascade deletes
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { isDemoUser, demoForbiddenResponse } from '@/lib/utils/demo';
 
 function getAdminClient() {
   return createAdminClient(
@@ -46,6 +47,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     const userId = user.id;
+
+    // Public demo accounts can't be deleted (their password is published).
+    if (await isDemoUser(userId)) return demoForbiddenResponse('be deleted');
     const admin = getAdminClient();
 
     // Every step must succeed before the auth user is removed — otherwise we'd
