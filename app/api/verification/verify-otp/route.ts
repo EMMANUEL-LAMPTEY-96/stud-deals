@@ -3,18 +3,19 @@
 //
 // Validates the 6-digit OTP the student typed.
 // Checks:
-//   1. OTP matches what's stored in verification_notes
-//   2. OTP hasn't expired (15 min window)
+//   1. A code was issued and hasn't expired (15 min window)
+//   2. Fewer than OTP_MAX_VERIFY_ATTEMPTS wrong guesses so far
+//   3. HMAC of the input matches the stored hash
 // On success:
-//   - Sets verification_status = 'verified'
-//   - Sets verification_method = 'edu_email'
-//   - Sets verified_at = now()
-//   - Clears verification_notes (removes the raw OTP from DB)
+//   - Sets verification_status = 'verified', verification_method = 'edu_email'
+//   - Sets student_email, institution, verified_at
+//   - Clears verification_notes
 // =============================================================================
 
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { OTP_MAX_VERIFY_ATTEMPTS, otpMatches, parseStoredOtp } from '@/lib/utils/otp';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -45,51 +46,62 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Already verified.' }, { status: 400 });
   }
 
-  // ── Parse stored OTP data ─────────────────────────────────────────────
-  let stored: {
-    otp_code: string;
-    otp_expires_at: string;
-    otp_email: string;
-    institution_id: string | null;
-    institution_name: string | null;
-  } | null = null;
-
-  try {
-    if (sp.verification_notes) stored = JSON.parse(sp.verification_notes);
-  } catch (_) {
-    return NextResponse.json({ error: 'Verification session expired. Please start again.' }, { status: 400 });
-  }
-
-  if (!stored?.otp_code) {
+  const stored = parseStoredOtp(sp.verification_notes);
+  if (!stored) {
     return NextResponse.json({ error: 'No verification in progress. Please request a new code.' }, { status: 400 });
   }
 
-  // ── Check expiry ──────────────────────────────────────────────────────
+  // ── Check expiry + attempts ───────────────────────────────────────────
   if (new Date() > new Date(stored.otp_expires_at)) {
     return NextResponse.json({ error: 'Code expired. Please request a new one.' }, { status: 400 });
   }
+  if (stored.otp_attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+    return NextResponse.json({ error: 'Too many incorrect attempts. Please request a new code.' }, { status: 429 });
+  }
 
   // ── Check code ────────────────────────────────────────────────────────
-  if (inputCode !== stored.otp_code) {
-    return NextResponse.json({ error: 'Incorrect code. Please try again.' }, { status: 400 });
+  if (!otpMatches(user.id, stored.otp_email, inputCode, stored.otp_hash)) {
+    // Optimistic lock on the previous notes value so parallel guesses can't
+    // share one attempt slot.
+    const { data: bumped } = await admin
+      .from('student_profiles')
+      .update({ verification_notes: JSON.stringify({ ...stored, otp_attempts: stored.otp_attempts + 1 }) })
+      .eq('id', sp.id)
+      .eq('verification_notes', sp.verification_notes)
+      .select('id');
+
+    if (!bumped?.length) {
+      return NextResponse.json({ error: 'Please try again.' }, { status: 409 });
+    }
+    const left = OTP_MAX_VERIFY_ATTEMPTS - stored.otp_attempts - 1;
+    return NextResponse.json(
+      { error: left > 0 ? `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.` : 'Too many incorrect attempts. Please request a new code.' },
+      { status: 400 }
+    );
   }
 
   // ── Mark as verified ──────────────────────────────────────────────────
-  const { error: updateError } = await admin
+  const { data: updated, error: updateError } = await admin
     .from('student_profiles')
     .update({
       verification_status: 'verified',
       verification_method: 'edu_email',
       verified_at: new Date().toISOString(),
-      verification_notes: null,   // clear the raw OTP
+      verification_notes: null,
+      student_email: stored.otp_email,
       institution_id: stored.institution_id,
-      institution_name_manual: stored.institution_name,
+      institution_name_manual: null,
     })
-    .eq('id', sp.id);
+    .eq('id', sp.id)
+    .eq('verification_notes', sp.verification_notes)
+    .select('id');
 
   if (updateError) {
     safeLog.error('verify-otp update error:', updateError);
     return NextResponse.json({ error: 'Failed to update verification status.' }, { status: 500 });
+  }
+  if (!updated?.length) {
+    return NextResponse.json({ error: 'Verification session changed. Please request a new code.' }, { status: 409 });
   }
 
   return NextResponse.json({

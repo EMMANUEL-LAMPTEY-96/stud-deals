@@ -256,3 +256,26 @@ export function newReviewEmail(data: NewReviewEmailData): { subject: string; htm
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Student university-email verification code
+// ---------------------------------------------------------------------------
+
+export function verificationOtpEmail(code: string, expiryMinutes: number): { subject: string; html: string } {
+  const subject = `${code} is your Studeals verification code`;
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Studeals</title></head>
+<body style="margin:0;padding:32px 16px;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;">
+    <tr><td style="padding:32px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:20px;font-weight:900;color:#4f46e5;">Studeals</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#374151;">Enter this code to verify your university email:</p>
+      <p style="margin:0 0 24px;font-size:36px;font-weight:800;letter-spacing:8px;color:#111827;">${code}</p>
+      <p style="margin:0;font-size:13px;color:#6b7280;">The code expires in ${expiryMinutes} minutes. If you didn't request it, you can ignore this email.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+  return { subject, html };
+}

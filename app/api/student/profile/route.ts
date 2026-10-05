@@ -29,11 +29,16 @@ export async function GET() {
     .eq('id', user.id)
     .maybeSingle();
 
-  const { data: studentProfile } = await admin
+  const { data: studentProfileRow } = await admin
     .from('student_profiles')
     .select('*')
     .eq('user_id', user.id)
     .maybeSingle();
+
+  // Never return internal verification state (OTP hash, admin notes, ID document path).
+  const studentProfile = studentProfileRow
+    ? (({ verification_notes, verification_document_url, verified_by, ...rest }) => rest)(studentProfileRow)
+    : null;
 
   const share_with_vendors = user.user_metadata?.share_with_vendors !== false;
 
