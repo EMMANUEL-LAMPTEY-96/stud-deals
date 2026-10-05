@@ -25,7 +25,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import type { PlanTier, PlanStatus } from '@/lib/utils/plan-tier';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-  apiVersion: '2025-04-30.basil',
+  apiVersion: '2025-02-24.acacia',
 });
 
 // Map Stripe subscription status → our plan_status
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.CheckoutSession;
+        const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode === 'subscription' && session.subscription) {
           const sub = await stripe.subscriptions.retrieve(
             session.subscription as string

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     .from('redemptions')
     .select('id, status, created_at, offer_id, student_id')
     .eq('vendor_id', session.vendorId)
-    .in('status', REWARD_STATUSES as unknown as string[])
+    .in('status', REWARD_STATUSES)
     .is('metadata->reward_claimed_at', null)
     .order('created_at', { ascending: false })
     .limit(20);

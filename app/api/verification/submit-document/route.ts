@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import type { TablesUpdate } from '@/lib/types/database.types';
 import { checkRateLimit, markVerificationSuccess, rateLimitResponse } from '@/lib/utils/rate-limit';
 import { safeLog } from '@/lib/utils/safe-logger';
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     const documentUrl = signedUrlData?.signedUrl ?? storagePath; // fallback to path
 
     // ── Update student_profiles ───────────────────────────────────────────────
-    const updatePayload: Record<string, unknown> = {
+    const updatePayload: TablesUpdate<'student_profiles'> = {
       verification_status: 'pending_review',
       verification_method: 'id_upload',
       verification_document_url: storagePath, // store the path, not the signed URL

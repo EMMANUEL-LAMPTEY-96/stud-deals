@@ -109,7 +109,7 @@ export async function GET(req: NextRequest) {
     // Fetch profiles (name + email) only for students who consented to sharing
     const userIds = [...new Set(
       (studentProfiles ?? [])
-        .filter((sp: any) => sp?.share_with_vendors === true)
+        .filter(sp => sp?.share_with_vendors === true)
         .map(sp => sp?.user_id)
         .filter(Boolean)
     )] as string[];
@@ -159,12 +159,11 @@ export async function GET(req: NextRequest) {
       if (!sid) continue;
 
       const sp = spMap.get(sid);
-      const consented = (sp as any)?.share_with_vendors === true;
+      const consented = sp?.share_with_vendors === true;
       const uid = consented ? (sp?.user_id ?? '') : '';
       const profile = consented ? profileMap.get(uid) : undefined;
       const rawEmail = consented ? (emailMap.get(uid) ?? null) : null;
       const maskedEmail = rawEmail ? maskEmail(rawEmail) : null;
-      // @ts-ignore
       const institutionName = consented ? (sp?.institutions?.name ?? null) : null;
 
       const isStamp = row.status === 'stamp';

@@ -8,6 +8,10 @@ import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { Constants, type Enums } from '@/lib/types/database.types';
+
+const OFFER_CATEGORIES: readonly string[] = Constants.public.Enums.offer_category;
+const isOfferCategory = (c: string): c is Enums<'offer_category'> => OFFER_CATEGORIES.includes(c);
 
 export async function GET(request: NextRequest) {
   // Require authentication
@@ -47,6 +51,11 @@ export async function GET(request: NextRequest) {
     .limit(60);
 
   if (category && category !== 'all') {
+    // Unknown category: previously PostgREST rejected the enum cast (500).
+    // Return an empty list instead of an error.
+    if (!isOfferCategory(category)) {
+      return NextResponse.json({ offers: [] });
+    }
     query = query.eq('category', category);
   }
 

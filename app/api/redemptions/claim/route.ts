@@ -29,7 +29,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { generateVoucherCode, computeVoucherExpiry, buildQrPayload } from '@/lib/utils/voucher';
 import { generateStudentVoucherQr } from '@/lib/utils/qr-code';
-import type { ClaimOfferRequest, ClaimOfferResponse } from '@/lib/types/database.types';
+import type { ClaimOfferRequest, ClaimOfferResponse, TablesInsert } from '@/lib/types/database.types';
+import { randomBytes } from 'crypto';
 import { ClaimSchema, validationErrorResponse } from '@/lib/utils/validation';
 
 // Retry up to 3 times on code collision before giving up
@@ -305,6 +306,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to generate voucher. Please try again.' }, { status: 500 });
       }
 
+      if (!newRedemption) {
+        safeLog.error('[claim] Insert returned no row');
+        return NextResponse.json({ error: 'Failed to generate voucher. Please try again.' }, { status: 500 });
+      }
+
       redemptionCode = newRedemption.redemption_code;
 
       // ── 14. Fire-and-forget: Referral reward check ────────────────────
@@ -358,40 +364,27 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', referral.id);
 
+          // redemption_code is NOT NULL with no default — each bonus row needs one.
+          const referralBonusRow = (studentId: string): TablesInsert<'redemptions'> => ({
+            student_id:      studentId,
+            vendor_id:       vendorId,
+            offer_id:        offer_id,
+            status:          'referral_bonus',
+            redemption_code: `REF-${randomBytes(12).toString('hex').toUpperCase()}`,
+            claimed_at:      now,
+            confirmed_at:    now,
+          });
+
           // ── Grant 2 bonus stamps to the referred student ──────────────
           await admin.from('redemptions').insert([
-            {
-              student_id:   studentProfile.id,
-              vendor_id:    vendorId,
-              offer_id:     offer_id,
-              status:       'referral_bonus',
-              confirmed_at: now,
-            },
-            {
-              student_id:   studentProfile.id,
-              vendor_id:    vendorId,
-              offer_id:     offer_id,
-              status:       'referral_bonus',
-              confirmed_at: now,
-            },
+            referralBonusRow(studentProfile.id),
+            referralBonusRow(studentProfile.id),
           ]);
 
           // ── Grant 2 bonus stamps to the referrer ─────────────────────
           await admin.from('redemptions').insert([
-            {
-              student_id:   referral.referrer_id,
-              vendor_id:    vendorId,
-              offer_id:     offer_id,
-              status:       'referral_bonus',
-              confirmed_at: now,
-            },
-            {
-              student_id:   referral.referrer_id,
-              vendor_id:    vendorId,
-              offer_id:     offer_id,
-              status:       'referral_bonus',
-              confirmed_at: now,
-            },
+            referralBonusRow(referral.referrer_id),
+            referralBonusRow(referral.referrer_id),
           ]);
 
           // ── In-app notifications for both parties ─────────────────────
@@ -401,7 +394,7 @@ export async function POST(request: NextRequest) {
             .eq('id', referral.referrer_id)
             .maybeSingle();
 
-          const notifications: object[] = [
+          const notifications: TablesInsert<'notifications'>[] = [
             {
               user_id: user.id,
               type:    'referral_reward',

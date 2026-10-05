@@ -46,8 +46,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Already verified.' }, { status: 400 });
   }
 
-  const stored = parseStoredOtp(sp.verification_notes);
-  if (!stored) {
+  // Pending OTP state lives in verification_notes; it is also the optimistic-lock
+  // value for the updates below.
+  const prevNotes = sp.verification_notes;
+  const stored = parseStoredOtp(prevNotes);
+  if (!stored || prevNotes === null) {
     return NextResponse.json({ error: 'No verification in progress. Please request a new code.' }, { status: 400 });
   }
 
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
       .from('student_profiles')
       .update({ verification_notes: JSON.stringify({ ...stored, otp_attempts: stored.otp_attempts + 1 }) })
       .eq('id', sp.id)
-      .eq('verification_notes', sp.verification_notes)
+      .eq('verification_notes', prevNotes)
       .select('id');
 
     if (!bumped?.length) {
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
       institution_name_manual: null,
     })
     .eq('id', sp.id)
-    .eq('verification_notes', sp.verification_notes)
+    .eq('verification_notes', prevNotes)
     .select('id');
 
   if (updateError) {

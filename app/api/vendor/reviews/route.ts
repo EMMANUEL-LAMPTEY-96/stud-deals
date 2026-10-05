@@ -13,7 +13,7 @@ const ReviewReplySchema = z.object({
 });
 
 export async function GET() {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -36,7 +36,7 @@ export async function GET() {
                     id, rating, title, body,
                     vendor_reply, vendor_replied_at,
                     is_visible, created_at,
-                    student_profiles ( id, full_name, avatar_url )
+                    student_profiles ( id, profile:profiles!student_profiles_user_id_fkey ( first_name, display_name ) )
                   `)
       .eq('vendor_id', vendor.id)
       .eq('is_visible', true)
@@ -55,7 +55,7 @@ export async function GET() {
   }
 
 export async function PATCH(req: NextRequest) {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {

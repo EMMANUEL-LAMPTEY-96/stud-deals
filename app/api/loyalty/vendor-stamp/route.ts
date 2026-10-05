@@ -28,6 +28,7 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import type { TablesInsert } from '@/lib/types/database.types';
 import { randomBytes } from 'crypto';
 import {
   parseLoyaltyConfig,
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
 
   if (recentStamp) {
     const nextAllowed = new Date(
-      new Date(recentStamp.confirmed_at).getTime() +
+      new Date(recentStamp.confirmed_at ?? Date.now()).getTime() +
         STAMP_COOLDOWN_HOURS * 60 * 60 * 1000
     );
     const hoursLeft = Math.ceil(
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
   // ── 9. Stamp expiry: determine effective cycle-position ───────────────────
   let effectiveStampCount = allStamps.length;
 
-  if (loyaltyConfig?.stamp_expiry_days && allStamps.length > 0) {
+  if (loyaltyConfig?.stamp_expiry_days && allStamps.length > 0 && allStamps[0].confirmed_at) {
     const mostRecentDate = new Date(allStamps[0].confirmed_at);
     const daysSince =
       (Date.now() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -288,7 +289,7 @@ export async function POST(request: NextRequest) {
   const secureStampCode = (prefix: string) =>
     `${prefix}-${randomBytes(12).toString('hex').toUpperCase()}`;
 
-  const insertRows: object[] = [
+  const insertRows: TablesInsert<'redemptions'>[] = [
     {
       student_id:      studentProfile.id,
       vendor_id:       vendorProfile.id,
@@ -342,7 +343,7 @@ export async function POST(request: NextRequest) {
 
   const { error: insertError } = await admin
     .from('redemptions')
-    .insert(insertRows as never[]);
+    .insert(insertRows);
 
   if (insertError) {
     safeLog.error('vendor-stamp insert error:', insertError);
@@ -353,7 +354,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 15. Notifications (fire-and-forget) ───────────────────────────────────
-  const notifRows: object[] = [];
+  const notifRows: TablesInsert<'notifications'>[] = [];
   const vendorName = vendorProfile.business_name ?? 'the venue';
   const almostThere = cyclePositionAfter === requiredVisits - 1 && !rewardTriggered;
 
@@ -396,7 +397,7 @@ export async function POST(request: NextRequest) {
   if (notifRows.length > 0) {
     admin
       .from('notifications')
-      .insert(notifRows as never[])
+      .insert(notifRows)
       .then(({ error: e }) => {
         if (e) safeLog.error('vendor-stamp notification error:', e.message);
       });

@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         offer:offers (id, title, discount_label),
         student:student_profiles (
           id,
-          user:profiles (first_name, last_name)
+          user:profiles!student_profiles_user_id_fkey (first_name, last_name)
         )
       `)
       .eq('redemption_code', normalisedCode)
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     // ── 9. Build privacy-safe student display name ────────────────────────
     // We show "Emmanuel A." — enough for personal service, not full PII
-    const studentUser = (redemption.student as { user: { first_name: string | null; last_name: string | null } | null } | null)?.user;
+    const studentUser = redemption.student?.user ?? null;
     const firstName = studentUser?.first_name ?? 'Student';
     const lastInitial = studentUser?.last_name ? `${studentUser.last_name[0].toUpperCase()}.` : '';
     const displayName = `${firstName} ${lastInitial}`.trim();
