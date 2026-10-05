@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ??
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://studeals.vercel.app';
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://studeals.vercel.app');
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
