@@ -22,9 +22,18 @@
 
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const SECRET =
-  process.env.STAMP_QR_SECRET ??
-  'studeals-dev-stamp-secret-change-in-prod';
+/**
+ * STAMP_QR_SECRET is required in production. The dev fallback only exists so
+ * local development works without extra env setup.
+ */
+function stampSecret(): string {
+  const secret = process.env.STAMP_QR_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('STAMP_QR_SECRET must be set in production');
+  }
+  return 'studeals-dev-stamp-secret';
+}
 
 /** Validity window in seconds. Student QR refreshes every 60s; this gives 30s slack. */
 export const STAMP_QR_TTL_SECONDS = 90;
@@ -45,7 +54,7 @@ export function generateStampPayload(studentProfileId: string): {
 } {
   const expiresAt = Math.floor(Date.now() / 1000) + STAMP_QR_TTL_SECONDS;
   const message = `${studentProfileId}:${expiresAt}`;
-  const hmac12 = createHmac('sha256', SECRET)
+  const hmac12 = createHmac('sha256', stampSecret())
     .update(message)
     .digest('hex')
     .slice(0, 12)
@@ -111,7 +120,7 @@ export function validateStampPayload(raw: string): StampValidationResult {
 
   // ── 3. HMAC verification (constant-time) ──────────────────────────────────
   const message = `${studentProfileId}:${expiresAt}`;
-  const expectedHmac = createHmac('sha256', SECRET)
+  const expectedHmac = createHmac('sha256', stampSecret())
     .update(message)
     .digest('hex')
     .slice(0, 12)
@@ -138,4 +147,44 @@ export function validateStampPayload(raw: string): StampValidationResult {
   }
 
   return { valid: true, studentProfileId };
+}
+
+// ---------------------------------------------------------------------------
+// Vendor QR (student-scans-vendor flow)
+//
+// The vendor's on-screen QR links to /stamp/{vendorId}?t={token}, where
+//   token = {window}.{hmac16}
+//   window = floor(unix ms / 5 min)
+//   hmac16 = first 16 hex chars of HMAC-SHA256(SECRET, "vendor-qr:{vendorId}:{window}")
+// Tokens are minted server-side (/api/vendor/stamp-qr) so they can't be
+// predicted from the clock, and are accepted for the current window ±1.
+// ---------------------------------------------------------------------------
+
+export const VENDOR_QR_WINDOW_MS = 5 * 60 * 1000;
+
+function vendorQrSig(vendorId: string, window: number): string {
+  return createHmac('sha256', stampSecret())
+    .update(`vendor-qr:${vendorId.toLowerCase()}:${window}`)
+    .digest('hex')
+    .slice(0, 16);
+}
+
+export function generateVendorQrToken(vendorId: string): { token: string; refreshInMs: number } {
+  const now = Date.now();
+  const window = Math.floor(now / VENDOR_QR_WINDOW_MS);
+  return {
+    token: `${window}.${vendorQrSig(vendorId, window)}`,
+    refreshInMs: VENDOR_QR_WINDOW_MS - (now % VENDOR_QR_WINDOW_MS),
+  };
+}
+
+export function validateVendorQrToken(vendorId: string, token: string): boolean {
+  const [windowStr, sig] = String(token).split('.');
+  const window = Number(windowStr);
+  if (!Number.isInteger(window) || !sig) return false;
+  const current = Math.floor(Date.now() / VENDOR_QR_WINDOW_MS);
+  if (Math.abs(current - window) > 1) return false;
+  const expected = Buffer.from(vendorQrSig(vendorId, window));
+  const provided = Buffer.from(sig.toLowerCase());
+  return expected.length === provided.length && timingSafeEqual(expected, provided);
 }
