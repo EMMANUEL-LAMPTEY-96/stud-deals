@@ -178,7 +178,8 @@ export async function POST(request: NextRequest) {
         : `Your application needs attention. ${notes ?? 'Please review your business details and resubmit.'}`,
       type: action === 'approve' ? 'vendor_approved' : 'vendor_rejected',
       is_read: false,
-      data: JSON.stringify({ vendor_profile_id, action }),
+      related_entity_type: 'vendor',
+      related_entity_id: vendor_profile_id,
     });
   }
 

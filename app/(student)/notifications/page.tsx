@@ -18,8 +18,8 @@
 // Data source: notifications table
 //   - type: 'promotion' | 'reward' | 'stamp_milestone' | 'system'
 //   - is_read: boolean
-//   - vendor_id: FK to vendor_profiles (optional)
-//   - offer_id: FK to offers (optional)
+//   - body: text
+//   - related_entity_type / related_entity_id: optional link ('offer', 'vendor', ...)
 // =============================================================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -197,12 +197,8 @@ export default function NotificationsPage() {
       const { data, error: fetchErr } = await supabase
         .from('notifications')
         .select(`
-          id, type, title, message, is_read, created_at,
-          vendor_id, offer_id,
-          vendor_profiles (
-            business_name,
-            logo_url
-          )
+          id, type, title, body, is_read, created_at,
+          related_entity_type, related_entity_id
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -217,13 +213,11 @@ export default function NotificationsPage() {
         id: n.id,
         type: n.type as NotifType,
         title: n.title,
-        message: n.message,
+        message: n.body,
         is_read: n.is_read,
         created_at: n.created_at,
-        vendor_id: n.vendor_id,
-        offer_id: n.offer_id,
-        vendor_name: n.vendor_profiles?.business_name ?? undefined,
-        vendor_logo: n.vendor_profiles?.logo_url ?? null,
+        vendor_id: n.related_entity_type === 'vendor' ? n.related_entity_id : null,
+        offer_id: n.related_entity_type === 'offer' ? n.related_entity_id : null,
       }));
 
       setHasMore(rows.length === PAGE_SIZE);

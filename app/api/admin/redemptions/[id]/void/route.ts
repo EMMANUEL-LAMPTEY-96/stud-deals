@@ -66,8 +66,18 @@ export async function PATCH(
       .eq('id', redemption.vendor_id)
       .maybeSingle();
 
+    // redemptions.student_id is student_profiles.id; notifications need the auth user id
+    const { data: sp } = await admin
+      .from('student_profiles')
+      .select('user_id')
+      .eq('id', redemption.student_id)
+      .maybeSingle();
+    if (!sp?.user_id) throw new Error('student profile not found');
+
     await admin.from('notifications').insert({
-      user_id: redemption.student_id,
+      user_id: sp.user_id,
+      related_entity_type: 'redemption',
+      related_entity_id: redemptionId,
       title:   'Redemption cancelled by platform',
       body:    `A redemption at ${vp?.business_name ?? 'a vendor'} was cancelled. Reason: ${reason}`,
       type:    'redemption_voided',
