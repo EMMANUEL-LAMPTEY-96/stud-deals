@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { findInstitutionForEmail } from '@/lib/utils/institution-domain';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -37,9 +38,14 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .maybeSingle();
 
+  // Role comes from sign-up metadata, which the user controls — only ever
+  // accept 'student' or 'vendor' from it (never 'admin').
+  const metaRole = user.user_metadata?.role;
+  const signupRole: 'student' | 'vendor' = metaRole === 'vendor' ? 'vendor' : 'student';
+
   if (!existingProfile) {
     const meta = user.user_metadata;
-    const userRole = (meta?.role as string) ?? 'student';
+    const userRole = signupRole;
 
     // Split full_name into first/last — matches actual profiles schema
     const fullName = (meta?.full_name as string) ?? '';
@@ -56,32 +62,22 @@ export async function GET(request: Request) {
       display_name: fullName || (user.email?.split('@')[0] ?? ''),
     });
 
-    // 2. Create student sub-profile
+    // 2. Create student sub-profile. The sign-up email has just been confirmed,
+    //    so auto-verify only if its domain belongs to a known Hungarian
+    //    institution (exact domain or subdomain — no substring matching).
     if (userRole === 'student') {
-      const UNI_DOMAINS = [
-        // Hungarian university domains
-        '.hu',
-        // International
-        '.ac.uk', '.edu', '.edu.au', '.edu.ca', '.ac.nz', '.ac.za',
-        '.edu.ng', '.ac.gh', '.edu.gh', '.ac.in', '.edu.sg', '.ac.jp', '.edu.hk',
-      ];
-      const email = user.email ?? '';
-      const domain = email.toLowerCase().split('@')[1] ?? '';
-      // .hu check: must look like a university (has edu/stud/hallgato prefix OR known patterns)
-      const isHuniEmail = domain.endsWith('.hu') && (
-        domain.includes('edu.') || domain.includes('stud.') ||
-        domain.includes('hallgato.') || domain.includes('student.') ||
-        domain.includes('caesar.') || domain.includes('unimail.')
-      );
-      const isOtherUniEmail = UNI_DOMAINS.filter(d => d !== '.hu').some(d => email.toLowerCase().endsWith(d));
-      const isUniEmail = isHuniEmail || isOtherUniEmail;
+      const email = (user.email ?? '').toLowerCase();
+      const institution = email && user.email_confirmed_at
+        ? await findInstitutionForEmail(admin, email)
+        : null;
 
       await admin.from('student_profiles').insert({
         user_id: user.id,
-        verification_status: isUniEmail ? 'verified' : 'unverified',
-        verification_method: isUniEmail ? 'edu_email' : null,
-        verified_at: isUniEmail ? new Date().toISOString() : null,
-        student_email: isUniEmail ? email : null,
+        verification_status: institution ? 'verified' : 'unverified',
+        verification_method: institution ? 'edu_email' : null,
+        verified_at: institution ? new Date().toISOString() : null,
+        student_email: institution ? email : null,
+        institution_id: institution?.id ?? null,
       });
     }
     // vendor_profiles has required city — vendor fills this in profile settings
@@ -92,7 +88,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/reset-password`);
   }
 
-  const role = existingProfile?.role ?? (user.user_metadata?.role as string) ?? 'student';
+  const role = existingProfile?.role ?? signupRole;
   const dashboardPath = role === 'vendor' ? '/vendor' : role === 'admin' ? '/admin' : '/dashboard';
 
   return NextResponse.redirect(`${origin}${dashboardPath}`);
