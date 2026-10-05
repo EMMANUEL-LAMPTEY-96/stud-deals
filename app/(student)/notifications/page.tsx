@@ -162,7 +162,7 @@ function NotifItem({
 
   if (notif.offer_id) {
     return (
-      <Link href={`/offers/${notif.offer_id}`} className="block">
+      <Link href={`/offer/${notif.offer_id}`} className="block">
         {inner}
       </Link>
     );
