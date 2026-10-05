@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getStaffSession } from '@/lib/utils/staff-session';
+import { REWARD_STATUSES, markRewardHandedOver } from '@/lib/utils/reward-claim';
 
 export async function GET(request: NextRequest) {
   const session = await getStaffSession(request);
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
     .from('redemptions')
     .select('id, status, created_at, offer_id, student_id')
     .eq('vendor_id', session.vendorId)
-    .in('status', ['reward_earned', 'tier_reward'])
+    .in('status', REWARD_STATUSES as unknown as string[])
+    .is('metadata->reward_claimed_at', null)
     .order('created_at', { ascending: false })
     .limit(20);
   const reds = (redsRaw ?? []) as { id: string; status: string; created_at: string; offer_id: string; student_id: string }[];
@@ -76,16 +78,7 @@ export async function POST(request: NextRequest) {
   }
   if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from('redemptions')
-    .update({ status: 'confirmed', claimed_at: new Date().toISOString() } as any)
-    .eq('id', body.id)
-    .eq('vendor_id', session.vendorId)
-    .in('status', ['reward_earned', 'tier_reward'])
-    .select('id');
-
-  if (error) return NextResponse.json({ error: 'Could not claim reward.' }, { status: 500 });
-  if (!data?.length) return NextResponse.json({ error: 'Reward not found or already claimed.' }, { status: 404 });
+  const result = await markRewardHandedOver(createAdminClient(), session.vendorId, body.id, { staff_id: session.staffId });
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ success: true });
 }
