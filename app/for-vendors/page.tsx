@@ -7,7 +7,7 @@
 //
 // Sections:
 //   1. Hero
-//   2. Social proof strip
+//   2. Social proof strip (live counts; a figure is hidden when it is 0)
 //   3. How it works (3 steps)
 //   4. Feature highlights
 //   5. Pricing plans (HUF)
@@ -17,6 +17,7 @@
 
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { createAdminClient } from '@/lib/supabase/server';
 import {
   QrCode, BarChart3, Zap, Users, Star, Shield,
   CheckCircle, ChevronDown, ArrowRight, Coffee,
@@ -198,7 +199,46 @@ function FAQ({ q, a }: { q: string; a: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ForVendorsPage() {
+// Live platform figures, refreshed at most every 5 minutes.
+export const revalidate = 300;
+
+interface PlatformStats {
+  students: number | null;
+  deals: number | null;
+  universities: number | null;
+}
+
+async function getPlatformStats(): Promise<PlatformStats> {
+  try {
+    const admin = createAdminClient();
+    const [students, deals, universities] = await Promise.all([
+      admin.from('student_profiles').select('id', { count: 'exact', head: true }).eq('verification_status', 'verified'),
+      admin.from('offers').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      admin.from('institutions').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('country', 'Hungary'),
+    ]);
+    return {
+      students: students.error ? null : students.count ?? 0,
+      deals: deals.error ? null : deals.count ?? 0,
+      universities: universities.error ? null : universities.count ?? 0,
+    };
+  } catch {
+    return { students: null, deals: null, universities: null };
+  }
+}
+
+function fmtCount(n: number | null): string | null {
+  return n && n > 0 ? n.toLocaleString('hu-HU') : null;
+}
+
+export default async function ForVendorsPage() {
+  const stats = await getPlatformStats();
+  const proofStats = [
+    { value: fmtCount(stats.students),     label: 'Verified students' },
+    { value: fmtCount(stats.deals),        label: 'Active deals' },
+    { value: fmtCount(stats.universities), label: 'Universities covered' },
+    { value: '0%',                         label: 'Commission charged' },
+  ].filter((s): s is { value: string; label: string } => s.value !== null);
+
   return (
     <div className="min-h-screen bg-white">
 
@@ -277,13 +317,8 @@ export default function ForVendorsPage() {
       {/* ── Social proof strip ── */}
       <section className="bg-gray-50 border-y border-gray-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
-            {[
-              { value: '47,000+', label: 'Verified students' },
-              { value: '2,400+',  label: 'Active deals' },
-              { value: '18',      label: 'Universities covered' },
-              { value: '0%',      label: 'Commission charged' },
-            ].map(stat => (
+          <div className={`grid grid-cols-2 gap-6 text-center ${proofStats.length >= 4 ? 'sm:grid-cols-4' : proofStats.length === 3 ? 'sm:grid-cols-3' : ''}`}>
+            {proofStats.map(stat => (
               <div key={stat.label}>
                 <p className="text-2xl sm:text-3xl font-black text-vendor-700">{stat.value}</p>
                 <p className="text-xs text-gray-500 font-medium mt-0.5">{stat.label}</p>
@@ -416,29 +451,6 @@ export default function ForVendorsPage() {
         <p className="text-center text-xs text-gray-400 mt-6">
           All prices exclude 27% Hungarian VAT (ÁFA). Billed monthly. Cancel anytime.
         </p>
-      </section>
-
-      {/* ── Testimonial placeholder ── */}
-      <section className="bg-vendor-700 py-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center gap-1 mb-5">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={20} className="fill-amber-400 text-amber-400" />
-            ))}
-          </div>
-          <blockquote className="text-white text-xl sm:text-2xl font-black leading-snug mb-6">
-            &ldquo;Since joining Studeals, Tuesday lunch covers are up 40%. The flash deal tool fills every slow shift.&rdquo;
-          </blockquote>
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold text-white">
-              KM
-            </div>
-            <div className="text-left">
-              <p className="text-white font-semibold text-sm">Kővári Máté</p>
-              <p className="text-white/60 text-xs">Owner, Kávézó az Egyetemnél · Budapest</p>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* ── FAQ ── */}
