@@ -24,6 +24,7 @@ import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
+import { parseLoyaltyConfig } from '@/lib/utils/loyalty';
 import {
   Stamp, Trophy, Coffee, MapPin, ArrowRight,
   Loader2, AlertCircle, Sparkles, Star, Gift,
@@ -49,6 +50,10 @@ interface LoyaltyCard {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+// Every row with one of these statuses is one stamp (matches /api/loyalty/stamp,
+// which records the reward-triggering stamp as 'reward_earned' / 'tier_reward').
+const STAMP_STATUSES: ReadonlySet<string> = new Set(['stamp', 'reward_earned', 'tier_reward']);
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -384,12 +389,11 @@ export default function LoyaltyPage() {
         }
 
         // Student profile
-        const { data: spRaw } = await supabase
+        const { data: sp } = await supabase
           .from('student_profiles')
           .select('id, verification_status')
-          .eq('user_id', user.id as string)
+          .eq('user_id', user.id)
           .maybeSingle();
-        const sp = (spRaw as unknown) as { id: string; verification_status: string } | null;
 
         if (cancelled) return;
 
@@ -415,7 +419,7 @@ export default function LoyaltyPage() {
               logo_url
             )
           `)
-          .eq('student_profile_id', studentProfileId)
+          .eq('student_id', studentProfileId)
           .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed'])
           .order('claimed_at', { ascending: false });
 
@@ -438,23 +442,37 @@ export default function LoyaltyPage() {
           return;
         }
 
-        // Fetch active punch card offers for those vendors
-        type LoyaltyOffer = { id: string; vendor_id: string; title: string; required_visits: number; reward_label: string; is_active: boolean };
+        // Fetch loyalty offers for those vendors. Loyalty settings live in
+        // offers.terms_and_conditions as a [[LOYALTY:{...}]] prefix.
+        type LoyaltyOffer = { id: string; vendor_id: string; title: string; required_visits: number; reward_label: string | null; is_active: boolean };
         const { data: offersRaw } = await supabase
           .from('offers')
-          .select('id, vendor_id, title, required_visits, reward_label, is_active')
+          .select('id, vendor_id, title, terms_and_conditions, status')
           .in('vendor_id', vendorIds)
-          .eq('offer_type', 'punch_card')
-          .order('is_active', { ascending: false })
           .order('created_at', { ascending: false });
-        const offers = (offersRaw as unknown) as LoyaltyOffer[] | null;
 
         if (cancelled) return;
 
+        const offers: LoyaltyOffer[] = [];
+        for (const o of offersRaw ?? []) {
+          const cfg = parseLoyaltyConfig(o.terms_and_conditions);
+          if (!cfg) continue;
+          offers.push({
+            id: o.id,
+            vendor_id: o.vendor_id,
+            title: o.title,
+            // Same default as /api/loyalty/stamp when required_visits is unset
+            required_visits: cfg.required_visits && cfg.required_visits > 0 ? cfg.required_visits : 5,
+            reward_label: cfg.reward_label ?? null,
+            is_active: o.status === 'active',
+          });
+        }
+
         // Map vendor → most relevant offer (prefer active)
         const offerByVendor = new Map<string, LoyaltyOffer>();
-        for (const o of offers ?? []) {
-          if (!offerByVendor.has(o.vendor_id) || o.is_active) {
+        for (const o of offers) {
+          const current = offerByVendor.get(o.vendor_id);
+          if (!current || (o.is_active && !current.is_active)) {
             offerByVendor.set(o.vendor_id, o);
           }
         }
@@ -462,8 +480,7 @@ export default function LoyaltyPage() {
         // Aggregate stamps per vendor
         interface VendorAgg {
           vendor_id: string;
-          // @ts-ignore
-          vendor_profile: any;
+          vendor_profile: { business_name: string | null; city: string | null; logo_url: string | null } | null;
           total_stamps: number;
           all_time_events: number;
           last_visited: string;
@@ -479,15 +496,14 @@ export default function LoyaltyPage() {
           if (!existing) {
             vendorAgg.set(vid, {
               vendor_id: vid,
-              // @ts-ignore
               vendor_profile: row.vendor_profiles,
-              total_stamps: row.status === 'stamp' ? 1 : 0,
+              total_stamps: STAMP_STATUSES.has(row.status) ? 1 : 0,
               all_time_events: 1,
               last_visited: row.claimed_at,
               events: [{ status: row.status, claimed_at: row.claimed_at }],
             });
           } else {
-            if (row.status === 'stamp') existing.total_stamps += 1;
+            if (STAMP_STATUSES.has(row.status)) existing.total_stamps += 1;
             existing.all_time_events += 1;
             existing.events.push({ status: row.status, claimed_at: row.claimed_at });
             if (new Date(row.claimed_at) > new Date(existing.last_visited)) {
@@ -508,7 +524,7 @@ export default function LoyaltyPage() {
           // Count stamps in current cycle
           // Cycle: every req stamps = 1 completed cycle
           const stamps = agg.events
-            .filter(e => e.status === 'stamp')
+            .filter(e => STAMP_STATUSES.has(e.status))
             .sort((a, b) => new Date(a.claimed_at).getTime() - new Date(b.claimed_at).getTime());
 
           const totalStamps = stamps.length;

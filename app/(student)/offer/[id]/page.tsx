@@ -18,7 +18,23 @@ import {
   Calendar, Users, Star, Coffee, ShoppingBag, Laptop,
   Dumbbell, Book, Shirt,
 } from 'lucide-react';
-import type { OfferWithVendor, ClaimOfferResponse } from '@/lib/types/database.types';
+import type { Offer, ClaimOfferResponse } from '@/lib/types/database.types';
+
+// Shape of the vendor_profiles_public embed selected below (view columns are nullable)
+interface OfferVendor {
+  id: string | null;
+  business_name: string | null;
+  city: string | null;
+  state: string | null;
+  address_line1: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  is_verified: boolean | null;
+  description: string | null;
+  business_type: string | null;
+  website_url: string | null;
+}
+type OfferDetail = Offer & { vendor: OfferVendor | null };
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
   food_drink:       { label: 'Food & Drink',    icon: <Coffee size={14} />,     color: 'text-amber-700',  bg: 'bg-amber-100' },
@@ -47,7 +63,7 @@ export default function OfferDetailPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [offer, setOffer]               = useState<OfferWithVendor | null>(null);
+  const [offer, setOffer]               = useState<OfferDetail | null>(null);
   const [loading, setLoading]           = useState(true);
   const [claiming, setClaiming]         = useState(false);
   const [claimError, setClaimError]     = useState('');
@@ -76,26 +92,27 @@ export default function OfferDetailPage() {
         .maybeSingle();
 
       if (!data) { router.push('/dashboard'); return; }
-      setOffer(data as unknown as OfferWithVendor);
+      setOffer(data);
 
       if (user) {
-        // Check saved status
-        const { data: savedRaw } = await supabase
-          .from('saved_offers')
-          .select('id')
-          .eq('user_id', user.id as string)
-          .eq('offer_id', id)
-          .maybeSingle();
-        setIsSaved(!!(savedRaw as unknown as { id: string } | null));
-
-        // Check verification status
-        const { data: spRaw } = await supabase
+        // Verification status + student_profiles.id (saved_offers is keyed on it)
+        const { data: sp } = await supabase
           .from('student_profiles')
-          .select('verification_status')
-          .eq('user_id', user.id as string)
+          .select('id, verification_status')
+          .eq('user_id', user.id)
           .maybeSingle();
-        const sp = (spRaw as unknown) as { verification_status: string } | null;
         setVerifyStatus(sp?.verification_status ?? 'unverified');
+
+        // Check saved status
+        if (sp) {
+          const { data: saved } = await supabase
+            .from('saved_offers')
+            .select('id')
+            .eq('student_id', sp.id)
+            .eq('offer_id', id)
+            .maybeSingle();
+          setIsSaved(!!saved);
+        }
       }
 
       setLoading(false);
@@ -104,12 +121,16 @@ export default function OfferDetailPage() {
 
   const handleSave = async () => {
     if (!isLoggedIn) { router.push('/sign-in'); return; }
-    const newState = !isSaved;
-    setIsSaved(newState);
-    if (newState) {
-      await supabase.from('saved_offers').insert({ offer_id: id });
-    } else {
-      await supabase.from('saved_offers').delete().eq('offer_id', id);
+    const previous = isSaved;
+    setIsSaved(!previous); // optimistic
+    try {
+      // Server toggles the bookmark for the caller's student profile
+      const res = await fetch(`/api/offers/${id}/save`, { method: 'POST' });
+      if (!res.ok) throw new Error('save failed');
+      const body: { saved?: boolean } = await res.json();
+      setIsSaved(!!body.saved);
+    } catch {
+      setIsSaved(previous);
     }
   };
 
@@ -151,7 +172,7 @@ export default function OfferDetailPage() {
   if (!offer) return null;
 
   const cat = CATEGORY_CONFIG[offer.category] ?? CATEGORY_CONFIG.other;
-  const vendor = offer.vendor as OfferWithVendor['vendor'];
+  const vendor = offer.vendor;
   const isExpired = offer.expires_at ? new Date(offer.expires_at) < new Date() : false;
   const isActive  = offer.status === 'active' && !isExpired;
 
@@ -202,7 +223,7 @@ export default function OfferDetailPage() {
             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50">
               <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {vendor?.logo_url
-                  ? <img src={vendor.logo_url} alt={vendor?.business_name} className="w-full h-full object-cover" />
+                  ? <img src={vendor.logo_url} alt={vendor?.business_name ?? ''} className="w-full h-full object-cover" />
                   : <Store size={22} className="text-purple-600" />
                 }
               </div>

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 'use client';
 
 /**
@@ -88,7 +86,7 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
 
       // Only count fixed-amount redemptions for HUF savings (percentage = no known bill amount)
       function hufValue(r: typeof all[number]): number {
-        const dtype = (r.offers as any)?.discount_type ?? '';
+        const dtype = r.offers?.discount_type ?? '';
         if (dtype === 'percentage') return 0; // can't compute without bill amount
         return r.discount_value_applied ?? 0;
       }
@@ -118,7 +116,7 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
       if (institutionId && semesterHuf > 0) {
         const { data: peers } = await supabase
           .from('student_profiles')
-          .select('user_id')
+          .select('id')
           .eq('institution_id', institutionId)
           .eq('verification_status', 'verified');
 
@@ -128,7 +126,8 @@ export default function SavingsHero({ studentProfileId, institutionId, showEUR =
             .from('redemptions')
             .select('student_id', { count: 'exact', head: true })
             .eq('status', 'confirmed')
-            .in('student_id', peers.map(p => p.user_id).filter(Boolean));
+            // redemptions.student_id is student_profiles.id (not the auth user id)
+            .in('student_id', peers.map(p => p.id));
 
           // Our rank: redemptionCount vs total
           const total = lowerCount ?? 0;

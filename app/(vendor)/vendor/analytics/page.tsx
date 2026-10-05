@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
 import type { VendorPlan } from '@/lib/utils/plan-tier';
+import { parseLoyaltyConfig } from '@/lib/utils/loyalty';
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -32,12 +33,9 @@ function fmtP(n: number) { return `${n.toFixed(1)}%`; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function parseLoyaltyConfig(terms: string | null): any | null {
-  if (!terms) return null;
-  const m = terms.match(/^\[\[LOYALTY:({.*?})\]\]/s);
-  if (!m) return null;
-  try { return JSON.parse(m[1]); } catch (_) { return null; }
-}
+// Every row with one of these statuses is one loyalty stamp (matches /api/loyalty/stamp,
+// which records the reward-triggering stamp as 'reward_earned' / 'tier_reward').
+const STAMP_STATUSES: ReadonlySet<string> = new Set(['stamp', 'reward_earned', 'tier_reward']);
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -313,7 +311,8 @@ export default function VendorAnalyticsPage() {
     // Punch card funnel
     const punchOffers = offerRows.filter(o => {
       const cfg = parseLoyaltyConfig(o.terms_and_conditions);
-      return cfg && (cfg.mode === 'punch_card' || cfg.mode === 'tiered');
+      // There is no 'tiered' mode — tiers are an option on a config
+      return !!cfg && (cfg.mode === 'punch_card' || (cfg.tiers?.length ?? 0) > 0);
     });
 
     if (punchOffers.length > 0) {
@@ -321,12 +320,12 @@ export default function VendorAnalyticsPage() {
 
       for (const offer of punchOffers) {
         const cfg = parseLoyaltyConfig(offer.terms_and_conditions);
-        const req: number = cfg?.required_visits ?? 10;
+        const req: number = cfg?.required_visits && cfg.required_visits > 0 ? cfg.required_visits : 10;
 
         // Fetch all stamp-type redemptions for this offer
         const { data: stampRows } = await supabase
           .from('redemptions')
-          .select('student_profile_id, status, redemption_code, claimed_at')
+          .select('student_id, status, redemption_code, claimed_at')
           .eq('vendor_id', vid)
           .eq('offer_id', offer.id)
           .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed']);
@@ -337,15 +336,15 @@ export default function VendorAnalyticsPage() {
         const rewardEarned = new Set(
           rows
             .filter(r => ['reward_earned', 'confirmed'].includes(r.status))
-            .map(r => r.student_profile_id)
+            .map(r => r.student_id)
         );
 
-        // Count stamps per student (only 'stamp' status rows)
+        // Count stamps per student (every stamp-type row is one stamp)
         const stampMap: Record<string, number> = {};
         rows
-          .filter(r => r.status === 'stamp')
+          .filter(r => STAMP_STATUSES.has(r.status))
           .forEach(r => {
-            stampMap[r.student_profile_id] = (stampMap[r.student_profile_id] ?? 0) + 1;
+            stampMap[r.student_id] = (stampMap[r.student_id] ?? 0) + 1;
           });
 
         const totalStudents = Object.keys(stampMap).length;
@@ -421,9 +420,12 @@ export default function VendorAnalyticsPage() {
       // Only set benchmark when there are real peers to compare against
       if (peerCount >= 2) {
         const avgCvr =
-          peerRows.reduce((s, p) => s + (p.total_lifetime_views > 0 ? (p.total_lifetime_redemptions / p.total_lifetime_views) * 100 : 0), 0) / peerCount;
+          peerRows.reduce((s, p) => {
+            const views = p.total_lifetime_views ?? 0;
+            return s + (views > 0 ? ((p.total_lifetime_redemptions ?? 0) / views) * 100 : 0);
+          }, 0) / peerCount;
         const avgRedemptions =
-          peerRows.reduce((s, p) => s + p.total_lifetime_redemptions, 0) / peerCount;
+          peerRows.reduce((s, p) => s + (p.total_lifetime_redemptions ?? 0), 0) / peerCount;
 
         const thisCvr = (thisVP.total_lifetime_views ?? 0) > 0
           ? ((thisVP.total_lifetime_redemptions ?? 0) / (thisVP.total_lifetime_views ?? 1)) * 100
@@ -439,13 +441,13 @@ export default function VendorAnalyticsPage() {
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
     const { data: monthReds } = await supabase
       .from('redemptions')
-      .select('student_profile_id, status, claimed_at, offer_id')
+      .select('student_id, status, claimed_at, offer_id')
       .eq('vendor_id', vid)
       .gte('claimed_at', monthStart.toISOString());
 
     const mRows = monthReds ?? [];
-    const newMemberSet = new Set(mRows.map(r => r.student_profile_id));
-    const mStamps = mRows.filter(r => r.status === 'stamp').length;
+    const newMemberSet = new Set(mRows.map(r => r.student_id));
+    const mStamps = mRows.filter(r => STAMP_STATUSES.has(r.status)).length;
     const mRewards = mRows.filter(r => r.status === 'confirmed').length;
     const mDayCounts: Record<number,number> = {};
     mRows.forEach(r => { const d = new Date(r.claimed_at).getDay(); mDayCounts[d] = (mDayCounts[d]??0)+1; });
@@ -467,7 +469,7 @@ export default function VendorAnalyticsPage() {
     try {
       const { data: reds } = await supabase
         .from('redemptions')
-        .select('claimed_at, status, student_profile_id, offer_id')
+        .select('claimed_at, status, student_id, offer_id')
         .eq('vendor_id', vendorId)
         .order('claimed_at', { ascending: false });
 
@@ -487,7 +489,7 @@ export default function VendorAnalyticsPage() {
             dt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' }),
             r.status,
             `"${(offerMap[r.offer_id] ?? 'Unknown offer').replace(/"/g,'""')}"`,
-            r.student_profile_id?.slice(0,8) ?? '–',
+            r.student_id.slice(0,8),
           ].join(',');
         }),
       ].join('\n');

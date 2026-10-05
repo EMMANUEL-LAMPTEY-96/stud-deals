@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 'use client';
 
 // =============================================================================
@@ -172,11 +170,12 @@ export default function AchievementBadges({ studentProfileId }: Props) {
       const { data } = await supabase
         .from('redemptions')
         .select('status')
-        .eq('student_profile_id', studentProfileId)
+        .eq('student_id', studentProfileId) // redemptions.student_id = student_profiles.id
         .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed']);
 
       const rows = data ?? [];
-      const stamps  = rows.filter(r => r.status === 'stamp').length;
+      // reward_earned / tier_reward rows are stamps too (the one that triggered the reward)
+      const stamps  = rows.filter(r => r.status === 'stamp' || r.status === 'reward_earned' || r.status === 'tier_reward').length;
       const rewards = rows.filter(r => r.status === 'confirmed').length;
 
       // Check which badges are newly earned (vs cached in localStorage)
