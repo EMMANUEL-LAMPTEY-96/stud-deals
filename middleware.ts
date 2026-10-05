@@ -8,7 +8,7 @@
 //   4. Redirect wrong-role users (e.g., vendor accessing /student/dashboard)
 // =============================================================================
 
-import { createServerClient, type CookieOptionsWithName } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/types/database.types';
 import type { Profile } from '@/lib/types/database.types';
@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet: CookieOptionsWithName[]) {
+        setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -95,14 +95,15 @@ export async function middleware(request: NextRequest) {
   // separate DB queries for the same user on every authenticated request.
   // We include both 'role' and 'is_active' in the single SELECT so rules 2 & 3
   // can share the same result without additional round-trips.
-  let sharedProfile: { role?: string; is_active?: boolean } | null = null;
+  type SharedProfile = { role?: string; is_active?: boolean };
+  let sharedProfile: SharedProfile | null = null;
   if (user) {
     const { data: p } = await supabase
       .from('profiles')
       .select('role, is_active')
       .eq('id', user.id)
       .maybeSingle();
-    sharedProfile = p as typeof sharedProfile;
+    sharedProfile = p as SharedProfile | null;
   }
 
   // ──────────────────────────────────────────────────────────────────────────

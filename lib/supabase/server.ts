@@ -5,7 +5,7 @@
 // This is what enforces RLS policies with the actual logged-in user's JWT.
 // =============================================================================
 
-import { createServerClient, type CookieOptionsWithName } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/types/database.types';
 
@@ -32,7 +32,7 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: CookieOptionsWithName[]) {
+        setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
