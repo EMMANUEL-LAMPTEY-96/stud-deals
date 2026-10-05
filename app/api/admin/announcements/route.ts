@@ -26,6 +26,9 @@ export async function GET(request: NextRequest) {
   if (callerProfile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const target = new URL(request.url).searchParams.get('target') ?? 'all';
+  if (target !== 'all' && target !== 'student' && target !== 'vendor') {
+    return NextResponse.json({ error: 'target must be all | student | vendor' }, { status: 400 });
+  }
 
   let q = admin.from('profiles').select('id', { count: 'exact', head: true }).neq('role', 'admin');
   if (target !== 'all') q = q.eq('role', target);
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest) {
       user_id: r.id,
       type:    'announcement',
       title,
-      message,
+      body:    message,
       is_read: false,
     }));
     const { error } = await admin.from('notifications').insert(rows);

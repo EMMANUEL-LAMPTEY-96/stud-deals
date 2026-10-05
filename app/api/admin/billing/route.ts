@@ -55,8 +55,7 @@ export async function GET() {
   const { data: vendors, error } = await admin
     .from('vendor_profiles')
     .select(
-      'id, user_id, business_name, city, plan_tier, plan_status, trial_ends_at, ' +
-      'plan_started_at, plan_expires_at, stripe_customer_id, stripe_subscription_id, created_at'
+      'id, user_id, business_name, city, plan_tier, plan_status, trial_ends_at, plan_started_at, plan_expires_at, stripe_customer_id, stripe_subscription_id, created_at'
     )
     .order('created_at', { ascending: false });
 

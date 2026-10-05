@@ -85,7 +85,7 @@ export async function PATCH(
     });
   } catch { /* non-fatal */ }
 
-  // Audit log
+  // Audit log (non-fatal: the PostgREST builder resolves with { error } rather than throwing)
   await admin.from('admin_audit_log').insert({
     admin_id:    user.id,
     action:      'redemption_voided',
@@ -98,7 +98,7 @@ export async function PATCH(
       original_status: redemption.status,
       reason,
     },
-  }).catch(() => {});
+  });
 
   return NextResponse.json({ success: true });
 }

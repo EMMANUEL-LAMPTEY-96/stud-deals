@@ -6,12 +6,13 @@
 //   - All offers with loyalty config parsed
 //   - Redemption summary (last 30 days + all-time)
 //   - Active stamp cards count (students with ≥1 stamp, no reward yet)
-//   - Staff PINs (masked: first char + ***)
+//   - Staff PIN count (PINs are stored hashed; no PIN material is returned)
 //   - Top 5 students by stamp count
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { parseStaffPins } from '@/lib/utils/staff-session';
 
 function parseLoyaltyConfig(terms: string | null) {
   if (!terms) return null;
@@ -20,11 +21,6 @@ function parseLoyaltyConfig(terms: string | null) {
   try { return JSON.parse(match[1]); } catch { return null; }
 }
 
-function maskPin(pin: string | null): string | null {
-  if (!pin) return null;
-  if (pin.length <= 1) return pin;
-  return pin[0] + '*'.repeat(pin.length - 1);
-}
 
 export async function GET(
   request: NextRequest,
@@ -88,7 +84,7 @@ export async function GET(
 
   const { data: recentRedemptions } = await admin
     .from('redemptions')
-    .select('id, status, created_at')
+    .select('id, status, created_at, student_id')
     .eq('vendor_id', vendorProfileId)
     .gte('created_at', thirtyDaysAgo);
 
@@ -135,13 +131,14 @@ export async function GET(
 
   let topStudents: { id: string; name: string; stamps: number }[] = [];
   if (top5StudentIds.length) {
-    const { data: profiles } = await admin
-      .from('profiles')
-      .select('id, first_name, last_name, display_name')
+    // redemptions.student_id is student_profiles.id → resolve names via user_id → profiles
+    const { data: studentProfiles } = await admin
+      .from('student_profiles')
+      .select('id, profiles!student_profiles_user_id_fkey(first_name, last_name, display_name)')
       .in('id', top5StudentIds);
 
     topStudents = top5StudentIds.map((sid) => {
-      const p = (profiles ?? []).find((x) => x.id === sid);
+      const p = (studentProfiles ?? []).find((x) => x.id === sid)?.profiles;
       const name = p
         ? (p.first_name ? `${p.first_name} ${p.last_name ?? ''}`.trim() : (p.display_name ?? 'Student'))
         : 'Unknown';
@@ -149,11 +146,13 @@ export async function GET(
     });
   }
 
+  const { staff_pins, ...vendorFields } = vp;
+
   return NextResponse.json({
     vendor: {
-      ...vp,
+      ...vendorFields,
       email,
-      staff_pin: maskPin(vp.staff_pins),
+      staff_count: parseStaffPins(staff_pins).length,
       approval_status: vp.is_verified
         ? 'approved'
         : vp.verified_at ? 'rejected' : 'pending',
