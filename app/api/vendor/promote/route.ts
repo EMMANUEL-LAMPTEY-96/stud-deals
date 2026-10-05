@@ -30,6 +30,7 @@ import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
 import { hasAccess } from '@/lib/utils/plan-tier';
 import type { VendorPlan } from '@/lib/utils/plan-tier';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 const PromoteBodySchema = z.object({
   target: z.enum(['all', 'loyal', 'lapsed']),
@@ -219,6 +220,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (include) targetStudentIds.push(sid);
+  }
+
+  // The demo vendor (public login) must never message real students.
+  if (await isDemoUser(user.id)) {
+    const demoStudents = new Set(await getDemoStudentProfileIds());
+    for (let i = targetStudentIds.length - 1; i >= 0; i--) {
+      if (!demoStudents.has(targetStudentIds[i])) targetStudentIds.splice(i, 1);
+    }
   }
 
   if (targetStudentIds.length === 0) {

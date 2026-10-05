@@ -3,7 +3,8 @@
 // PATCH /api/vendor/reviews       - vendor adds/updates a reply
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
 
@@ -30,13 +31,16 @@ export async function GET() {
           return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
         }
 
-    const { data: reviews, error } = await supabase
+    // Reviewer names live on other users' profiles, which the vendor's own
+    // session can't read — resolve them with the service role.
+    const admin = createAdminClient();
+    const { data: rows, error } = await admin
       .from('vendor_reviews')
       .select(`
-                    id, rating, title, body,
+                    id, rating, title, body, student_id,
                     vendor_reply, vendor_replied_at,
                     is_visible, created_at,
-                    student_profiles ( id, profile:profiles!student_profiles_user_id_fkey ( first_name, display_name ) )
+                    student_profiles ( id, profile:profiles!student_profiles_user_id_fkey ( first_name, last_name, display_name ) )
                   `)
       .eq('vendor_id', vendor.id)
       .eq('is_visible', true)
@@ -46,12 +50,34 @@ export async function GET() {
           return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-    const total = reviews?.length ?? 0;
-    const avg = total
-      ? reviews!.reduce((s, r) => s + r.rating, 0) / total
-      : 0;
+    // The demo vendor (public login) only sees reviews from demo students.
+    let visibleRows = rows ?? [];
+    if (await isDemoUser(user.id)) {
+      const demoStudents = new Set(await getDemoStudentProfileIds());
+      visibleRows = visibleRows.filter((r) => demoStudents.has(r.student_id));
+    }
 
-    return NextResponse.json({ reviews: reviews ?? [], total, average: avg });
+    const reviews = visibleRows.map((r) => {
+      const profile = r.student_profiles?.profile;
+      const student_name = profile?.display_name
+        || (profile?.first_name ? `${profile.first_name} ${profile.last_name ?? ''}`.trim() : 'Anonymous');
+      return {
+        id: r.id,
+        rating: r.rating,
+        title: r.title,
+        body: r.body,
+        vendor_reply: r.vendor_reply,
+        vendor_replied_at: r.vendor_replied_at,
+        is_visible: r.is_visible,
+        created_at: r.created_at,
+        student_name,
+      };
+    });
+
+    const total = reviews.length;
+    const avg = total ? reviews.reduce((s, r) => s + r.rating, 0) / total : 0;
+
+    return NextResponse.json({ reviews, total, average: avg });
   }
 
 export async function PATCH(req: NextRequest) {

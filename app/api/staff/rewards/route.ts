@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getStaffSession } from '@/lib/utils/staff-session';
 import { REWARD_STATUSES, markRewardHandedOver } from '@/lib/utils/reward-claim';
+import { isDemoVendor, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 export async function GET(request: NextRequest) {
   const session = await getStaffSession(request);
@@ -24,7 +25,12 @@ export async function GET(request: NextRequest) {
     .is('metadata->reward_claimed_at', null)
     .order('created_at', { ascending: false })
     .limit(20);
-  const reds = (redsRaw ?? []) as { id: string; status: string; created_at: string; offer_id: string; student_id: string }[];
+  let reds = (redsRaw ?? []) as { id: string; status: string; created_at: string; offer_id: string; student_id: string }[];
+  // Demo vendor (public login): only show demo students.
+  if (await isDemoVendor(session.vendorId)) {
+    const demoStudents = new Set(await getDemoStudentProfileIds());
+    reds = reds.filter((r) => demoStudents.has(r.student_id));
+  }
   if (!reds.length) return NextResponse.json({ rewards: [] });
 
   const offerIds = [...new Set(reds.map((r) => r.offer_id))];

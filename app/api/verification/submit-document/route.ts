@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { TablesUpdate } from '@/lib/types/database.types';
 import { checkRateLimit, markVerificationSuccess, rateLimitResponse } from '@/lib/utils/rate-limit';
 import { safeLog } from '@/lib/utils/safe-logger';
+import { isDemoUser, demoForbiddenResponse } from '@/lib/utils/demo';
 
 const MAX_FILE_SIZE_MB = 10;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorised.' }, { status: 401 });
     }
+    if (await isDemoUser(user.id)) return demoForbiddenResponse('upload ID documents');
 
     // ── Rate limit: 3 submissions per 24 hrs ─────────────────────────────────
     const rl = await checkRateLimit(user.id, 'doc_upload', { maxAttempts: 3, windowHours: 24 });

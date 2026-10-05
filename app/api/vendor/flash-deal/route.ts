@@ -12,6 +12,7 @@ import { haversineKm } from '@/lib/utils/distance';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
 import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
+import { isDemoUser, getDemoUserIds } from '@/lib/utils/demo';
 
 const FlashDealBodySchema = z.object({
   title: z.string().min(1, 'Title is required.').max(100, 'Title must be 100 characters or fewer.'),
@@ -119,6 +120,9 @@ export async function POST(request: NextRequest) {
 
     let notifyCount = 0;
 
+    // The demo vendor (public login) may only notify demo students.
+    const demoOnly = (await isDemoUser(user.id)) ? new Set(await getDemoUserIds()) : null;
+
     if (vendor.latitude && vendor.longitude) {
       const { data: institutions } = await admin
         .from('institutions')
@@ -140,7 +144,7 @@ export async function POST(request: NextRequest) {
           .in('institution_id', nearbyInstitutionIds)
           .eq('verification_status', 'verified');
 
-        const userIds = (students ?? []).map(s => s.user_id);
+        const userIds = (students ?? []).map(s => s.user_id).filter(uid => !demoOnly || demoOnly.has(uid));
         notifyCount = userIds.length;
 
         if (userIds.length > 0) {
@@ -170,7 +174,7 @@ export async function POST(request: NextRequest) {
           .in('institution_id', cityInstitutions.map(i => i.id))
           .eq('verification_status', 'verified');
 
-        const userIds = (students ?? []).map(s => s.user_id);
+        const userIds = (students ?? []).map(s => s.user_id).filter(uid => !demoOnly || demoOnly.has(uid));
         notifyCount = userIds.length;
 
         if (userIds.length > 0) {

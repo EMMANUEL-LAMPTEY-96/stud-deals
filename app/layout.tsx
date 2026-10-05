@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import CookieConsent from '@/components/shared/CookieConsent'
+import DemoBanner from '@/components/shared/DemoBanner'
 import LegalFooter from '@/components/shared/LegalFooter'
 import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar'
 import { I18nProvider } from '@/lib/i18n'
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Ugrás a főtartalomhoz / Skip to main content
         </a>
 
+        <DemoBanner />
         <I18nProvider>
           <div id="main-content">
             {children}

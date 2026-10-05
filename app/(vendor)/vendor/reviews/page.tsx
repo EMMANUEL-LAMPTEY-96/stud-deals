@@ -268,50 +268,24 @@ export default function ReviewsPage() {
   const [filter, setFilter] = useState<'all' | '5' | '4' | '3' | '2' | '1' | 'unreplied'>('all');
   const [toast, setToast] = useState<string | null>(null);
 
-  const load = useCallback(async (vid: string) => {
-    // Try fetching — if table doesn't exist Supabase returns a specific error
-    const { data, error } = await supabase
-      .from('vendor_reviews' as any)
-      .select(`
-        *,
-        student:student_profiles(
-          user_id,
-          profile:profiles!student_profiles_user_id_fkey(first_name, last_name, display_name)
-        )
-      `)
-      .eq('vendor_id', vid)
-      .eq('is_visible', true)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      // Table doesn't exist yet
+  const load = useCallback(async (_vid: string) => {
+    // Server route resolves reviewer names (other users' profiles aren't
+    // readable from the browser) and scopes the demo vendor to demo students.
+    const res = await fetch('/api/vendor/reviews').catch(() => null);
+    if (!res?.ok) {
       setTableExists(false);
       setLoading(false);
       return;
     }
-
     setTableExists(true);
 
-    const mapped: Review[] = (data ?? []).map((r: any) => {
-      const profile = r.student?.profile;
-      const name = profile?.display_name
-        ?? (profile?.first_name ? `${profile.first_name} ${profile.last_name ?? ''}`.trim() : 'Anonymous');
-      const parts = name.trim().split(' ').filter(Boolean);
+    const data: { reviews: Omit<Review, 'student_initials'>[] } = await res.json();
+    const mapped: Review[] = (data.reviews ?? []).map((r) => {
+      const parts = r.student_name.trim().split(' ').filter(Boolean);
       const initials = parts.length >= 2
         ? parts[0][0] + parts[parts.length - 1][0]
-        : name.slice(0, 2);
-      return {
-        id: r.id,
-        rating: r.rating,
-        title: r.title,
-        body: r.body,
-        vendor_reply: r.vendor_reply,
-        vendor_replied_at: r.vendor_replied_at,
-        is_visible: r.is_visible,
-        created_at: r.created_at,
-        student_name: name,
-        student_initials: initials.toUpperCase(),
-      };
+        : r.student_name.slice(0, 2);
+      return { ...r, student_initials: initials.toUpperCase() };
     });
 
     setReviews(mapped);

@@ -34,6 +34,7 @@ import { isValidVoucherCodeFormat, normaliseVoucherCode, parseQrPayload } from '
 import type { ConfirmRedemptionRequest, ConfirmRedemptionResponse } from '@/lib/types/database.types';
 import { sendEmail } from '@/lib/email/resend';
 import { redemptionEmail } from '@/lib/email/templates';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 4. Fetch the redemption ───────────────────────────────────────────
-    const { data: redemption, error: fetchError } = await supabase
+    const { data: redemptionRow, error: fetchError } = await supabase
       .from('redemptions')
       .select(`
         id, status, expires_at, vendor_id, offer_id, student_id,
@@ -122,6 +123,15 @@ export async function POST(request: NextRequest) {
     if (fetchError) {
       safeLog.error('[confirm] DB error fetching redemption:', fetchError);
       return NextResponse.json({ error: 'Server error looking up code.' }, { status: 500 });
+    }
+
+    let redemption = redemptionRow;
+
+    // The demo vendor (public login) can only confirm demo students' vouchers —
+    // otherwise it would reveal a real student's name.
+    if (redemption && (await isDemoUser(user.id))) {
+      const demoStudents = await getDemoStudentProfileIds();
+      if (!demoStudents.includes(redemption.student_id)) redemption = null;
     }
 
     if (!redemption) {
