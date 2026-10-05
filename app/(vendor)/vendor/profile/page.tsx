@@ -822,7 +822,7 @@ export default function VendorProfilePage() {
                   )}
                 </div>
                 {plan.cta && (
-                  <a href="/vendor/upgrade" className="btn-vendor text-xs px-4 py-2 flex items-center gap-1.5">
+                  <a href="/vendor/billing" className="btn-vendor text-xs px-4 py-2 flex items-center gap-1.5">
                     <Zap size={13} />
                     Upgrade
                     <ArrowUpRight size={12} />
