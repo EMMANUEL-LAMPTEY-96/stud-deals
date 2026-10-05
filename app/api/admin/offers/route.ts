@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { Constants } from '@/lib/types/database.types';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -50,7 +51,11 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (status !== 'all') q = q.eq('status', status);
+  if (status !== 'all') {
+    const valid = Constants.public.Enums.offer_status.find((s) => s === status);
+    if (!valid) return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 });
+    q = q.eq('status', valid);
+  }
   if (city) q = q.eq('vendor_profiles.city', city);
   // Push search to DB so pagination counts stay accurate (no client-side filter)
   if (search) {

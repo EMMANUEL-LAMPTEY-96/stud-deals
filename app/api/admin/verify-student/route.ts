@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { Constants } from '@/lib/types/database.types';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -84,7 +85,9 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status') ?? 'pending_review';
+  const statusParam = searchParams.get('status') ?? 'pending_review';
+  const status = Constants.public.Enums.verification_status.find((v) => v === statusParam);
+  if (!status) return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
 
   const { data, error } = await admin
     .from('student_profiles')

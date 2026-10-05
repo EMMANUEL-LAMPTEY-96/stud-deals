@@ -37,6 +37,32 @@ export async function GET(_request: NextRequest) {
     .gte('created_at', h24ago);
 
   const stampKey = (s: string, v: string) => `${s}|${v}`;
+
+  // redemptions.student_id is student_profiles.id — resolve names through
+  // student_profiles → profiles (user_id), not profiles.id directly.
+  async function studentNameMap(studentProfileIds: string[]): Promise<Record<string, string>> {
+    const map: Record<string, string> = {};
+    if (!studentProfileIds.length) return map;
+    const { data } = await admin
+      .from('student_profiles')
+      .select('id, profiles!student_profiles_user_id_fkey(first_name, last_name, display_name)')
+      .in('id', studentProfileIds);
+    for (const sp of data ?? []) {
+      const p = sp.profiles;
+      map[sp.id] = p?.first_name
+        ? `${p.first_name} ${p.last_name ?? ''}`.trim()
+        : (p?.display_name ?? 'Student');
+    }
+    return map;
+  }
+
+  async function vendorNameMap(vendorIds: string[]): Promise<Record<string, string>> {
+    const map: Record<string, string> = {};
+    if (!vendorIds.length) return map;
+    const { data } = await admin.from('vendor_profiles').select('id, business_name').in('id', vendorIds);
+    for (const v of data ?? []) map[v.id] = v.business_name;
+    return map;
+  }
   const pairCount: Record<string, number> = {};
   for (const r of recentStamps ?? []) {
     const k = stampKey(r.student_id, r.vendor_id);
@@ -51,14 +77,10 @@ export async function GET(_request: NextRequest) {
   // Enrich with names
   const spStudentIds = [...new Set(suspiciousPairs.map((p) => p.student_id))];
   const spVendorIds  = [...new Set(suspiciousPairs.map((p) => p.vendor_id))];
-  const [{ data: spStudents }, { data: spVendors }] = await Promise.all([
-    spStudentIds.length ? admin.from('profiles').select('id, first_name, last_name, display_name').in('id', spStudentIds) : Promise.resolve({ data: [] }),
-    spVendorIds.length  ? admin.from('vendor_profiles').select('id, business_name').in('id', spVendorIds) : Promise.resolve({ data: [] }),
+  const [spStudentMap, spVendorMap] = await Promise.all([
+    studentNameMap(spStudentIds),
+    vendorNameMap(spVendorIds),
   ]);
-  const spStudentMap: Record<string, string> = {};
-  for (const s of spStudents ?? []) spStudentMap[s.id] = s.first_name ? `${s.first_name} ${s.last_name ?? ''}`.trim() : (s.display_name ?? 'Student');
-  const spVendorMap:  Record<string, string> = {};
-  for (const v of spVendors  ?? []) spVendorMap[v.id]  = v.business_name;
 
   const rateLimitHits = suspiciousPairs.map((p) => ({
     ...p,
@@ -132,14 +154,10 @@ export async function GET(_request: NextRequest) {
   if (velocitySpikes.length) {
     const vsStudentIds = [...new Set(velocitySpikes.map((s) => s.student_id))];
     const vsVendorIds  = [...new Set(velocitySpikes.map((s) => s.vendor_id))];
-    const [{ data: vsStudents }, { data: vsVendors }] = await Promise.all([
-      admin.from('profiles').select('id, first_name, last_name, display_name').in('id', vsStudentIds),
-      admin.from('vendor_profiles').select('id, business_name').in('id', vsVendorIds),
+    const [vsStudentMap, vsVendorMap] = await Promise.all([
+      studentNameMap(vsStudentIds),
+      vendorNameMap(vsVendorIds),
     ]);
-    const vsStudentMap: Record<string, string> = {};
-    for (const s of vsStudents ?? []) vsStudentMap[s.id] = s.first_name ? `${s.first_name} ${s.last_name ?? ''}`.trim() : (s.display_name ?? 'Student');
-    const vsVendorMap:  Record<string, string> = {};
-    for (const v of vsVendors  ?? []) vsVendorMap[v.id]  = v.business_name;
 
     for (const spike of velocitySpikes) {
       spike.student_name = vsStudentMap[spike.student_id] ?? 'Unknown';

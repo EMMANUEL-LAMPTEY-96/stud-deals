@@ -30,8 +30,10 @@ interface Offer {
 
 const STATUS_COLORS: Record<string, string> = {
   active:   'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-500',
+  paused:   'bg-gray-100 text-gray-500',
   draft:    'bg-yellow-100 text-yellow-700',
+  expired:  'bg-red-100 text-red-600',
+  depleted: 'bg-orange-100 text-orange-700',
 };
 
 const LIMIT = 50;
@@ -46,7 +48,7 @@ function ConfirmModal({
   loading: boolean;
 }) {
   const labels = {
-    pause:    { title: 'Pause offer',    desc: `"${offer.title}" will be set to inactive and hidden from students.`, btn: 'Pause offer',    color: 'bg-yellow-500 hover:bg-yellow-600' },
+    pause:    { title: 'Pause offer',    desc: `"${offer.title}" will be paused and hidden from students.`, btn: 'Pause offer',    color: 'bg-yellow-500 hover:bg-yellow-600' },
     activate: { title: 'Activate offer', desc: `"${offer.title}" will be set to active and visible to students.`,    btn: 'Activate offer', color: 'bg-green-600 hover:bg-green-700' },
     delete:   { title: 'Delete offer',   desc: `"${offer.title}" will be permanently deleted. This cannot be undone.`, btn: 'Delete offer',   color: 'bg-red-600 hover:bg-red-700' },
   };
@@ -202,7 +204,7 @@ export default function AdminOffersPage() {
 
           {/* Status */}
           <div className="flex gap-1.5">
-            {['all', 'active', 'inactive', 'draft'].map((s) => (
+            {['all', 'active', 'paused', 'draft', 'expired'].map((s) => (
               <button
                 key={s}
                 onClick={() => { setStatusFilter(s); setPage(1); }}

@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { safeLog } from '@/lib/utils/safe-logger';
+import type { Json } from '@/lib/types/database.types';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -59,13 +60,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let body: { key: string; value: unknown };
+  // request.json() yields parsed JSON, so `value` is a JSON value by construction.
+  let body: { key: string; value: Json };
   try { body = await request.json(); } catch (_) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
   const { key, value } = body;
   if (!key) return NextResponse.json({ error: 'key is required' }, { status: 400 });
+  if (value === undefined) return NextResponse.json({ error: 'value is required' }, { status: 400 });
 
   // Capture old value before updating (for full audit trail)
   const { data: oldRow } = await admin

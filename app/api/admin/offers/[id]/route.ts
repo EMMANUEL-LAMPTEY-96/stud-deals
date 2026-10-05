@@ -55,7 +55,7 @@ export async function PATCH(
     const { error } = await admin.from('offers').delete().eq('id', offerId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   } else {
-    const newStatus = action === 'pause' ? 'inactive' : 'active';
+    const newStatus = action === 'pause' ? 'paused' : 'active';
     const { error } = await admin.from('offers').update({ status: newStatus }).eq('id', offerId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }

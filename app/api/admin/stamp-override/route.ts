@@ -18,6 +18,10 @@
 import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { safeLog } from '@/lib/utils/safe-logger';
+import type { Database } from '@/lib/types/database.types';
+
+type RedemptionInsert = Database['public']['Tables']['redemptions']['Insert'];
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -53,11 +57,11 @@ export async function POST(request: NextRequest) {
 
   // For credits: insert N stamp rows
   // For debits:  insert N voided rows (negative stamps — deducted in count queries)
-  const rows = Array.from({ length: absDelta }, () => ({
+  const rows: RedemptionInsert[] = Array.from({ length: absDelta }, () => ({
     student_id,
     vendor_id,
     offer_id,
-    status: isCredit ? 'stamp' : 'admin_void',
+    status: isCredit ? 'stamp' as const : 'admin_void' as const,
     // Unique per row — Date.now() alone gave every row in the batch the same
     // code, so multi-stamp overrides failed on the unique constraint.
     redemption_code: `ADMIN-${isCredit ? 'CREDIT' : 'DEBIT'}-${Date.now()}-${randomBytes(4).toString('hex').toUpperCase()}`,
@@ -80,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (!notifUserId) {
       // Student profile not found — skip notification but don't fail the request
-      safeLog.error?.('[stamp-override] Could not resolve user_id for student_id:', student_id);
+      safeLog.error('[stamp-override] Could not resolve user_id for student_id:', student_id);
     } else {
     await admin.from('notifications').insert({
       user_id: notifUserId,  // auth UUID — correct mapping to profiles.id
@@ -103,7 +107,7 @@ export async function POST(request: NextRequest) {
     entity_type: 'redemption',
     entity_id:   student_id,
     metadata:    { student_id, vendor_id, offer_id, delta, reason },
-  }).catch(() => {});
+  }); // non-fatal: the builder resolves with { error } rather than throwing
 
   return NextResponse.json({ success: true, delta, rows_inserted: absDelta });
 }
