@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 'use client';
 
 // =============================================================================
@@ -32,6 +30,16 @@ import {
   RotateCcw, AlertTriangle, Star, Gift, Stamp,
   Smartphone,
 } from 'lucide-react';
+
+// BarcodeDetector (Shape Detection API) is not in TypeScript's DOM lib yet —
+// minimal typing for the bits used here.
+interface DetectedBarcode { rawValue: string }
+interface BarcodeDetectorInstance { detect(source: HTMLVideoElement): Promise<DetectedBarcode[]> }
+type BarcodeDetectorCtor = new (options: { formats: string[] }) => BarcodeDetectorInstance;
+const getBarcodeDetector = (): BarcodeDetectorCtor | undefined =>
+  typeof window === 'undefined'
+    ? undefined
+    : (window as Window & { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
 
 type ScanMode = 'camera' | 'manual';
 type ScanState = 'idle' | 'loading' | 'stamp_added' | 'reward' | 'error';
@@ -87,7 +95,7 @@ export default function LoyaltyScanner() {
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [result, setResult] = useState<StampResult | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,15 +121,16 @@ export default function LoyaltyScanner() {
         videoRef.current.play();
       }
 
-      if ('BarcodeDetector' in window) {
-        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+      const BarcodeDetectorImpl = getBarcodeDetector();
+      if (BarcodeDetectorImpl) {
+        const detector = new BarcodeDetectorImpl({ formats: ['qr_code'] });
 
         scanIntervalRef.current = setInterval(async () => {
           if (!videoRef.current || scanState === 'loading') return;
           try {
             const barcodes = await detector.detect(videoRef.current);
             if (barcodes.length > 0) {
-              const payload = barcodes[0].rawValue as string;
+              const payload = barcodes[0].rawValue;
               // Deduplicate: only process once per unique payload
               if (payload === lastScannedRef.current) return;
               // Only process Studeals QR codes
@@ -399,7 +408,7 @@ export default function LoyaltyScanner() {
               Student QR payload
             </label>
             <textarea
-              ref={inputRef as any}
+              ref={inputRef}
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
               placeholder="STUDEALS_STAMP:v1:..."

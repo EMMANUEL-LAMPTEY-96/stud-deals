@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 'use client';
 
 // =============================================================================
@@ -78,7 +76,7 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
         // All-time stamps
         const { data: allStamps } = await supabase
           .from('redemptions')
-          .select('student_profile_id, claimed_at, status')
+          .select('student_id, claimed_at, status')
           .eq('vendor_id', vendorId)
           .in('status', ['stamp', 'reward_earned', 'tier_reward', 'confirmed']);
 
@@ -87,12 +85,14 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
         const rows = allStamps ?? [];
 
         // Unique loyalty members
-        const uniqueStudents = new Set(rows.map(r => r.student_profile_id));
+        const uniqueStudents = new Set(rows.map(r => r.student_id));
         const loyaltyMembers = uniqueStudents.size;
 
         // Stamps this month
+        // reward_earned / tier_reward rows are stamps too (the reward-triggering one)
+        const isStamp = (s: string) => s === 'stamp' || s === 'reward_earned' || s === 'tier_reward';
         const stampsThisMonth = rows.filter(r =>
-          r.status === 'stamp' &&
+          isStamp(r.status) &&
           new Date(r.claimed_at) >= monthStart
         ).length;
 
@@ -101,8 +101,8 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
 
         // Return visit rate: students who stamped more than once
         const stampCount: Record<string, number> = {};
-        rows.filter(r => r.status === 'stamp').forEach(r => {
-          stampCount[r.student_profile_id] = (stampCount[r.student_profile_id] ?? 0) + 1;
+        rows.filter(r => isStamp(r.status)).forEach(r => {
+          stampCount[r.student_id] = (stampCount[r.student_id] ?? 0) + 1;
         });
         const returners = Object.values(stampCount).filter(c => c > 1).length;
         const returnVisitRate = loyaltyMembers > 0 ? (returners / loyaltyMembers) * 100 : 0;

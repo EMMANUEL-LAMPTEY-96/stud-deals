@@ -12,7 +12,8 @@
 //   - "Audience" selector: all followers / loyal (5+ stamps) / nearby students
 //
 // Boosts are stored as special offers in the `offers` table with:
-//   - category = 'special_offer' (existing value)
+//   - category = the vendor's most recent offer category (fallback 'other';
+//     offer_category has no 'special_offer' value)
 //   - terms_and_conditions prefix: [[BOOST:{...}]]
 //   - status = 'active', expires_at = now + duration
 // =============================================================================
@@ -339,17 +340,27 @@ export default function BoostPage() {
         created_at: new Date().toISOString(),
       };
 
+      // Reuse the vendor's usual category so the boost shows up in the right feed filter
+      const { data: lastOffer } = await supabase
+        .from('offers')
+        .select('category')
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       const { error } = await supabase.from('offers').insert({
         vendor_id: vendorId,
         title,
         discount_label: discountLabel,
         description: `Limited-time boost: ${discountLabel}. Active for ${DURATIONS.find(d => d.hours === durationHours)?.label ?? durationHours + 'h'}.`,
-        category: 'special_offer',
-        offer_type: 'standard',
+        category: lastOffer?.category ?? 'other',
+        // discount_type is required; only a flash sale is a %-style discount,
+        // the other templates are a free item / stamp perk with no numeric value.
+        discount_type: selectedTemplate === 'flash_sale' ? 'percentage' : 'free_item',
         status: 'active',
         expires_at: expiresAt,
         terms_and_conditions: `[[BOOST:${JSON.stringify(boostConfig)}]]`,
-        is_student_exclusive: true,
         view_count: 0,
         redemption_count: 0,
         save_count: 0,

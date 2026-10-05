@@ -211,7 +211,7 @@ export default function CalendarPage() {
         .from('offers')
         .select('id, title, discount_label, status, starts_at, expires_at, terms_and_conditions')
         .eq('vendor_id', vp.id)
-        .neq('status', 'deleted')
+        // (offer_status has no 'deleted' value — filtering on it made Postgres reject the query)
         .order('starts_at', { ascending: true })
         .limit(500); // guard against unbounded fetch on high-volume accounts
 

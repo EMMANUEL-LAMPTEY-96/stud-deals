@@ -200,6 +200,7 @@ export default function NotificationsPage() {
       .select('id', { count: 'exact', head: true })
       .eq('vendor_id', vid)
       .in('status', ['reward_earned', 'tier_reward'])
+      .is('metadata->reward_claimed_at', null) // not yet handed over (same filter as /vendor/rewards)
       .gte('created_at', since24h);
 
     const rewardItems: VendorNotif[] = recentRewards && recentRewards > 0 ? [{
@@ -218,7 +219,8 @@ export default function NotificationsPage() {
       .from('redemptions')
       .select('id', { count: 'exact', head: true })
       .eq('vendor_id', vid)
-      .eq('status', 'stamp');
+      // reward_earned / tier_reward rows are also stamps (the reward-triggering one)
+      .in('status', ['stamp', 'reward_earned', 'tier_reward']);
 
     const milestoneItems: VendorNotif[] = [];
     const ts = totalStamps ?? 0;
