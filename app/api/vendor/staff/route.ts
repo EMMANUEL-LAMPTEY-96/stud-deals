@@ -8,6 +8,7 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import type { Json } from '@/lib/types/database.types';
 import {
   hashStaffPin,
   parseStaffPins,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from('vendor_profiles').update({ staff_pins: pins } as any).eq('id', vp.id);
+  const { error } = await admin.from('vendor_profiles').update({ staff_pins: pins as unknown as Json }).eq('id', vp.id);
   if (error) return NextResponse.json({ error: 'Could not save staff.' }, { status: 500 });
 
   return NextResponse.json({ staff: pins.map(publicStaffEntry) });

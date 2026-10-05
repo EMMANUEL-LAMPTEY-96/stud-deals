@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     ) ?? null;
 
     // ── Determine the recommended verification path ───────────────────────
-    const { path, reason } = determineVerificationPath(normalised, matchedInstitution as never);
+    const { path, reason } = determineVerificationPath(normalised, matchedInstitution);
 
     if (path === 'not_eligible') {
       return NextResponse.json<VerifyEduEmailResponse>({
