@@ -150,7 +150,8 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - Vendor stamp QR carries a server-signed token from `/api/vendor/stamp-qr`; `/api/loyalty/stamp` rejects anything else.
 - Handing over a loyalty reward never changes its status — it sets `redemptions.metadata.reward_claimed_at` (`lib/utils/reward-claim.ts`).
 - `redemptions.student_id` is `student_profiles.id`, not the auth user id. `notifications` columns: `title, body, related_entity_type, related_entity_id`.
-- Migrations live in `supabase/migrations/`. 015a is applied; 015b–019 must be applied (in order) before deploying this branch. `lib/types/database.types.ts` includes hand-added types for 016–018 — regenerate after applying.
+- Migrations live in `supabase/migrations/`. Applied to mktqusaucpunasdnfulx: 015a, 017, 018, 020. Still to apply before deploying this branch: 015b, 016, 019. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
+- Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students. Billing runs in demo mode when `STRIPE_SECRET_KEY` is unset (`lib/billing/stripe.ts`).
 
 ### Components
 
