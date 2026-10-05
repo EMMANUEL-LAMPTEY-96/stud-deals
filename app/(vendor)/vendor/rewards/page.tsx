@@ -7,8 +7,9 @@
 // yet physically claimed. The vendor sees: student name, which offer, what the
 // reward is, when it was earned, and a "Mark as claimed" button.
 //
-// Claiming updates the redemption status to 'confirmed' (same status used when
-// the vendor confirms a standard voucher redemption).
+// Claiming goes through POST /api/vendor/rewards/claim, which records
+// metadata.reward_claimed_at and leaves the status alone (so the stamp still
+// counts and the voucher-confirmed trigger doesn't fire).
 //
 // Also shows a "Claimed today" history at the bottom.
 // =============================================================================
@@ -105,30 +106,33 @@ export default function RewardsPage() {
   const [claimError, setClaimError] = useState<string | null>(null);
 
   const loadRewards = useCallback(async (vid: string) => {
-    // Step 1: fetch pending rewards (reward_earned + tier_reward not yet confirmed)
+    // Step 1: fetch pending rewards (reward_earned + tier_reward not yet handed over).
+    // Handing a reward over is recorded in metadata.reward_claimed_at — the
+    // status stays put so the student's stamp count is unaffected.
     const { data: rawPending } = await supabase
       .from('redemptions')
       .select(`
-        id, status, redemption_code, confirmed_at, claimed_at, student_id,
+        id, status, redemption_code, confirmed_at, claimed_at, student_id, metadata,
         offer:offers(id, title, terms_and_conditions)
       `)
       .eq('vendor_id', vid)
       .in('status', ['reward_earned', 'tier_reward'])
+      .is('metadata->reward_claimed_at', null)
       .order('confirmed_at', { ascending: false })
       .limit(100);
 
-    // Step 2: fetch today's confirmed rewards (claimed in last 24h)
+    // Step 2: fetch rewards handed over in the last 24h
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: rawClaimed } = await supabase
       .from('redemptions')
       .select(`
-        id, status, redemption_code, confirmed_at, claimed_at, student_id,
+        id, status, redemption_code, confirmed_at, claimed_at, student_id, metadata,
         offer:offers(id, title, terms_and_conditions)
       `)
       .eq('vendor_id', vid)
-      .eq('status', 'confirmed')
-      .gte('claimed_at', since)
-      .order('claimed_at', { ascending: false })
+      .in('status', ['reward_earned', 'tier_reward'])
+      .gte('metadata->>reward_claimed_at', since)
+      .order('metadata->>reward_claimed_at', { ascending: false })
       .limit(50);
 
     // Step 3: resolve student names for all rows
@@ -173,7 +177,7 @@ export default function RewardsPage() {
         status: r.status,
         redemption_code: r.redemption_code ?? '',
         confirmed_at: r.confirmed_at,
-        claimed_at: r.claimed_at,
+        claimed_at: r.metadata?.reward_claimed_at ?? r.claimed_at,
         offer: offer ?? null,
         student_profile_id: r.student_id,
         student_name: sName,
@@ -205,14 +209,15 @@ export default function RewardsPage() {
     if (!vendorId) return;
     setClaimError(null);
     setClaiming(prev => new Set(prev).add(row.id));
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('redemptions')
-      .update({ status: 'confirmed', claimed_at: now })
-      .eq('id', row.id);
-    if (!error) {
+    const res = await fetch('/api/vendor/rewards/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: row.id }),
+    }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
+    if (res?.ok) {
       setPending(prev => prev.filter(r => r.id !== row.id));
-      setClaimed(prev => [{ ...row, status: 'confirmed', claimed_at: now }, ...prev]);
+      setClaimed(prev => [{ ...row, claimed_at: data.claimed_at ?? new Date().toISOString() }, ...prev]);
     } else {
       setClaimError('Could not mark as claimed. Please try again.');
       setTimeout(() => setClaimError(null), 4000);
