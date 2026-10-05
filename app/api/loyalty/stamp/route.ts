@@ -393,7 +393,8 @@ export async function POST(request: NextRequest) {
       type:       'almost_there',
       title:      '🎯 Just 1 stamp away!',
       body:       `Visit ${vendorName} one more time to earn: ${rewardLabel}`,
-      action_url: `/loyalty`,
+      related_entity_type: 'vendor',
+      related_entity_id:   vendorProfile.id,
       is_read:    false,
     });
   }
@@ -405,7 +406,8 @@ export async function POST(request: NextRequest) {
       type:       'reward_earned',
       title:      '🎉 Reward unlocked!',
       body:       `You earned "${rewardLabel}" at ${vendorName}. Show this to redeem it.`,
-      action_url: `/loyalty`,
+      related_entity_type: 'vendor',
+      related_entity_id:   vendorProfile.id,
       is_read:    false,
     });
   }
@@ -417,7 +419,8 @@ export async function POST(request: NextRequest) {
       type:       'tier_reward',
       title:      '⭐ Milestone reward!',
       body:       `You unlocked "${tier.reward_label}" at ${vendorName}!`,
-      action_url: `/loyalty`,
+      related_entity_type: 'vendor',
+      related_entity_id:   vendorProfile.id,
       is_read:    false,
     });
   }

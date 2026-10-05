@@ -148,11 +148,12 @@ export async function POST(request: NextRequest) {
             user_id: uid,
             type: 'flash_deal',
             title: `⚡ Flash Deal: ${vendor.business_name ?? 'Nearby Business'}`,
-            message: `${discount_text} — ends ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
-            action_url: `/flash/${flashDeal.id}`,
-            expires_at: endsAt.toISOString(),
+            body: `${discount_text} — ends ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
+            related_entity_type: 'flash_deal',
+            related_entity_id: flashDeal.id,
           }));
-          await admin.from('notifications').insert(notifications);
+          const { error: notifErr } = await admin.from('notifications').insert(notifications);
+          if (notifErr) safeLog.error('flash deal notification insert error:', notifErr.message);
           safeLog.audit('flash_deal_notifications_sent', { vendorId: vendor.id, notifyCount, flashDealId: flashDeal.id });
         }
       }
@@ -177,11 +178,12 @@ export async function POST(request: NextRequest) {
             user_id: uid,
             type: 'flash_deal',
             title: `⚡ Flash Deal: ${vendor.business_name ?? 'Nearby Business'}`,
-            message: `${discount_text} — ends at ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
-            action_url: `/flash/${flashDeal.id}`,
-            expires_at: endsAt.toISOString(),
+            body: `${discount_text} — ends at ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
+            related_entity_type: 'flash_deal',
+            related_entity_id: flashDeal.id,
           }));
-          await admin.from('notifications').insert(notifications);
+          const { error: notifErr } = await admin.from('notifications').insert(notifications);
+          if (notifErr) safeLog.error('flash deal notification insert error:', notifErr.message);
         }
       }
     }
