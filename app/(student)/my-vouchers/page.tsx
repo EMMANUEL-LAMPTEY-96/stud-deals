@@ -174,7 +174,7 @@ export default function MyVouchersPage() {
           claimed_at, expires_at, confirmed_at,
           offer:offers (
             id, title, discount_label, category,
-            vendor:vendor_profiles (business_name, city, logo_url)
+            vendor:vendor_profiles_public (business_name, city, logo_url)
           )
         `)
         .eq('student_id', user.id)

@@ -4,29 +4,24 @@
 // app/(vendor)/vendor/scan/page.tsx — Staff Scan-Only Interface
 //
 // A minimal, PIN-protected page for counter staff.
-// No full vendor auth required — staff enter their 4-digit PIN,
-// which is matched against vendor_profiles.staff_pins for ANY vendor.
+// No full vendor auth required — staff open /vendor/scan?v=<vendorId> and
+// enter their 4-digit PIN, which is checked server-side by /api/staff/login
+// against that vendor's hashed PINs. The session is an HttpOnly cookie.
 //
 // Once authenticated:
 //   - Shows a compact QR code panel (same as vendor dashboard)
 //   - Shows pending rewards to claim (reward_earned redemptions)
 //   - Mark reward as claimed
 //
-// Session stored in sessionStorage — cleared when tab is closed.
-// PIN entry UI re-appears after 4 hours of inactivity.
+// Session cookie expires after 4 hours; PIN entry UI re-appears then.
 // =============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import VendorQRPanel from '@/components/vendor/VendorQRPanel';
 import {
   Lock, CheckCircle, AlertCircle, Loader2, Gift,
   QrCode, LogOut, User, Clock, RefreshCw, Zap,
 } from 'lucide-react';
-
-interface StaffMember {
-  id: string; name: string; pin: string; role: string; active: boolean;
-}
 
 interface PendingReward {
   id: string;
@@ -38,13 +33,14 @@ interface PendingReward {
 }
 
 const SESSION_KEY = 'stud_staff_session';
+const VENDOR_KEY = 'stud_staff_vendor';
 const SESSION_TTL = 4 * 60 * 60 * 1000; // 4 hours
 
 interface StaffSession {
   vendorId: string;
   businessName: string;
   staffName: string;
-  city: string;
+  city: string | null;
   expiresAt: number;
 }
 
@@ -61,8 +57,19 @@ function timeAgo(iso: string) {
 const MAX_PIN_ATTEMPTS = 5;
 const LOCKOUT_SECONDS  = 60;
 
+/** Vendor this scan page belongs to: ?v=<id> from the staff link, remembered per device. */
+function scanVendorId(): string | null {
+  if (typeof window === 'undefined') return null;
+  const fromUrl = new URLSearchParams(window.location.search).get('v');
+  try {
+    if (fromUrl) { localStorage.setItem(VENDOR_KEY, fromUrl); return fromUrl; }
+    return localStorage.getItem(VENDOR_KEY);
+  } catch (_) {
+    return fromUrl;
+  }
+}
+
 function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void }) {
-  const supabase = createClient();
   const [pin, setPin] = useState('');
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
@@ -100,31 +107,31 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
     setChecking(true);
     setError('');
 
-    // Search all vendor_profiles for a matching staff PIN
-    const { data: vendorsRaw } = await supabase
-      .from('vendor_profiles')
-      .select('id, business_name, city, staff_pins')
-      .not('staff_pins', 'is', null);
-    const vendors = (vendorsRaw as unknown) as { id: string; business_name: string; city: string | null; staff_pins: unknown }[] | null;
-
     let matched: StaffSession | null = null;
-
-    for (const vp of vendors ?? []) {
-      const pins: StaffMember[] = Array.isArray((vp as any).staff_pins) ? (vp as any).staff_pins : [];
-      const member = pins.find(p => p.pin === entered && p.active);
-      if (member) {
-        matched = {
-          vendorId: vp.id,
-          businessName: vp.business_name,
-          staffName: member.name,
-          city: vp.city,
-          expiresAt: Date.now() + SESSION_TTL,
-        };
-        break;
+    let serverError: string | null = null;
+    try {
+      const res = await fetch('/api/staff/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendor_id: scanVendorId(), pin: entered }),
+      });
+      const data = await res.json();
+      if (res.ok && data.session) {
+        matched = { ...data.session, expiresAt: Date.now() + SESSION_TTL };
+      } else if (res.status !== 401) {
+        serverError = data.error ?? 'Could not verify PIN. Please try again.';
       }
+    } catch (_) {
+      serverError = 'Network error. Please try again.';
     }
 
     setChecking(false);
+
+    if (serverError) {
+      setPin('');
+      setError(serverError);
+      return;
+    }
 
     if (!matched) {
       setPin('');
@@ -139,8 +146,6 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
       return;
     }
 
-    // Persist session
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(matched));
     onSuccess(matched);
   };
 
@@ -228,7 +233,6 @@ function PinEntry({ onSuccess }: { onSuccess: (session: StaffSession) => void })
 // ── Main Scan Screen ───────────────────────────────────────────────────────────
 
 function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: () => void }) {
-  const supabase = createClient();
   const [pending, setPending] = useState<PendingReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
@@ -248,72 +252,30 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
   }, [session.expiresAt]);
 
   const load = useCallback(async () => {
-    // Fetch pending rewards — reward_earned + tier_reward
-    type RedRow = { id: string; status: string; created_at: string; offer_id: string };
-    const { data: redsRaw } = await supabase
-      .from('redemptions')
-      .select('id, status, created_at, offer_id')
-      .eq('vendor_id', session.vendorId)
-      .in('status', ['reward_earned', 'tier_reward'])
-      .order('created_at', { ascending: false })
-      .limit(20);
-    const reds = (redsRaw as unknown) as RedRow[] | null;
-
-    if (!reds?.length) { setPending([]); setLoading(false); return; }
-
-    // Resolve offer titles
-    const offerIds = [...new Set(reds.map(r => r.offer_id))];
-    type OfferRow = { id: string; title: string; terms_and_conditions: string | null; discount_label: string | null };
-    const { data: offersRaw } = await supabase
-      .from('offers')
-      .select('id, title, terms_and_conditions, discount_label')
-      .in('id', offerIds);
-    const offers = (offersRaw as unknown) as OfferRow[] | null;
-
-    const offerMap: Record<string, any> = {};
-    (offers ?? []).forEach(o => { offerMap[o.id] = o; });
-
-    // Resolve student names
-    type ProfRow = { id: string; display_name: string | null };
-    const { data: profsRaw } = await supabase
-      .from('student_profiles')
-      .select('id, display_name')
-      .in('id', reds.map(r => (r as any).student_profile_id).filter(Boolean));
-    const profs = (profsRaw as unknown) as ProfRow[] | null;
-    const profMap: Record<string, string> = {};
-    (profs ?? []).forEach(p => { profMap[p.id] = p.display_name ?? 'Student'; });
-
-    const rewards: PendingReward[] = reds.map(r => {
-      const offer = offerMap[r.offer_id] ?? {};
-      let rewardLabel = offer.discount_label ?? 'Reward';
-      try {
-        const m = (offer.terms_and_conditions ?? '').match(/^\[\[LOYALTY:({.*?})\]\]/s);
-        if (m) { const cfg = JSON.parse(m[1]); rewardLabel = cfg.reward_label ?? rewardLabel; }
-      } catch (_) {}
-      return {
-        id: r.id,
-        student_name: profMap[(r as any).student_profile_id] ?? 'Student',
-        offer_title: offer.title ?? 'Offer',
-        reward_label: rewardLabel,
-        status: r.status,
-        created_at: r.created_at,
-      };
-    });
-
-    setPending(rewards);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/staff/rewards');
+      if (res.status === 401) { onLogout(); return; }
+      const data = await res.json();
+      setPending(Array.isArray(data.rewards) ? data.rewards : []);
+    } catch (_) {
+      /* keep previous list */
+    } finally {
+      setLoading(false);
+    }
   }, [session.vendorId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleClaim = async (id: string) => {
     setClaiming(id);
-    await supabase
-      .from('redemptions')
-      .update({ status: 'confirmed', claimed_at: new Date().toISOString() } as any)
-      .eq('id', id);
+    const res = await fetch('/api/staff/rewards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    }).catch(() => null);
     setClaiming(null);
-    setToast('✅ Reward claimed!');
+    if (res?.status === 401) { onLogout(); return; }
+    setToast(res?.ok ? '✅ Reward claimed!' : '⚠️ Could not claim reward. Please try again.');
     setTimeout(() => setToast(null), 4000);
     await load();
   };
@@ -369,7 +331,7 @@ function ScanScreen({ session, onLogout }: { session: StaffSession; onLogout: ()
           <VendorQRPanel
             vendorId={session.vendorId}
             businessName={session.businessName}
-            city={session.city}
+            city={session.city ?? undefined}
           />
         </div>
 
@@ -446,20 +408,33 @@ export default function StaffScanPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (raw) {
+    // The HttpOnly cookie is the real session; sessionStorage only remembers
+    // the expiry for the countdown banner.
+    (async () => {
       try {
-        const s: StaffSession = JSON.parse(raw);
-        if (s.expiresAt > Date.now()) { setSession(s); }
-        else { sessionStorage.removeItem(SESSION_KEY); }
-      } catch (_) { sessionStorage.removeItem(SESSION_KEY); }
-    }
-    setReady(true);
+        const res = await fetch('/api/staff/session');
+        if (res.ok) {
+          const data = await res.json();
+          let expiresAt = Date.now() + SESSION_TTL;
+          try {
+            const raw = sessionStorage.getItem(SESSION_KEY);
+            if (raw) expiresAt = JSON.parse(raw).expiresAt ?? expiresAt;
+          } catch (_) { /* ignore */ }
+          setSession({ ...data.session, expiresAt });
+        }
+      } catch (_) { /* show PIN entry */ }
+      setReady(true);
+    })();
   }, []);
 
+  const handleSuccess = (s: StaffSession) => {
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ expiresAt: s.expiresAt })); } catch (_) { /* ignore */ }
+    setSession(s);
+  };
+
   const handleLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY);
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (_) { /* ignore */ }
+    fetch('/api/staff/login', { method: 'DELETE' }).catch(() => {});
     setSession(null);
   };
 
@@ -469,6 +444,6 @@ export default function StaffScanPage() {
     </div>
   );
 
-  if (!session) return <PinEntry onSuccess={setSession} />;
+  if (!session) return <PinEntry onSuccess={handleSuccess} />;
   return <ScanScreen session={session} onLogout={handleLogout} />;
 }

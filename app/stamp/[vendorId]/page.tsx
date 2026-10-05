@@ -31,7 +31,6 @@ interface VendorInfo {
   business_name: string;
   city: string | null;
   logo_url: string | null;
-  is_approved: boolean;
 }
 
 interface ActiveOffer {
@@ -219,10 +218,10 @@ export default function StampPage() {
           return;
         }
 
-        // 3. Vendor info
+        // 3. Vendor info (the public view only contains verified vendors)
         const { data: vp } = await supabase
-          .from('vendor_profiles')
-          .select('id, business_name, city, logo_url, is_approved')
+          .from('vendor_profiles_public')
+          .select('id, business_name, city, logo_url')
           .eq('id', vendorId)
           .maybeSingle();
 
@@ -230,12 +229,6 @@ export default function StampPage() {
 
         if (!vp) {
           setPageState('vendor_not_found');
-          return;
-        }
-
-        if (!vp.is_approved) {
-          setPageState('error');
-          setErrorMsg('This vendor is not yet approved on Studeals.');
           return;
         }
 
