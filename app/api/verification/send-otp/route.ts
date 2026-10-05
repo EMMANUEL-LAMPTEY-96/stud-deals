@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { sendEmail } from '@/lib/email/resend';
 import { verificationOtpEmail } from '@/lib/email/templates';
+import { findInstitutionForEmail } from '@/lib/utils/institution-domain';
 import {
   OTP_EXPIRY_MINUTES,
   OTP_MAX_SENDS_PER_WINDOW,
@@ -58,19 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Domain must belong to a known Hungarian institution ──────────────────
-  const domain = uniEmail.split('@')[1];
-  const { data: institutions } = await admin
-    .from('institutions')
-    .select('id, name, short_name, email_domains')
-    .eq('is_active', true)
-    .eq('country', 'Hungary');
-
-  const matched = (institutions ?? []).find((inst) =>
-    Array.isArray(inst.email_domains) &&
-    (inst.email_domains as string[]).some(
-      (d) => domain === d.toLowerCase() || domain.endsWith('.' + d.toLowerCase())
-    )
-  );
+  const matched = await findInstitutionForEmail(admin, uniEmail);
 
   if (!matched) {
     return NextResponse.json(
