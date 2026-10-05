@@ -15,6 +15,7 @@
 //   }
 // =============================================================================
 
+import { randomBytes } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 
@@ -57,8 +58,10 @@ export async function POST(request: NextRequest) {
     vendor_id,
     offer_id,
     status: isCredit ? 'stamp' : 'admin_void',
-    redemption_code: `ADMIN-${isCredit ? 'CREDIT' : 'DEBIT'}-${Date.now()}`,
-    metadata: JSON.stringify({ admin_override: true, admin_id: user.id, reason }),
+    // Unique per row — Date.now() alone gave every row in the batch the same
+    // code, so multi-stamp overrides failed on the unique constraint.
+    redemption_code: `ADMIN-${isCredit ? 'CREDIT' : 'DEBIT'}-${Date.now()}-${randomBytes(4).toString('hex').toUpperCase()}`,
+    metadata: { admin_override: true, admin_id: user.id, reason },
   }));
 
   const { error } = await admin.from('redemptions').insert(rows);
