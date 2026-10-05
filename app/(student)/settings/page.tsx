@@ -171,7 +171,11 @@ export default function StudentSettingsPage() {
   async function handleDeleteAccount() {
     setDeletingAccount(true);
     try {
-      const res = await fetch('/api/account/delete', { method: 'DELETE' });
+      const res = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE_MY_ACCOUNT' }),
+      });
       if (!res.ok) {
         const json = await res.json();
         throw new Error(json.error ?? 'Failed to delete account.');
