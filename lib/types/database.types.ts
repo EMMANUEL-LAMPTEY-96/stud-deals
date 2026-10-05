@@ -529,6 +529,7 @@ export type Database = {
           estimated_transaction_value: number | null
           expires_at: string
           id: string
+          metadata: Json | null
           offer_category: Database["public"]["Enums"]["offer_category"] | null
           offer_id: string
           qr_code_payload: string | null
@@ -560,8 +561,9 @@ export type Database = {
           device_type?: string | null
           discount_value_applied?: number | null
           estimated_transaction_value?: number | null
-          expires_at: string
+          expires_at?: string
           id?: string
+          metadata?: Json | null
           offer_category?: Database["public"]["Enums"]["offer_category"] | null
           offer_id: string
           qr_code_payload?: string | null
@@ -595,6 +597,7 @@ export type Database = {
           estimated_transaction_value?: number | null
           expires_at?: string
           id?: string
+          metadata?: Json | null
           offer_category?: Database["public"]["Enums"]["offer_category"] | null
           offer_id?: string
           qr_code_payload?: string | null
@@ -1227,7 +1230,18 @@ export type Database = {
         | "fitness"
         | "other"
       offer_status: "draft" | "active" | "paused" | "expired" | "depleted"
-      redemption_status: "claimed" | "confirmed" | "expired" | "cancelled"
+      redemption_status:
+        | "claimed"
+        | "confirmed"
+        | "expired"
+        | "cancelled"
+        | "stamp"
+        | "reward_earned"
+        | "tier_reward"
+        | "referral_bonus"
+        | "birthday_bonus"
+        | "admin_void"
+        | "voided"
       user_role: "student" | "vendor" | "admin"
       vendor_plan: "free" | "starter" | "growth" | "pro"
       verification_method: "edu_email" | "id_upload" | "admin_override"
@@ -1370,7 +1384,11 @@ export const Constants = {
         "entertainment", "transport", "books_stationery", "fitness", "other",
       ],
       offer_status: ["draft", "active", "paused", "expired", "depleted"],
-      redemption_status: ["claimed", "confirmed", "expired", "cancelled"],
+      redemption_status: [
+        "claimed", "confirmed", "expired", "cancelled",
+        "stamp", "reward_earned", "tier_reward", "referral_bonus",
+        "birthday_bonus", "admin_void", "voided",
+      ],
       user_role: ["student", "vendor", "admin"],
       vendor_plan: ["free", "starter", "growth", "pro"],
       verification_method: ["edu_email", "id_upload", "admin_override"],
