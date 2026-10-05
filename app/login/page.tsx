@@ -81,7 +81,7 @@ function LoginForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const t            = useT();
-  const redirectTo   = searchParams.get('redirect') ?? '';
+  const redirectTo   = safeRedirectPath(searchParams.get('redirect'));
   const roleParam    = (searchParams.get('role') as LoginRole) ?? 'student';
 
   const [role, setRole]         = useState<LoginRole>(roleParam === 'vendor' ? 'vendor' : 'student');
@@ -416,6 +416,23 @@ function LoginForm() {
       </div>
     </div>
   );
+}
+
+/**
+ * Only allow same-site relative paths ("/dashboard", "/offer/123?x=1").
+ * Rejects absolute URLs, protocol-relative "//evil.com", backslash tricks and
+ * javascript: URLs to prevent open redirects via ?redirect=.
+ */
+function safeRedirectPath(raw: string | null): string {
+  if (!raw) return '';
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return '';
+  try {
+    const url = new URL(raw, 'https://studeals.invalid');
+    if (url.origin !== 'https://studeals.invalid') return '';
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return '';
+  }
 }
 
 export default function LoginPage() {
