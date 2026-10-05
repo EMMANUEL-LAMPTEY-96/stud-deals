@@ -11,7 +11,8 @@ import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
 // Returns aggregated customer data for the authenticated vendor:
 //   - Unique students who have at least 1 stamp/redemption with this vendor
 //   - Stamp count, rewards claimed, last/first visit dates
-//   - GDPR-safe: email partially masked (first 2 chars + domain)
+//   - GDPR: name, email (masked) and institution only for students who opted
+//     in (student_profiles.share_with_vendors); everyone else is anonymous
 //   - Sorted by: most stamps (default), most recent visit, or name
 // =============================================================================
 
@@ -99,14 +100,19 @@ export async function GET(req: NextRequest) {
     // Fetch student profile + auth user info via admin
     const { data: studentProfiles } = await admin
       .from('student_profiles')
-      .select('id, user_id, verification_status, institution_id, institutions(name)')
+      .select('id, user_id, verification_status, institution_id, share_with_vendors, institutions(name)')
       .in('id', studentIds);
 
     const spMap = new Map<string, typeof studentProfiles extends (infer T)[] | null ? T : never>();
     (studentProfiles ?? []).forEach(sp => sp && spMap.set(sp.id, sp));
 
-    // Fetch profiles (name + email) for all user_ids
-    const userIds = [...new Set((studentProfiles ?? []).map(sp => sp?.user_id).filter(Boolean))] as string[];
+    // Fetch profiles (name + email) only for students who consented to sharing
+    const userIds = [...new Set(
+      (studentProfiles ?? [])
+        .filter((sp: any) => sp?.share_with_vendors === true)
+        .map(sp => sp?.user_id)
+        .filter(Boolean)
+    )] as string[];
     const { data: profiles } = await admin
       .from('profiles')
       .select('id, first_name, display_name')
@@ -153,12 +159,13 @@ export async function GET(req: NextRequest) {
       if (!sid) continue;
 
       const sp = spMap.get(sid);
-      const uid = sp?.user_id ?? '';
-      const profile = profileMap.get(uid);
-      const rawEmail = emailMap.get(uid) ?? null;
+      const consented = (sp as any)?.share_with_vendors === true;
+      const uid = consented ? (sp?.user_id ?? '') : '';
+      const profile = consented ? profileMap.get(uid) : undefined;
+      const rawEmail = consented ? (emailMap.get(uid) ?? null) : null;
       const maskedEmail = rawEmail ? maskEmail(rawEmail) : null;
       // @ts-ignore
-      const institutionName = sp?.institutions?.name ?? null;
+      const institutionName = consented ? (sp?.institutions?.name ?? null) : null;
 
       const isStamp = row.status === 'stamp';
       const isReward = ['reward_earned', 'tier_reward', 'confirmed'].includes(row.status);
