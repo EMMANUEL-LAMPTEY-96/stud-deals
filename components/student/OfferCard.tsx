@@ -86,6 +86,7 @@ export default function OfferCard({ offer, isSaved = false, onSaveToggle }: Offe
   return (
     <Link
       href={`/offer/${offer.id}`}
+      prefetch={false}
       className="group card-hover flex flex-col overflow-hidden h-full"
     >
       {/* Image area */}

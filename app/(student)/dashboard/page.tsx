@@ -150,6 +150,7 @@ function DiscoverPill({ offer, badge }: { offer: DiscoverOffer; badge?: React.Re
   return (
     <Link
       href={`/offer/${offer.id}`}
+      prefetch={false}
       className="flex-shrink-0 w-44 bg-white border border-gray-100 rounded-2xl p-3 hover:border-purple-200 hover:shadow-md transition-all duration-150 group"
     >
       <div className="flex items-start justify-between gap-1 mb-2">
