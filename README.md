@@ -97,6 +97,38 @@ The demo vendor only ever sees demo students. There is intentionally **no admin 
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    B["Browser<br/>(student · vendor · staff · admin)"]
+
+    subgraph V["Vercel"]
+        MW["middleware.ts<br/>session refresh + role routing"]
+        P["Next.js 14 pages<br/>(client components)"]
+        API["API route handlers<br/>app/api/*"]
+        CRON["Vercel Cron<br/>daily keep-alive"]
+    end
+
+    subgraph S["Supabase (eu-west-1)"]
+        AUTH["Auth"]
+        DB[("Postgres<br/>RLS + guard triggers")]
+        ST["Storage<br/>private ID bucket"]
+    end
+
+    RS["Resend<br/>OTP + vendor email"]
+    STR["Stripe<br/>(optional)"]
+
+    B --> MW --> P
+    B -- "fetch /api/*" --> API
+    P -- "user session<br/>(RLS applies)" --> DB
+    P --> AUTH
+    API -- "getUser(), then<br/>service role when needed" --> DB
+    API --> AUTH
+    API --> ST
+    API --> RS
+    API <-->|"checkout · portal · webhook"| STR
+    CRON --> API
+```
+
 ```
 app/
 ├── (student)/        student pages: dashboard, explore, offer/[id], loyalty, my-vouchers, verification…
@@ -124,6 +156,29 @@ middleware.ts         session refresh + role-based route protection
 - Stamps and vouchers both live in `redemptions`, distinguished by status: `stamp`, `reward_earned`, `tier_reward`, `claimed`, `confirmed`, and others.
 - Each programme's configuration is embedded in its offer as `[[LOYALTY:{json}]]`.
 - When a reward is handed over, the row keeps its status and the hand-over is recorded in `metadata.reward_claimed_at`. This keeps stamp counts intact.
+
+### Key decisions & trade-offs
+
+- **RLS + guard triggers instead of app-only checks.** Pages talk to Supabase directly with the user's
+  session, so the database itself has to be the security boundary. Row Level Security limits which rows a
+  user can touch, and `BEFORE INSERT OR UPDATE` guard triggers stop users from setting protected columns on their
+  own rows (role, verification status, plan, counters, demo flag). _Trade-off:_ business rules live
+  partly in SQL, which is harder to unit-test and to change than TypeScript.
+- **Loyalty stamps stored in `redemptions`.** Stamps, rewards and vouchers share one table, told apart
+  by `status`. One table means one RLS policy set and one place for analytics (visits, peak hours, funnels).
+  _Trade-off:_ stamp counting has to filter by status everywhere, and the loyalty config sits as JSON
+  inside `offers.terms_and_conditions` rather than in its own typed table.
+- **HMAC-signed, rotating stamp QR.** The vendor's on-screen QR carries a server-signed token that expires
+  after about 10 minutes, and `/api/loyalty/stamp` rejects anything else. A photo of the QR stops working
+  quickly, and nobody can forge a code. _Trade-off:_ the QR must be shown on a live screen; the printable
+  kit can't hold a permanent stamp code.
+- **One-click demo accounts.** Recruiters can try both sides without signing up. Accounts are marked with
+  `profiles.is_demo`. Postgres blocks credential changes for them; the API blocks deletion and ID uploads;
+  the demo vendor only ever sees demo students. A re-runnable seed resets the data. _Trade-off:_ the demo
+  password is public, so every demo restriction must be enforced on the server.
+- **Public vendor view.** Other vendors' data is read through `vendor_profiles_public`, a view with only
+  public columns of verified vendors. The base table is no longer readable across users. This closes a
+  leak of staff PINs and Stripe IDs. _Trade-off:_ an extra object to keep in sync when public columns change.
 
 ---
 
