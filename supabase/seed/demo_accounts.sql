@@ -75,17 +75,18 @@ ON CONFLICT (id) DO UPDATE SET
 INSERT INTO public.vendor_profiles (
   id, user_id, business_name, business_type, description, city, country,
   address_line1, postal_code, latitude, longitude, business_phone, business_email,
-  is_verified, verified_at, plan_tier, plan_status, slug
+  is_verified, verified_at, plan_tier, plan_status, slug, logo_url
 ) VALUES (
   'de300000-0000-4000-a000-000000000201', 'de300000-0000-4000-a000-000000000002',
   'Demo Café', 'cafe',
   'A cosy campus café next to ELTE — specialty coffee, fresh pastries and a shelf of second-hand textbooks. (Demo business for the StudDeals portfolio.)',
   'Budapest', 'Hungary', 'Egyetem tér 5', '1053', 47.4905, 19.0587,
   '+36 1 000 0000', 'demo-vendor@studeals.demo',
-  true, now() - interval '40 days', 'growth', 'active', 'demo-cafe'
+  true, now() - interval '40 days', 'growth', 'active', 'demo-cafe', '/demo/demo-cafe-logo.svg'
 )
 ON CONFLICT (id) DO UPDATE SET
   is_verified = true, plan_tier = 'growth', plan_status = 'active',
+  logo_url = EXCLUDED.logo_url,
   total_lifetime_redemptions = 0, total_lifetime_views = 0;
 
 -- ── Offers ───────────────────────────────────────────────────────────────────
@@ -113,6 +114,25 @@ INSERT INTO public.offers (
 ON CONFLICT (id) DO UPDATE SET
   status = 'active', view_count = 0, redemption_count = 0, save_count = 0,
   terms_and_conditions = EXCLUDED.terms_and_conditions;
+
+-- A finished boost campaign, so the vendor's onboarding checklist ("Launch your
+-- first boost") is complete and /vendor/boost has history. Kept 'expired' so it
+-- never shows in the student feed.
+INSERT INTO public.offers (
+  id, vendor_id, title, description, discount_label, discount_type, discount_value,
+  category, terms_and_conditions, status, starts_at, expires_at, created_at,
+  view_count, redemption_count, save_count
+) VALUES (
+  'de300000-0000-4000-a000-000000000305', 'de300000-0000-4000-a000-000000000201',
+  '⚡ Flash Sale — Demo Café', 'Limited-time boost: 20% OFF. Active for 4 hours.',
+  '20% OFF', 'percentage', 20, 'food_drink',
+  '[[BOOST:{"template":"flash_sale","discount_label":"20% OFF","custom_title":"⚡ Flash Sale — Demo Café","duration_hours":4,"audience":"all","created_at":"2026-01-01T10:00:00.000Z"}]]',
+  'expired', now() - interval '12 days', now() - interval '12 days' + interval '4 hours', now() - interval '12 days',
+  38, 0, 0
+)
+ON CONFLICT (id) DO UPDATE SET
+  status = 'expired', terms_and_conditions = EXCLUDED.terms_and_conditions,
+  starts_at = EXCLUDED.starts_at, expires_at = EXCLUDED.expires_at;
 
 -- ── Reset demo-only activity ─────────────────────────────────────────────────
 -- Only rows where the student is a demo student AND the vendor is the demo vendor.
