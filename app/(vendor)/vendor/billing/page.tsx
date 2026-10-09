@@ -55,19 +55,23 @@ function StatusBanner({ plan }: { plan: VendorPlan }) {
   const days = trialDaysRemaining(plan);
 
   if (plan.plan_status === 'trialing') {
-    const urgent = days <= 7;
+    // A trial with no end date is open-ended (e.g. demo vendor) — active, no countdown.
+    // Only call it expired when trial_ends_at is actually in the past.
+    const noEndDate = !plan.trial_ends_at;
+    const expired   = !noEndDate && new Date(plan.trial_ends_at as string).getTime() <= Date.now();
+    const urgent    = expired || (!noEndDate && days <= 7);
+    const title = noEndDate ? 'Trial active'
+                : expired   ? 'Your free trial has expired'
+                : `${days} day${days !== 1 ? 's' : ''} left in your free trial`;
+    const body  = noEndDate ? 'All Growth features are active during your trial.'
+                : expired   ? 'Subscribe now to restore access to Growth features.'
+                : 'All Growth features are active. Subscribe before the trial ends to keep full access.';
     return (
       <div className={`rounded-2xl p-4 mb-6 flex items-start gap-3 border ${urgent ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}>
         <Clock className={`w-5 h-5 mt-0.5 flex-shrink-0 ${urgent ? 'text-orange-500' : 'text-blue-500'}`} />
         <div>
-          <p className={`font-semibold text-sm ${urgent ? 'text-orange-800' : 'text-blue-800'}`}>
-            {days > 0 ? `${days} day${days !== 1 ? 's' : ''} left in your free trial` : 'Your free trial has expired'}
-          </p>
-          <p className={`text-sm mt-0.5 ${urgent ? 'text-orange-600' : 'text-blue-600'}`}>
-            {days > 0
-              ? 'All Growth features are active. Subscribe before the trial ends to keep full access.'
-              : 'Subscribe now to restore access to Growth features.'}
-          </p>
+          <p className={`font-semibold text-sm ${urgent ? 'text-orange-800' : 'text-blue-800'}`}>{title}</p>
+          <p className={`text-sm mt-0.5 ${urgent ? 'text-orange-600' : 'text-blue-600'}`}>{body}</p>
         </div>
       </div>
     );
