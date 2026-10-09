@@ -13,6 +13,20 @@ businesses; vendors run offers, loyalty programmes and analytics from one dashbo
 
 ---
 
+## Video walkthrough
+
+<!--
+  TODO: add the walkthrough. Either embed a GIF:
+    ![StudDeals walkthrough](docs/walkthrough.gif)
+  or link a YouTube video with a thumbnail:
+    [![StudDeals walkthrough](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
+-->
+
+> 🎬 _Walkthrough coming soon_ — a ~2-minute tour: a student claims a voucher and earns a stamp,
+> then the vendor confirms it and checks analytics.
+
+---
+
 ## Try it
 
 On the [sign-in page](https://studeals.vercel.app/login), click **Try as Student** or **Try as Vendor**.
