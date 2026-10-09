@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
+import { track } from '@/lib/analytics';
 import {
   Gift, Copy, Check, Users, Star, Clock,
   ArrowLeft, Loader2, AlertCircle, QrCode,
@@ -128,6 +129,7 @@ export default function ReferralPage() {
   // ── Copy referral link ───────────────────────────────────────────────────
   async function copyLink() {
     if (!data) return;
+    track('referral_link_shared', { method: 'copy_link' });
     try {
       await navigator.clipboard.writeText(data.referral_link);
       setCopied(true);
@@ -153,7 +155,9 @@ export default function ReferralPage() {
         title: 'Join me on StudDeals!',
         text:  'Get exclusive student discounts near campus. Use my link and we both earn bonus stamps when you claim your first deal!',
         url:   data.referral_link,
-      }).catch(() => {});
+      })
+        .then(() => track('referral_link_shared', { method: 'web_share' }))
+        .catch(() => {}); // dismissed share sheet — not a share
     } else {
       copyLink();
     }

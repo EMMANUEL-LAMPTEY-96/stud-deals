@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useT } from '@/lib/i18n';
+import { identify, track } from '@/lib/analytics';
 import {
   GraduationCap, Mail, Lock, User, CheckCircle,
   AlertCircle, Loader2, Upload, Shield, ArrowLeft, Eye, EyeOff, Gift, Cake
@@ -52,6 +53,13 @@ function StudentSignUpForm() {
   const [emailTouched, setEmailTouched] = useState(false);
   // Hungarian GDPR Art. 8 — minimum age 16 for digital services
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const signupStartedRef = useRef(false);
+
+  function handleFormFocus() {
+    if (signupStartedRef.current) return;
+    signupStartedRef.current = true;
+    track('signup_started', { role: 'student', has_referral_code: referralCode.length === 8 });
+  }
 
   useEffect(() => {
     if (emailTouched) setIsUniEmail(isUniversityEmail(email));
@@ -102,6 +110,16 @@ function StudentSignUpForm() {
       setError(signUpError.message);
       setLoading(false);
       return;
+    }
+
+    if (data.user) {
+      identify(data.user.id, { role: 'student', is_demo: false, city: null, institution: null });
+      track('signed_up', {
+        role: 'student',
+        university_email: isUniEmail,
+        id_uploaded: !!studentIdFile,
+        has_referral_code: referralCode.length === 8,
+      });
     }
 
     // Upload student ID if provided
@@ -182,7 +200,7 @@ function StudentSignUpForm() {
         )}
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} onFocus={handleFormFocus} className="space-y-5">
             {error && (
               <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-red-400 text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />

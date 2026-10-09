@@ -6,13 +6,16 @@
 // ePrivacy Directive + GDPR Article 7 compliant.
 // Three separate consent categories, each independently toggleable:
 //   1. Szükséges / Necessary   — always on, cannot be declined
-//   2. Analitikai / Analytics  — anonymous page-view counts (opt-in)
+//   2. Analitikai / Analytics  — PostHog product analytics, pseudonymous (opt-in)
 //   3. Marketing               — currently unused, but disclosed (opt-in)
 //
 // Consent stored as JSON in localStorage under 'studeals_consent_v2'.
 // Format: { necessary: true, analytics: boolean, marketing: boolean, ts: number }
 //
 // Previous 'studeals_cookie_consent' key is migrated on first load.
+//
+// Saving fires CONSENT_EVENT on window; components/shared/AnalyticsProvider.tsx
+// listens for it and starts PostHog only when analytics is accepted.
 //
 // Copy follows the current UI language (messages/*.json → "cookies"):
 // English by default, Hungarian when the language switcher is set to HU.
@@ -22,16 +25,9 @@ import { useState, useEffect } from 'react';
 import { Shield, X, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-
-const CONSENT_KEY = 'studeals_consent_v2';
-const LEGACY_KEY  = 'studeals_cookie_consent';
-
-interface ConsentState {
-  necessary: true;
-  analytics: boolean;
-  marketing: boolean;
-  ts: number;
-}
+import {
+  CONSENT_EVENT, CONSENT_KEY, LEGACY_CONSENT_KEY as LEGACY_KEY, type ConsentState,
+} from '@/lib/analytics/consent';
 
 function loadConsent(): ConsentState | null {
   if (typeof window === 'undefined') return null;
@@ -56,6 +52,7 @@ function saveConsent(state: Omit<ConsentState, 'ts'>) {
   localStorage.setItem(CONSENT_KEY, JSON.stringify(full));
   // Remove legacy key
   localStorage.removeItem(LEGACY_KEY);
+  window.dispatchEvent(new CustomEvent<ConsentState>(CONSENT_EVENT, { detail: full }));
 }
 
 // Toggle switch

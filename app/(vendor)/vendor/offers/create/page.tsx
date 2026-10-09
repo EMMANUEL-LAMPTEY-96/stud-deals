@@ -23,6 +23,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/analytics';
 import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
 import {
@@ -638,6 +639,27 @@ export default function CreateOfferPage() {
     setSubmitLoading(false);
 
     if (err) { setError(err.message); return; }
+
+    const offerProps = {
+      vendor_id: vendorId,
+      category: payload.category,
+      discount_type: payload.discount_type,
+      status,
+      mode,
+      is_loyalty: mode !== 'standard',
+      source: 'create_form',
+    };
+    track('offer_created', offerProps);
+    if (mode !== 'standard') {
+      track('loyalty_program_created', {
+        ...offerProps,
+        required_visits: parseInt(pcVisits) || null,
+        has_tiers: pcTiered,
+        first_visit_bonus: pcFirstVisitBonus,
+        stamp_expiry: pcStampExpiry,
+        double_stamp_windows: pcDoubleStamp,
+      });
+    }
     router.push('/vendor/offers?created=1');
   };
 

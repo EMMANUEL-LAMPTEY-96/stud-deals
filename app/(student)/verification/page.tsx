@@ -32,6 +32,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/shared/Navbar';
+import { track, trackOnce } from '@/lib/analytics';
 import {
   Mail, Upload, CheckCircle, ArrowRight, ArrowLeft,
   GraduationCap, Loader2, XCircle, Eye, EyeOff,
@@ -68,6 +69,7 @@ export default function VerificationPage() {
 
   const [step, setStep] = useState<Step>('choose');
   const [method, setMethod] = useState<Method | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Email track state
   const [uniEmail, setUniEmail] = useState('');
@@ -94,6 +96,7 @@ export default function VerificationPage() {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
+      setUserId(user.id);
       const { data: spRaw } = await supabase
         .from('student_profiles')
         .select('verification_status, student_email')
@@ -159,6 +162,7 @@ export default function VerificationPage() {
         setEmailError(data.error ?? 'Failed to send code. Please try again.');
         return;
       }
+      track('verification_submitted', { method: 'edu_email', institution_matched: !!matchedInstitution });
       setStep('email_otp');
     } finally {
       setSendingOtp(false);
@@ -209,6 +213,7 @@ export default function VerificationPage() {
         otpRefs.current[0]?.focus();
         return;
       }
+      if (userId) void trackOnce(userId, 'verified', { method: 'edu_email' }, new Date().toISOString());
       setStep('success_verified');
     } finally {
       setVerifyingOtp(false);
@@ -257,6 +262,7 @@ export default function VerificationPage() {
         setUploadError(data.error ?? 'Upload failed. Please try again.');
         return;
       }
+      track('verification_submitted', { method: 'id_upload' });
       setStep('success_pending');
     } finally {
       setUploading(false);
@@ -290,7 +296,10 @@ export default function VerificationPage() {
               <StepDots current={0} total={3} />
 
               <div
-                onClick={() => { setMethod('email'); setStep('email_enter'); }}
+                onClick={() => {
+                  track('verification_started', { method: 'edu_email' });
+                  setMethod('email'); setStep('email_enter');
+                }}
                 className="card p-5 cursor-pointer hover:border-brand-300 hover:shadow-md transition-all border-2 border-transparent group"
               >
                 <div className="flex items-start gap-4">
@@ -316,7 +325,10 @@ export default function VerificationPage() {
               </div>
 
               <div
-                onClick={() => { setMethod('id_upload'); setStep('id_upload'); }}
+                onClick={() => {
+                  track('verification_started', { method: 'id_upload' });
+                  setMethod('id_upload'); setStep('id_upload');
+                }}
                 className="card p-5 cursor-pointer hover:border-brand-300 hover:shadow-md transition-all border-2 border-transparent group"
               >
                 <div className="flex items-start gap-4">

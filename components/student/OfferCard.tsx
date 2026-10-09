@@ -12,6 +12,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Heart, Clock, Tag, Coffee, ShoppingBag, Laptop, UtensilsCrossed, Dumbbell, Book, Sparkles } from 'lucide-react';
 import type { OfferWithVendor } from '@/lib/types/database.types';
+import { offerProperties, track } from '@/lib/analytics';
 
 interface OfferCardProps {
   offer: OfferWithVendor;
@@ -75,7 +76,10 @@ export default function OfferCard({ offer, isSaved = false, onSaveToggle }: Offe
         method: newState ? 'POST' : 'DELETE',
       });
       if (!res.ok) setSaved(!newState); // Revert on failure
-      else onSaveToggle?.(offer.id, newState);
+      else {
+        onSaveToggle?.(offer.id, newState);
+        if (newState) track('offer_saved', { ...offerProperties(offer), source: 'offer_card' });
+      }
     } catch (_) {
       setSaved(!newState);
     } finally {

@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { offerProperties, track } from '@/lib/analytics';
 import Navbar from '@/components/shared/Navbar';
 import OfferCard from '@/components/student/OfferCard';
 import VoucherModal from '@/components/student/VoucherModal';
@@ -371,6 +372,11 @@ export default function StudentDashboard() {
         return;
       }
 
+      const claimed = offers.find((o) => o.id === offerId);
+      track('voucher_claimed', {
+        ...(claimed ? offerProperties(claimed) : { offer_id: offerId }),
+        source: 'dashboard',
+      });
       setActiveVoucher(data);
     } catch (_) {
       alert('Network error. Please check your connection and try again.');

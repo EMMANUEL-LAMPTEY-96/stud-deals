@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { offerProperties, track } from '@/lib/analytics';
 import Navbar from '@/components/shared/Navbar';
 import OfferCard from '@/components/student/OfferCard';
 import VoucherModal from '@/components/student/VoucherModal';
@@ -250,6 +251,11 @@ export default function ExplorePage() {
         alert(data.error ?? 'Failed to claim voucher.');
         return;
       }
+      const claimed = offers.find((o) => o.id === offerId);
+      track('voucher_claimed', {
+        ...(claimed ? offerProperties(claimed) : { offer_id: offerId }),
+        source: 'explore',
+      });
       setActiveVoucher(data);
     } catch {
       alert('Network error. Please try again.');

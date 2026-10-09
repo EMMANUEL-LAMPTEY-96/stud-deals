@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import AnalyticsProvider from '@/components/shared/AnalyticsProvider'
 import CookieConsent from '@/components/shared/CookieConsent'
 import DemoBanner from '@/components/shared/DemoBanner'
 import LegalFooter from '@/components/shared/LegalFooter'
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <LegalFooter />
           <CookieConsent />
+          <AnalyticsProvider />
         </I18nProvider>
         <ServiceWorkerRegistrar />
       </body>

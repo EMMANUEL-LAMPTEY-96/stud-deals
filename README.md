@@ -89,6 +89,7 @@ The demo vendor only ever sees demo students. There is intentionally **no admin 
 | Validation | zod |
 | Email | Resend (REST) |
 | Payments | Stripe (optional; demo mode without a key) |
+| Analytics | PostHog EU (consent-gated product events) + SQL growth views for Looker Studio — see [docs/analytics](docs/analytics/events.md) |
 | QR | `qrcode`, `html5-qrcode`, and the native BarcodeDetector where available |
 | Hosting | Vercel (with Vercel Cron) |
 | Tests | Jest + ts-jest (unit), Playwright (E2E smoke), GitHub Actions CI |
@@ -116,6 +117,7 @@ flowchart LR
 
     RS["Resend<br/>OTP + vendor email"]
     STR["Stripe<br/>(optional)"]
+    PH["PostHog EU<br/>(after consent)"]
 
     B --> MW --> P
     B -- "fetch /api/*" --> API
@@ -127,6 +129,7 @@ flowchart LR
     API --> RS
     API <-->|"checkout · portal · webhook"| STR
     CRON --> API
+    B -. "product events" .-> PH
 ```
 
 ```
@@ -251,6 +254,8 @@ type-check, unit tests and production build on every push and pull request.
 | `NEXT_PUBLIC_APP_URL` | optional | Absolute URL used in emails and Stripe redirects |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | optional | Turns on real billing; without them billing shows "Demo — payments disabled" |
 | `NEXT_PUBLIC_STRIPE_{GROWTH,PRO}{,_ANNUAL}_PRICE_ID` | optional | Stripe price IDs for the plans |
+| `NEXT_PUBLIC_POSTHOG_KEY` | optional | PostHog project API key. Analytics is off without it, and starts only after cookie consent |
+| `NEXT_PUBLIC_POSTHOG_HOST` | optional | Defaults to `https://eu.i.posthog.com` (EU cloud) |
 
 ### Deployment
 
