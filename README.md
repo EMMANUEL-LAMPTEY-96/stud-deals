@@ -1,5 +1,7 @@
 # StudDeals
 
+[![CI](https://github.com/EMMANUEL-LAMPTEY-96/stud-deals/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/EMMANUEL-LAMPTEY-96/stud-deals/actions/workflows/ci.yml)
+
 **A hyper-local student discount and loyalty platform for Hungarian universities.**
 Verified students claim QR-code vouchers and collect digital stamp cards at campus
 businesses; vendors run offers, loyalty programmes and analytics from one dashboard.
