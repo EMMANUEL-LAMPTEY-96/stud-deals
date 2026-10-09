@@ -23,11 +23,6 @@ interface VendorQRPanelProps {
   city?: string;
 }
 
-/** Returns the current 5-minute time window bucket (unix minutes / 5, integer). */
-function currentTimeWindow(): number {
-  return Math.floor(Date.now() / (5 * 60 * 1000));
-}
-
 export default function VendorQRPanel({ vendorId, businessName, city }: VendorQRPanelProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [stampUrl, setStampUrl] = useState<string>('');
@@ -37,19 +32,23 @@ export default function VendorQRPanel({ vendorId, businessName, city }: VendorQR
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Generate (or regenerate) the QR code with the current time window nonce. */
+  /** Generate (or regenerate) the QR code with a fresh server-signed token. */
   const generateQr = useCallback(async (cancelled: { value: boolean }) => {
     if (!vendorId) return;
 
-    // Include a 5-minute time-window nonce in the URL.
-    // The stamp API verifies this nonce is within ±1 window (±10 min) of current time.
-    // This prevents screenshot-and-scan-from-home attacks.
-    const t = currentTimeWindow();
-    const url = `${window.location.origin}/stamp/${vendorId}?t=${t}`;
-    setStampUrl(`${window.location.origin}/stamp/${vendorId}`); // display URL without nonce
-
+    setStampUrl(`${window.location.origin}/stamp/${vendorId}`); // display URL without token
     setGenerating(true);
+
+    // The token ({window}.{hmac}) is signed server-side and verified by the
+    // stamp API, so a QR can't be forged or predicted ahead of time.
+    let refreshInMs = 60 * 1000; // retry sooner if fetching the token fails
     try {
+      const res = await fetch('/api/vendor/stamp-qr', { cache: 'no-store' });
+      if (!res.ok) throw new Error('token');
+      const { token, refresh_in_ms } = await res.json();
+      refreshInMs = refresh_in_ms;
+
+      const url = `${window.location.origin}/stamp/${vendorId}?t=${encodeURIComponent(token)}`;
       const dataUrl = await QRCode.toDataURL(url, {
         width: 256,
         margin: 2,
@@ -66,13 +65,12 @@ export default function VendorQRPanel({ vendorId, businessName, city }: VendorQR
       if (!cancelled.value) setGenerating(false);
     }
 
-    // Schedule refresh at the start of the next 5-minute window
+    // Schedule refresh at the start of the next token window
     if (!cancelled.value) {
-      const msUntilNextWindow = (5 * 60 * 1000) - (Date.now() % (5 * 60 * 1000));
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = setTimeout(() => {
         if (!cancelled.value) generateQr(cancelled);
-      }, msUntilNextWindow + 100); // +100ms buffer
+      }, refreshInMs + 500);
     }
   }, [vendorId]);
 

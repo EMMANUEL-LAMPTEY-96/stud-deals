@@ -12,8 +12,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit, rateLimitResponse } from '@/lib/utils/rate-limit';
+import type { TablesUpdate } from '@/lib/types/database.types';
+import { checkRateLimit, markVerificationSuccess, rateLimitResponse } from '@/lib/utils/rate-limit';
 import { safeLog } from '@/lib/utils/safe-logger';
+import { isDemoUser, demoForbiddenResponse } from '@/lib/utils/demo';
 
 const MAX_FILE_SIZE_MB = 10;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'application/pdf'];
@@ -28,9 +30,10 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorised.' }, { status: 401 });
     }
+    if (await isDemoUser(user.id)) return demoForbiddenResponse('upload ID documents');
 
     // ── Rate limit: 3 submissions per 24 hrs ─────────────────────────────────
-    const rl = await checkRateLimit(user.id, 'doc_submit', { maxAttempts: 3, windowHours: 24 });
+    const rl = await checkRateLimit(user.id, 'doc_upload', { maxAttempts: 3, windowHours: 24 });
     if (!rl.allowed) return rateLimitResponse(rl);
 
     // ── Parse multipart form data ─────────────────────────────────────────────
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
     const documentUrl = signedUrlData?.signedUrl ?? storagePath; // fallback to path
 
     // ── Update student_profiles ───────────────────────────────────────────────
-    const updatePayload: Record<string, unknown> = {
+    const updatePayload: TablesUpdate<'student_profiles'> = {
       verification_status: 'pending_review',
       verification_method: 'id_upload',
       verification_document_url: storagePath, // store the path, not the signed URL
@@ -114,16 +117,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Log to verification_attempts ─────────────────────────────────────────
-    await supabase.from('verification_attempts').insert({
-      user_id: user.id,
-      attempt_type: 'id_upload',
-      attempted_at: new Date().toISOString(),
-      success: true,
-      notes: `Uploaded ${docType} — ${storagePath}`,
-    }).throwOnError().catch(() => {
-      // Non-fatal if the table has different columns — best effort
-    });
+    await markVerificationSuccess(user.id, 'doc_upload');
 
     safeLog.info('[submit-document] Document submitted for review', { userId: user.id });
 

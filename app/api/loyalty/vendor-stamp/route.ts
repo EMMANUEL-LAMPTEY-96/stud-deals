@@ -28,6 +28,7 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import type { TablesInsert } from '@/lib/types/database.types';
 import { randomBytes } from 'crypto';
 import {
   parseLoyaltyConfig,
@@ -38,6 +39,7 @@ import { validateStampPayload } from '@/lib/utils/stamp-qr';
 import { sendEmail } from '@/lib/email/resend';
 import { rewardEarnedEmail } from '@/lib/email/templates';
 import { z } from 'zod';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 const STAMP_COOLDOWN_HOURS = 8;
 
@@ -137,6 +139,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // The demo vendor (public login) may only stamp demo students.
+  if (await isDemoUser(user.id)) {
+    const demoStudents = await getDemoStudentProfileIds();
+    if (!demoStudents.includes(studentProfile.id)) {
+      return NextResponse.json(
+        { error: 'The demo café can only stamp demo student accounts.', demo: true },
+        { status: 403 }
+      );
+    }
+  }
+
   if (!vendorProfile.is_verified) {
     return NextResponse.json(
       { error: 'Your business is not yet verified on Studeals.' },
@@ -162,7 +175,7 @@ export async function POST(request: NextRequest) {
 
   if (recentStamp) {
     const nextAllowed = new Date(
-      new Date(recentStamp.confirmed_at).getTime() +
+      new Date(recentStamp.confirmed_at ?? Date.now()).getTime() +
         STAMP_COOLDOWN_HOURS * 60 * 60 * 1000
     );
     const hoursLeft = Math.ceil(
@@ -217,7 +230,7 @@ export async function POST(request: NextRequest) {
   // ── 9. Stamp expiry: determine effective cycle-position ───────────────────
   let effectiveStampCount = allStamps.length;
 
-  if (loyaltyConfig?.stamp_expiry_days && allStamps.length > 0) {
+  if (loyaltyConfig?.stamp_expiry_days && allStamps.length > 0 && allStamps[0].confirmed_at) {
     const mostRecentDate = new Date(allStamps[0].confirmed_at);
     const daysSince =
       (Date.now() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -288,7 +301,7 @@ export async function POST(request: NextRequest) {
   const secureStampCode = (prefix: string) =>
     `${prefix}-${randomBytes(12).toString('hex').toUpperCase()}`;
 
-  const insertRows: object[] = [
+  const insertRows: TablesInsert<'redemptions'>[] = [
     {
       student_id:      studentProfile.id,
       vendor_id:       vendorProfile.id,
@@ -342,7 +355,7 @@ export async function POST(request: NextRequest) {
 
   const { error: insertError } = await admin
     .from('redemptions')
-    .insert(insertRows as never[]);
+    .insert(insertRows);
 
   if (insertError) {
     safeLog.error('vendor-stamp insert error:', insertError);
@@ -353,7 +366,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 15. Notifications (fire-and-forget) ───────────────────────────────────
-  const notifRows: object[] = [];
+  const notifRows: TablesInsert<'notifications'>[] = [];
   const vendorName = vendorProfile.business_name ?? 'the venue';
   const almostThere = cyclePositionAfter === requiredVisits - 1 && !rewardTriggered;
 
@@ -363,7 +376,8 @@ export async function POST(request: NextRequest) {
       type:       'almost_there',
       title:      '🎯 Just 1 stamp away!',
       body:       `Visit ${vendorName} one more time to earn: ${rewardLabel}`,
-      action_url: '/loyalty',
+      related_entity_type: 'vendor',
+      related_entity_id:   vendorProfile.id,
       is_read:    false,
     });
   }
@@ -374,7 +388,8 @@ export async function POST(request: NextRequest) {
       type:       'reward_earned',
       title:      '🎉 Reward unlocked!',
       body:       `You earned "${rewardLabel}" at ${vendorName}. Show this to redeem it.`,
-      action_url: '/loyalty',
+      related_entity_type: 'vendor',
+      related_entity_id:   vendorProfile.id,
       is_read:    false,
     });
   }
@@ -385,7 +400,8 @@ export async function POST(request: NextRequest) {
       type:       'tier_reward',
       title:      '⭐ Milestone reward!',
       body:       `You unlocked "${tier.reward_label}" at ${vendorName}!`,
-      action_url: '/loyalty',
+      related_entity_type: 'vendor',
+      related_entity_id:   vendorProfile.id,
       is_read:    false,
     });
   }
@@ -393,7 +409,7 @@ export async function POST(request: NextRequest) {
   if (notifRows.length > 0) {
     admin
       .from('notifications')
-      .insert(notifRows as never[])
+      .insert(notifRows)
       .then(({ error: e }) => {
         if (e) safeLog.error('vendor-stamp notification error:', e.message);
       });

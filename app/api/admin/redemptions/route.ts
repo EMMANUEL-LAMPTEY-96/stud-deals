@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { Constants } from '@/lib/types/database.types';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -42,7 +43,11 @@ export async function GET(request: NextRequest) {
 
   if (vendorId)  q = q.eq('vendor_id',  vendorId);
   if (studentId) q = q.eq('student_id', studentId);
-  if (status)    q = q.eq('status',     status);
+  if (status) {
+    const valid = Constants.public.Enums.redemption_status.find((s) => s === status);
+    if (!valid) return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 });
+    q = q.eq('status', valid);
+  }
 
   const { data: rows, count: totalCount, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -57,7 +62,11 @@ export async function GET(request: NextRequest) {
   const offerIds   = [...new Set(rows.map((r) => r.offer_id).filter(Boolean))];
 
   const [{ data: students }, { data: vendors }, { data: offers }] = await Promise.all([
-    admin.from('profiles').select('id, first_name, last_name, display_name').in('id', studentIds),
+    // redemptions.student_id is student_profiles.id → resolve names via user_id → profiles
+    admin
+      .from('student_profiles')
+      .select('id, profiles!student_profiles_user_id_fkey(first_name, last_name, display_name)')
+      .in('id', studentIds),
     admin.from('vendor_profiles').select('id, business_name').in('id', vendorIds),
     offerIds.length
       ? admin.from('offers').select('id, title').in('id', offerIds)
@@ -66,9 +75,10 @@ export async function GET(request: NextRequest) {
 
   const studentMap: Record<string, string> = {};
   for (const s of students ?? []) {
-    studentMap[s.id] = s.first_name
-      ? `${s.first_name} ${s.last_name ?? ''}`.trim()
-      : (s.display_name ?? 'Student');
+    const p = s.profiles;
+    studentMap[s.id] = p?.first_name
+      ? `${p.first_name} ${p.last_name ?? ''}`.trim()
+      : (p?.display_name ?? 'Student');
   }
   const vendorMap: Record<string, string> = {};
   for (const v of vendors ?? []) vendorMap[v.id] = v.business_name;

@@ -112,7 +112,8 @@ function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
 
 function OfferCard({ offer, isLoggedIn }: { offer: PublicOffer; isLoggedIn: boolean }) {
   const loyalty = parseLoyaltyConfig(offer.terms_and_conditions);
-  const isLoyalty = loyalty?.mode === 'punch_card' || loyalty?.mode === 'tiered';
+  // There is no 'tiered' mode — tiers are an option on a config (LoyaltyConfig.tiers)
+  const isLoyalty = loyalty?.mode === 'punch_card' || (loyalty?.tiers?.length ?? 0) > 0;
   const catIcon = CATEGORY_ICON[offer.category] ?? <Tag size={14} />;
   const catLabel = CATEGORY_LABEL[offer.category] ?? offer.category;
 

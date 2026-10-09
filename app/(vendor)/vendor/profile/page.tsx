@@ -34,7 +34,7 @@ import {
   Upload, X, Zap, Star, User, Clock, Image as ImageIcon,
   Plus, Trash2, Link as LinkIcon, ExternalLink,
 } from 'lucide-react';
-import type { VendorProfile } from '@/lib/types/database.types';
+import type { VendorProfile, VendorPlanEnum } from '@/lib/types/database.types';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -45,7 +45,10 @@ const BUSINESS_TYPES = [
   'Transport / Taxi', 'Online Business', 'Other',
 ];
 
-const PLAN_INFO = {
+interface PlanInfo { label: string; color: string; features: string[]; cta: boolean }
+
+// 'pro' has no card of its own yet and falls back to the free card below
+const PLAN_INFO: Partial<Record<VendorPlanEnum, PlanInfo>> & { free: PlanInfo } = {
   free: {
     label: 'Free',
     color: 'text-gray-600 bg-gray-100',
@@ -527,7 +530,7 @@ export default function VendorProfilePage() {
     );
   }
 
-  const plan = PLAN_INFO[(vp as any)?.plan_tier ?? 'free'] ?? PLAN_INFO.free;
+  const plan = PLAN_INFO[vp?.plan_tier ?? 'free'] ?? PLAN_INFO.free;
 
   return (
     <>
@@ -822,7 +825,7 @@ export default function VendorProfilePage() {
                   )}
                 </div>
                 {plan.cta && (
-                  <a href="/vendor/upgrade" className="btn-vendor text-xs px-4 py-2 flex items-center gap-1.5">
+                  <a href="/vendor/billing" className="btn-vendor text-xs px-4 py-2 flex items-center gap-1.5">
                     <Zap size={13} />
                     Upgrade
                     <ArrowUpRight size={12} />

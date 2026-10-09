@@ -8,8 +8,8 @@
 // Flow:
 //   1. Student taps "Earn Stamp" → this modal opens
 //   2. Camera activates, student points it at vendor's QR code
-//   3. QR decoded → payload validated (type: "stud_stamp")
-//   4. POST /api/loyalty/stamp called with vendor_id
+//   3. QR decoded → must be a {origin}/stamp/{vendorId}?t={token} URL
+//   4. POST /api/loyalty/stamp called with vendor_id + signed token (nonce)
 //   5. Success: animated stamp card shows progress + reward status
 //   6. Error: clear message (already stamped, no loyalty program, etc.)
 //
@@ -76,7 +76,7 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
     }
   }, []);
 
-  const processStamp = useCallback(async (vendorId: string) => {
+  const processStamp = useCallback(async (vendorId: string, nonce: string) => {
     if (hasScannedRef.current) return;
     hasScannedRef.current = true;
 
@@ -87,7 +87,7 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
       const res = await fetch('/api/loyalty/stamp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendor_id: vendorId }),
+        body: JSON.stringify({ vendor_id: vendorId, nonce }),
       });
 
       const data = await res.json();
@@ -152,14 +152,14 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
           aspectRatio: 1.0,
         },
         (decodedText) => {
-          // Validate it's a Stud Deals QR
+          // Vendor QRs encode {origin}/stamp/{vendorId}?t={signed token}
           try {
-            const payload = JSON.parse(decodedText);
-            if (payload?.type === 'stud_stamp' && payload?.vendor_id) {
-              processStamp(payload.vendor_id);
-            }
+            const url = new URL(decodedText);
+            const m = url.pathname.match(/^\/stamp\/([0-9a-f-]{36})\/?$/i);
+            const token = url.searchParams.get('t');
+            if (m && token) processStamp(m[1], token);
           } catch (_) {
-            // Not JSON — ignore and keep scanning
+            // Not a URL — ignore and keep scanning
           }
         },
         () => { /* scan failure — normal, ignore */ }

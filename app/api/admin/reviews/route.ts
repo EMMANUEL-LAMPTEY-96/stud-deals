@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   let q = admin
     .from('vendor_reviews')
     .select(`
-      id, rating, review_text, vendor_reply, created_at,
+      id, rating, review_text:body, vendor_reply, created_at,
       student_id, vendor_id,
       vendor_profiles!inner ( business_name, city )
     `, { count: 'exact' })
@@ -55,16 +55,18 @@ export async function GET(request: NextRequest) {
 
   // Enrich with student names
   const studentIds = [...new Set(reviews.map((r) => r.student_id))];
+  // vendor_reviews.student_id is student_profiles.id → resolve names via user_id → profiles
   const { data: studentProfiles } = await admin
-    .from('profiles')
-    .select('id, first_name, last_name, display_name')
+    .from('student_profiles')
+    .select('id, profiles!student_profiles_user_id_fkey(first_name, last_name, display_name)')
     .in('id', studentIds);
 
   const studentMap: Record<string, string> = {};
-  for (const p of studentProfiles ?? []) {
-    studentMap[p.id] = p.first_name
+  for (const sp of studentProfiles ?? []) {
+    const p = sp.profiles;
+    studentMap[sp.id] = p?.first_name
       ? `${p.first_name} ${p.last_name ?? ''}`.trim()
-      : p.display_name ?? 'Student';
+      : p?.display_name ?? 'Student';
   }
 
   let mapped = reviews.map((r) => ({
@@ -76,8 +78,8 @@ export async function GET(request: NextRequest) {
     student_id:    r.student_id,
     student_name:  studentMap[r.student_id] ?? 'Unknown',
     vendor_id:     r.vendor_id,
-    business_name: (r.vendor_profiles as any)?.business_name ?? null,
-    city:          (r.vendor_profiles as any)?.city ?? null,
+    business_name: r.vendor_profiles?.business_name ?? null,
+    city:          r.vendor_profiles?.city ?? null,
   }));
 
   if (search) {

@@ -17,13 +17,14 @@ import {
   Loader2, Ticket, ArrowRight, Sparkles,
 } from 'lucide-react';
 import type { ClaimOfferResponse } from '@/lib/types/database.types';
+import { generateStudentVoucherQr } from '@/lib/utils/qr-code';
 
 type TabKey = 'active' | 'used' | 'expired';
 
 interface VoucherRow {
   id: string;
   redemption_code: string;
-  qr_code_data_url: string | null;
+  qr_code_payload: string | null;
   status: string;
   claimed_at: string;
   expires_at: string;
@@ -33,9 +34,11 @@ interface VoucherRow {
     title: string;
     discount_label: string;
     category: string;
+    terms_and_conditions: string | null;
     vendor: {
-      business_name: string;
+      business_name: string | null;
       city: string | null;
+      address_line1: string | null;
       logo_url: string | null;
     } | null;
   } | null;
@@ -167,21 +170,31 @@ export default function MyVouchersPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/sign-in'); return; }
 
+      // redemptions.student_id references student_profiles.id, not auth.uid()
+      const { data: sp } = await supabase
+        .from('student_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!sp) { setVouchers([]); setLoading(false); return; }
+
       const { data } = await supabase
         .from('redemptions')
         .select(`
-          id, redemption_code, qr_code_data_url, status,
+          id, redemption_code, qr_code_payload, status,
           claimed_at, expires_at, confirmed_at,
           offer:offers (
-            id, title, discount_label, category,
-            vendor:vendor_profiles (business_name, city, logo_url)
+            id, title, discount_label, category, terms_and_conditions,
+            vendor:vendor_profiles_public (business_name, city, address_line1, logo_url)
           )
         `)
-        .eq('student_id', user.id)
+        .eq('student_id', sp.id)
+        // Vouchers only — loyalty stamps share this table with other statuses
+        .in('status', ['claimed', 'confirmed', 'expired', 'cancelled'])
         .order('claimed_at', { ascending: false })
         .limit(50);
 
-      setVouchers((data ?? []) as unknown as VoucherRow[]);
+      setVouchers(data ?? []);
       setLoading(false);
     })();
   }, []);
@@ -199,19 +212,32 @@ export default function MyVouchersPage() {
     expired: vouchers.filter(v => v.status !== 'confirmed' && new Date(v.expires_at) <= new Date()).length,
   };
 
-  const handleShow = (v: VoucherRow) => {
-    if (!v.qr_code_data_url) return;
+  const handleShow = async (v: VoucherRow) => {
+    // The table stores only the QR payload; render it the same way the claim API does.
+    let qrDataUrl: string | null = null;
+    try {
+      qrDataUrl = await generateStudentVoucherQr(v.qr_code_payload ?? v.redemption_code);
+    } catch {
+      qrDataUrl = null; // VoucherModal falls back to the text code
+    }
     setActiveVoucher({
-      redemption_id:   v.id,
-      redemption_code: v.redemption_code,
-      qr_code_data_url: v.qr_code_data_url,
-      expires_at:      v.expires_at,
-      offer_title:     v.offer?.title ?? '',
-      discount_label:  v.offer?.discount_label ?? '',
-      vendor_name:     v.offer?.vendor?.business_name ?? '',
-      vendor_address:  v.offer?.vendor?.city ?? '',
-      terms_and_conditions: null,
-    } as ClaimOfferResponse);
+      success:          true,
+      redemption_id:    v.id,
+      redemption_code:  v.redemption_code,
+      qr_code_data_url: qrDataUrl,
+      expires_at:       v.expires_at,
+      offer: {
+        id:                   v.offer?.id ?? '',
+        title:                v.offer?.title ?? '',
+        discount_label:       v.offer?.discount_label ?? '',
+        terms_and_conditions: v.offer?.terms_and_conditions ?? null,
+      },
+      vendor: {
+        business_name: v.offer?.vendor?.business_name ?? '',
+        address_line1: v.offer?.vendor?.address_line1 ?? null,
+        city:          v.offer?.vendor?.city ?? null,
+      },
+    });
   };
 
   const TABS: { key: TabKey; label: string; count: number }[] = [

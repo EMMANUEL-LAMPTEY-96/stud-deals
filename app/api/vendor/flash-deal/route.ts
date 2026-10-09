@@ -12,6 +12,7 @@ import { haversineKm } from '@/lib/utils/distance';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
 import { getVendorPlan, hasAccess } from '@/lib/utils/plan-tier';
+import { isDemoUser, getDemoUserIds } from '@/lib/utils/demo';
 
 const FlashDealBodySchema = z.object({
   title: z.string().min(1, 'Title is required.').max(100, 'Title must be 100 characters or fewer.'),
@@ -119,6 +120,9 @@ export async function POST(request: NextRequest) {
 
     let notifyCount = 0;
 
+    // The demo vendor (public login) may only notify demo students.
+    const demoOnly = (await isDemoUser(user.id)) ? new Set(await getDemoUserIds()) : null;
+
     if (vendor.latitude && vendor.longitude) {
       const { data: institutions } = await admin
         .from('institutions')
@@ -140,7 +144,7 @@ export async function POST(request: NextRequest) {
           .in('institution_id', nearbyInstitutionIds)
           .eq('verification_status', 'verified');
 
-        const userIds = (students ?? []).map(s => s.user_id);
+        const userIds = (students ?? []).map(s => s.user_id).filter(uid => !demoOnly || demoOnly.has(uid));
         notifyCount = userIds.length;
 
         if (userIds.length > 0) {
@@ -148,11 +152,12 @@ export async function POST(request: NextRequest) {
             user_id: uid,
             type: 'flash_deal',
             title: `⚡ Flash Deal: ${vendor.business_name ?? 'Nearby Business'}`,
-            message: `${discount_text} — ends ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
-            action_url: `/flash/${flashDeal.id}`,
-            expires_at: endsAt.toISOString(),
+            body: `${discount_text} — ends ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
+            related_entity_type: 'flash_deal',
+            related_entity_id: flashDeal.id,
           }));
-          await admin.from('notifications').insert(notifications);
+          const { error: notifErr } = await admin.from('notifications').insert(notifications);
+          if (notifErr) safeLog.error('flash deal notification insert error:', notifErr.message);
           safeLog.audit('flash_deal_notifications_sent', { vendorId: vendor.id, notifyCount, flashDealId: flashDeal.id });
         }
       }
@@ -169,7 +174,7 @@ export async function POST(request: NextRequest) {
           .in('institution_id', cityInstitutions.map(i => i.id))
           .eq('verification_status', 'verified');
 
-        const userIds = (students ?? []).map(s => s.user_id);
+        const userIds = (students ?? []).map(s => s.user_id).filter(uid => !demoOnly || demoOnly.has(uid));
         notifyCount = userIds.length;
 
         if (userIds.length > 0) {
@@ -177,11 +182,12 @@ export async function POST(request: NextRequest) {
             user_id: uid,
             type: 'flash_deal',
             title: `⚡ Flash Deal: ${vendor.business_name ?? 'Nearby Business'}`,
-            message: `${discount_text} — ends at ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
-            action_url: `/flash/${flashDeal.id}`,
-            expires_at: endsAt.toISOString(),
+            body: `${discount_text} — ends at ${endsAt.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit' })}`,
+            related_entity_type: 'flash_deal',
+            related_entity_id: flashDeal.id,
           }));
-          await admin.from('notifications').insert(notifications);
+          const { error: notifErr } = await admin.from('notifications').insert(notifications);
+          if (notifErr) safeLog.error('flash deal notification insert error:', notifErr.message);
         }
       }
     }

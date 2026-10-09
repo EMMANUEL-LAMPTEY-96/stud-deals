@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { Constants } from '@/lib/types/database.types';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -45,7 +46,11 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (role !== 'all') profileQuery = profileQuery.eq('role', role);
+  if (role !== 'all') {
+    const validRole = Constants.public.Enums.user_role.find((r) => r === role);
+    if (!validRole) return NextResponse.json({ error: 'Invalid role filter' }, { status: 400 });
+    profileQuery = profileQuery.eq('role', validRole);
+  }
   if (city) profileQuery = profileQuery.eq('city', city);
 
   const { data: profiles, count: totalCount } = await profileQuery;

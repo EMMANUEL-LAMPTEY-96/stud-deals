@@ -70,7 +70,7 @@ function KPI({ label, value, icon, bg, color, alert }: {
 }) {
   return (
     <div className={`${bg} rounded-2xl p-5 relative`}>
-      {alert && value > 0 && (
+      {alert && Number(value) > 0 && (
         <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
       )}
       <div className={`${color} mb-3`}>{icon}</div>

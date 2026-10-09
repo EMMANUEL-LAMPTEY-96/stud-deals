@@ -8,7 +8,7 @@
 //   4. Redirect wrong-role users (e.g., vendor accessing /student/dashboard)
 // =============================================================================
 
-import { createServerClient, type CookieOptionsWithName } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/types/database.types';
 import type { Profile } from '@/lib/types/database.types';
@@ -19,9 +19,22 @@ const VENDOR_ROUTES   = ['/vendor'];
 const ADMIN_ROUTES    = ['/admin'];
 const AUTH_ROUTES     = ['/sign-in', '/sign-up', '/login', '/register'];    // Redirect away if already logged in
 
-// Public routes inside /vendor/ that any authenticated user (including students) may access.
-// /vendor/[slug] is a shareable public profile page — it must NOT be blocked for students.
-const PUBLIC_VENDOR_ROUTES = /^\/vendor\/[a-z0-9][a-z0-9-]*[a-z0-9]?(\/.*)?$/;
+// Vendor dashboard sections under /vendor/. Everything here requires the vendor role.
+const VENDOR_APP_SECTIONS = new Set([
+  'analytics', 'billing', 'boost', 'calendar', 'customers', 'flash', 'notifications',
+  'offers', 'print-qr', 'profile', 'reviews', 'rewards', 'staff', 'upgrade',
+]);
+
+// Public routes inside /vendor/ that anyone (including students and logged-out visitors) may access:
+//   /vendor/[slug] — shareable public profile page (exactly one segment, not a dashboard section)
+//   /vendor/scan   — staff PIN scan mode (authenticated by its own staff session)
+function isPublicVendorRoute(pathname: string): boolean {
+  const m = pathname.match(/^\/vendor\/([^/]+)\/?$/);
+  if (!m) return false;
+  const segment = m[1];
+  if (segment === 'scan') return true;
+  return /^[a-z0-9][a-z0-9-]*$/.test(segment) && !VENDOR_APP_SECTIONS.has(segment);
+}
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -42,7 +55,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet: CookieOptionsWithName[]) {
+        setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -70,7 +83,7 @@ export async function middleware(request: NextRequest) {
 
   if (!user && isProtectedRoute) {
     // /vendor/[slug] is a public page — allow unauthenticated visitors to view it
-    if (PUBLIC_VENDOR_ROUTES.test(pathname)) {
+    if (isPublicVendorRoute(pathname)) {
       return supabaseResponse;
     }
     const redirectUrl = new URL('/login', request.url);
@@ -82,14 +95,15 @@ export async function middleware(request: NextRequest) {
   // separate DB queries for the same user on every authenticated request.
   // We include both 'role' and 'is_active' in the single SELECT so rules 2 & 3
   // can share the same result without additional round-trips.
-  let sharedProfile: { role?: string; is_active?: boolean } | null = null;
+  type SharedProfile = { role?: string; is_active?: boolean };
+  let sharedProfile: SharedProfile | null = null;
   if (user) {
     const { data: p } = await supabase
       .from('profiles')
       .select('role, is_active')
       .eq('id', user.id)
       .maybeSingle();
-    sharedProfile = p as typeof sharedProfile;
+    sharedProfile = p as SharedProfile | null;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -135,7 +149,7 @@ export async function middleware(request: NextRequest) {
     // Student trying to access vendor routes — but allow public vendor profile pages
     if (role === 'student' && VENDOR_ROUTES.some((r) => pathname.startsWith(r))) {
       // /vendor/[slug] is a public profile — students can view it
-      if (PUBLIC_VENDOR_ROUTES.test(pathname)) {
+      if (isPublicVendorRoute(pathname)) {
         return supabaseResponse;
       }
       return NextResponse.redirect(new URL('/dashboard', request.url));

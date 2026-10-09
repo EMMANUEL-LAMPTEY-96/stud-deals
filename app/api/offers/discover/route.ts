@@ -34,10 +34,12 @@ export async function GET() {
   const nowISO  = now.toISOString();
 
   // ── Base offer SELECT with vendor join ────────────────────────────────────
+  // Students can't read vendor_profiles directly (migration 016) — join the
+  // public-columns view, aliased so the result key stays vendor_profiles.
   const offerSelect = `
     id, title, category, status, discount_value, discount_type,
     expires_at, created_at,
-    vendor_profiles!inner ( business_name, city, logo_url )
+    vendor_profiles:vendor_profiles_public!inner ( business_name, city, logo_url )
   `;
 
   // ── 1. Trending: count recent redemptions per offer ───────────────────────
@@ -74,7 +76,7 @@ export async function GET() {
         ...mapOffer(o),
         claim_count: claimMap[o.id] ?? 0,
       }))
-      .sort((a, b) => (b as any).claim_count - (a as any).claim_count)
+      .sort((a, b) => b.claim_count - a.claim_count)
       .slice(0, 5);
   }
 
@@ -112,7 +114,19 @@ export async function GET() {
 }
 
 // ── Map raw Supabase row to DiscoverOffer ─────────────────────────────────
-function mapOffer(o: any) {
+type VendorBits = { business_name: string | null; city: string | null; logo_url: string | null };
+type DiscoverRow = {
+  id: string;
+  title: string;
+  category: string;
+  discount_value: number | null;
+  discount_type: string;
+  expires_at: string | null;
+  created_at: string;
+  vendor_profiles: VendorBits | VendorBits[] | null;
+};
+
+function mapOffer(o: DiscoverRow) {
   const vp = Array.isArray(o.vendor_profiles) ? o.vendor_profiles[0] : o.vendor_profiles;
   return {
     id:             o.id,

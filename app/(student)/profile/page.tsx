@@ -34,6 +34,7 @@ interface StudentData {
     last_name: string | null;
     display_name: string | null;
     created_at: string;
+    is_demo?: boolean;
   } | null;
   student_profile: {
     id: string;
@@ -290,7 +291,7 @@ export default function StudentProfilePage() {
   };
 
   const handlePasswordReset = async () => {
-    if (!data?.email) return;
+    if (!data?.email || data.profile?.is_demo) return;
     await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -465,7 +466,9 @@ export default function StudentProfilePage() {
                 <p className="text-sm font-semibold text-gray-900 mb-0.5">Change password</p>
                 <p className="text-xs text-gray-500">We'll email you a secure link to reset your password.</p>
               </div>
-              {passwordSent ? (
+              {data?.profile?.is_demo ? (
+                <span className="text-xs text-amber-700 font-semibold">Disabled on demo accounts</span>
+              ) : passwordSent ? (
                 <span className="text-sm text-green-600 font-semibold flex items-center gap-1.5">
                   <CheckCircle size={14} /> Email sent!
                 </span>
