@@ -1,4 +1,4 @@
-# Studeals
+# StudDeals
 
 **A hyper-local student discount and loyalty platform for Hungarian universities.**
 Verified students claim QR-code vouchers and collect digital stamp cards at campus

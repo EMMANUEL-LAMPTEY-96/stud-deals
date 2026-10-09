@@ -1,7 +1,7 @@
 -- =============================================================================
 -- 010_billing.sql
 --
--- Billing & subscription management for Unideals vendor accounts.
+-- Billing & subscription management for StudDeals vendor accounts.
 --
 -- Tiers:
 --   free    — 1 active offer, basic stamp card, no analytics

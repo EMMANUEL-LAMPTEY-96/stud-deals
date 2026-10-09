@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Unideals** (repo: `stud-deals`, live at `studeals.vercel.app`) is a hyper-local student discount marketplace targeting Hungarian university students. Verified students claim exclusive deals from campus businesses using QR-code vouchers and a loyalty stamp system.
+**StudDeals** (repo: `stud-deals`, live at `studeals.vercel.app`) is a hyper-local student discount marketplace targeting Hungarian university students. Verified students claim exclusive deals from campus businesses using QR-code vouchers and a loyalty stamp system.
 
 - **Tech stack:** Next.js 14 App Router · TypeScript · Tailwind CSS · Supabase (Postgres + Auth + Storage) · Vercel
 - **Deployment:** Auto-deploys from `main` branch on Vercel. Project name on Vercel is `unideals` under account `nellamptey-3909`.

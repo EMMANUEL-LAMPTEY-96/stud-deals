@@ -8,7 +8,7 @@
 //   - Business name + logo (or initials fallback)
 //   - QR code (same URL as the stamp scanner — students scan this)
 //   - "Scan to earn loyalty stamps" headline
-//   - Studeals branding + short instruction
+//   - StudDeals branding + short instruction
 //   - Optional: a half-sheet (A5) variant for table cards
 //
 // Uses window.print() with a @media print stylesheet that hides the UI chrome
@@ -293,7 +293,7 @@ export default function PrintQRKitPage() {
                   <div className={`rounded-2xl px-5 py-4 mb-5 w-full text-sm ${style.sub}`}>
                     <div className="flex items-center gap-3 mb-2.5">
                       <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background: style.accent, color: '#fff' }}>1</div>
-                      <span className="opacity-80">Open the <strong>Studeals</strong> app</span>
+                      <span className="opacity-80">Open the <strong>StudDeals</strong> app</span>
                     </div>
                     <div className="flex items-center gap-3 mb-2.5">
                       <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background: style.accent, color: '#fff' }}>2</div>
@@ -308,7 +308,7 @@ export default function PrintQRKitPage() {
                   {/* Footer */}
                   <div className="flex items-center gap-2 opacity-50">
                     <Zap size={13} style={{ color: style.accent }} className="flex-shrink-0"/>
-                    <span className="text-xs font-semibold">Powered by Studeals · studeals.app</span>
+                    <span className="text-xs font-semibold">Powered by StudDeals · studeals.app</span>
                   </div>
                 </div>
               </div>

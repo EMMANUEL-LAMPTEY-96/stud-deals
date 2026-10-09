@@ -92,7 +92,7 @@ export function validateStampPayload(raw: string): StampValidationResult {
   ) {
     return {
       valid: false,
-      error: 'Not a Studeals loyalty QR. Make sure the student opens their Loyalty page.',
+      error: 'Not a StudDeals loyalty QR. Make sure the student opens their Loyalty page.',
       error_code: 'INVALID_FORMAT',
     };
   }
@@ -141,7 +141,7 @@ export function validateStampPayload(raw: string): StampValidationResult {
   if (!signaturesMatch) {
     return {
       valid: false,
-      error: 'Invalid QR signature. This code did not come from Studeals.',
+      error: 'Invalid QR signature. This code did not come from StudDeals.',
       error_code: 'INVALID_SIGNATURE',
     };
   }

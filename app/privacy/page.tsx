@@ -57,7 +57,7 @@ const HU = {
       content: (
         <>
           <p>
-            A Studeals („mi") egy diákkedvezmény-piactér, amelyet ellenőrzött egyetemi hallgatók és
+            A StudDeals („mi") egy diákkedvezmény-piactér, amelyet ellenőrzött egyetemi hallgatók és
             helyi vállalkozások számára működtetünk. Az élő platform elérhető:{' '}
             <a href="https://studeals.vercel.app" className="text-brand-600 underline">
               studeals.vercel.app
@@ -216,7 +216,7 @@ const HU = {
               },
               {
                 party: 'Adminisztrátorok',
-                scope: 'A Studeals munkatársai hozzáférhetnek adataihoz a támogatási problémák megoldása vagy a hallgatói igazolvány-dokumentumok ellenőrzése céljából.',
+                scope: 'A StudDeals munkatársai hozzáférhetnek adataihoz a támogatási problémák megoldása vagy a hallgatói igazolvány-dokumentumok ellenőrzése céljából.',
               },
             ].map(({ party, scope }) => (
               <div key={party} className="flex gap-3">
@@ -406,7 +406,7 @@ const EN = {
       content: (
         <>
           <p>
-            Studeals ("we", "us", "our") is a student discount marketplace operated as a service for
+            StudDeals ("we", "us", "our") is a student discount marketplace operated as a service for
             verified university students and local businesses. Our live platform is available at{' '}
             <a href="https://studeals.vercel.app" className="text-brand-600 underline">
               studeals.vercel.app
@@ -566,7 +566,7 @@ const EN = {
               },
               {
                 party: 'Admins',
-                scope: "Studeals staff may access your data to resolve support issues or review student ID documents for verification.",
+                scope: "StudDeals staff may access your data to resolve support issues or review student ID documents for verification.",
               },
             ].map(({ party, scope }) => (
               <div key={party} className="flex gap-3">

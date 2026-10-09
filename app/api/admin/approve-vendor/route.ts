@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
         ? `${vp.business_name}: Application approved!`
         : `${vp.business_name}: Application update`,
       body: action === 'approve'
-        ? 'Your business has been approved on Stud Deals. Your offers are now visible to students!'
+        ? 'Your business has been approved on StudDeals. Your offers are now visible to students!'
         : `Your application needs attention. ${notes ?? 'Please review your business details and resubmit.'}`,
       type: action === 'approve' ? 'vendor_approved' : 'vendor_rejected',
       is_read: false,

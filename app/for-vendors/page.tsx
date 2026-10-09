@@ -3,7 +3,7 @@
 //
 // Public, no auth required.
 // Targets Hungarian campus businesses (cafés, bookshops, gyms, etc.)
-// explaining why they should join Studeals.
+// explaining why they should join StudDeals.
 //
 // Sections:
 //   1. Hero
@@ -25,9 +25,9 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'For Businesses — Studeals | Reach verified Hungarian university students',
+  title: 'For Businesses — StudDeals | Reach verified Hungarian university students',
   description:
-    'List your student discounts on Studeals and reach tens of thousands of verified university students near your venue. Free to start. No commission.',
+    'List your student discounts on StudDeals and reach tens of thousands of verified university students near your venue. Free to start. No commission.',
 };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -150,15 +150,15 @@ const PLANS: Plan[] = [
 const FAQS = [
   {
     q: 'Is there a commission on each redemption?',
-    a: 'No. Studeals charges a flat monthly fee (or nothing on the Free plan). You keep 100% of what students spend at your venue.',
+    a: 'No. StudDeals charges a flat monthly fee (or nothing on the Free plan). You keep 100% of what students spend at your venue.',
   },
   {
     q: 'How do I know students are actually verified?',
     a: 'Every student completes a verification step — university email, student ID upload, or institutional email domain check — before they can claim any deal. Unverified accounts cannot access offers.',
   },
   {
-    q: 'What types of businesses work best on Studeals?',
-    a: 'Cafés, restaurants, bookshops, gyms, beauty salons, pharmacies, electronics stores, and any business within walking distance of a university campus. If students walk past your door, Studeals can send them inside.',
+    q: 'What types of businesses work best on StudDeals?',
+    a: 'Cafés, restaurants, bookshops, gyms, beauty salons, pharmacies, electronics stores, and any business within walking distance of a university campus. If students walk past your door, StudDeals can send them inside.',
   },
   {
     q: 'How long does verification take?',
@@ -249,7 +249,7 @@ export default async function ForVendorsPage() {
             <div className="w-7 h-7 bg-vendor-600 rounded-lg flex items-center justify-center">
               <Zap size={14} className="text-white" />
             </div>
-            Studeals
+            StudDeals
           </Link>
           <div className="flex items-center gap-3">
             <Link
@@ -288,7 +288,7 @@ export default async function ForVendorsPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-white/75 max-w-2xl mx-auto mb-10">
-            Studeals connects Hungarian campus businesses with tens of thousands of verified
+            StudDeals connects Hungarian campus businesses with tens of thousands of verified
             university students — through QR vouchers, loyalty stamps, and targeted flash deals.
           </p>
 
@@ -477,7 +477,7 @@ export default async function ForVendorsPage() {
             Ready to grow your student customer base?
           </h2>
           <p className="text-gray-500 text-base mb-8 max-w-md mx-auto">
-            Join hundreds of campus businesses already on Studeals.
+            Join hundreds of campus businesses already on StudDeals.
             Free to list, live in 24 hours, no commission.
           </p>
           <Link
@@ -496,7 +496,7 @@ export default async function ForVendorsPage() {
       {/* ── Footer ── */}
       <footer className="border-t border-gray-100 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
-          <p>© {new Date().getFullYear()} Studeals · studeals.app</p>
+          <p>© {new Date().getFullYear()} StudDeals · studeals.app</p>
           <div className="flex items-center gap-5">
             <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>

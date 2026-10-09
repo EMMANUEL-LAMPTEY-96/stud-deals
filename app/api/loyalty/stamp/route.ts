@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 
   if (!vendorProfile.is_verified) {
     return NextResponse.json({
-      error: 'This business is not yet verified on Studeals.',
+      error: 'This business is not yet verified on StudDeals.',
     }, { status: 403 });
   }
 

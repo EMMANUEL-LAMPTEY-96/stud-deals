@@ -171,7 +171,7 @@ export default function OnboardingChecklist({ vendorId }: { vendorId: string }) 
       <div className="flex items-center gap-3 bg-vendor-50 border border-vendor-200 rounded-2xl px-5 py-3.5 mb-6 animate-fade-in">
         <CheckCircle size={18} className="text-vendor-600 flex-shrink-0" />
         <p className="text-sm font-semibold text-vendor-800 flex-1">
-          🎉 All set! Your business is fully configured and live on Stud Deals.
+          🎉 All set! Your business is fully configured and live on StudDeals.
         </p>
         <button onClick={handleDismiss} className="text-vendor-400 hover:text-vendor-700">
           <X size={15} />
@@ -189,7 +189,7 @@ export default function OnboardingChecklist({ vendorId }: { vendorId: string }) 
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-gray-900">Get started with Stud Deals</p>
+            <p className="text-sm font-bold text-gray-900">Get started with StudDeals</p>
             <span className="text-xs font-bold text-vendor-600 bg-vendor-50 px-2 py-0.5 rounded-full">
               {doneCount}/{total}
             </span>

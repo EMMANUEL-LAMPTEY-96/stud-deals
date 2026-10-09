@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
   await admin.from('notifications').insert({
     user_id: referrer.user_id,
     type:    'referral_joined',
-    title:   'Your friend joined Studeals! 🎉',
+    title:   'Your friend joined StudDeals! 🎉',
     body:    'A friend signed up using your referral link. You\'ll earn 2 bonus stamps when they claim their first deal.',
     is_read: false,
   });

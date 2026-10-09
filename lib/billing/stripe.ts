@@ -1,7 +1,7 @@
 // =============================================================================
 // lib/billing/stripe.ts
 //
-// Lazily-created Stripe client. Studeals runs as a demo without payments when
+// Lazily-created Stripe client. StudDeals runs as a demo without payments when
 // STRIPE_SECRET_KEY is unset: getStripe() returns null, the billing routes
 // answer 503 { demo: true }, and the billing page shows a disabled state.
 // With the key set, the real Stripe code paths run unchanged.

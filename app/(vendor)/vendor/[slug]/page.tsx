@@ -64,10 +64,10 @@ export async function generateMetadata(
     .maybeSingle();
   const vp = (vpMetaRaw as unknown) as { business_name: string; city: string | null; description: string | null } | null;
 
-  if (!vp) return { title: 'Vendor not found — Studeals' };
+  if (!vp) return { title: 'Vendor not found — StudDeals' };
 
   return {
-    title: `${vp.business_name} student deals${vp.city ? ` in ${vp.city}` : ''} — Studeals`,
+    title: `${vp.business_name} student deals${vp.city ? ` in ${vp.city}` : ''} — StudDeals`,
     description:
       vp.description ??
       `Exclusive student discounts at ${vp.business_name}. Verify your student status and claim deals instantly.`,
