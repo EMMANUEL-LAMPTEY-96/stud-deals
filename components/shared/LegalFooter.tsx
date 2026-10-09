@@ -3,22 +3,16 @@
 // =============================================================================
 // components/shared/LegalFooter.tsx
 //
-// Legal footer required by Hungarian Electronic Commerce Act
-// (2001. évi CVIII. törvény, §4) and EU Consumer Rights Directive.
-//
-// Must appear on all public-facing pages. Contains:
-//   - Company identity (name, cégszám, adószám, address)
-//   - EU ODR platform link (required by EU Reg. 524/2013)
-//   - NAIH supervisory authority reference
-//   - Privacy policy + Terms links
-//   - Copyright
-//
-// ⚠️  IMPORTANT: Replace the placeholder company details below with your
-//     real registered Hungarian company information before going live.
+// Site footer for public-facing pages. Contains:
+//   - Brand + platform / legal / support links
+//   - Portfolio-project notice (StudDeals is not a registered company and
+//     processes no real payments, so no company register details or EU ODR
+//     link apply)
+//   - Copyright + data-storage note
 // =============================================================================
 
 import Link from 'next/link';
-import { ExternalLink, Shield, Scale } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 export default function LegalFooter() {
   const year = new Date().getFullYear();
@@ -33,7 +27,7 @@ export default function LegalFooter() {
         {/* Top row — brand + tagline */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6 mb-8">
           <div>
-            <p className="font-black text-gray-900 text-base tracking-tight">Studeals</p>
+            <p className="font-black text-gray-900 text-base tracking-tight">StudDeals</p>
             <p className="text-xs text-gray-500 mt-1 max-w-xs leading-relaxed">
               Verified student discounts at local businesses near your campus.
               Hungary&apos;s student discount marketplace.
@@ -69,64 +63,21 @@ export default function LegalFooter() {
           </div>
         </div>
 
-        {/* Legal info block — required by 2001. évi CVIII. törvény §4 */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 text-xs text-gray-500 leading-relaxed space-y-1">
-          <div className="flex items-start gap-2 flex-wrap">
-            <Scale size={13} className="text-gray-400 flex-shrink-0 mt-0.5" />
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {/* ⚠️ Replace with your real registered company details */}
-              <span><strong className="text-gray-700">Studeals Kft.</strong></span>
-              <span>Cégszám: <strong className="text-gray-700">01-09-000000</strong></span>
-              <span>Adószám: <strong className="text-gray-700">00000000-0-00</strong></span>
-              <span>Székhely: <strong className="text-gray-700">1051 Budapest, Nádor utca 1.</strong></span>
-            </div>
+        {/* Project notice — this is a portfolio project, not a registered business */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-6 text-xs text-gray-500 leading-relaxed">
+          <div className="flex items-start gap-2">
+            <Info size={13} className="text-gray-400 flex-shrink-0 mt-0.5" />
+            <p>
+              StudDeals is a portfolio project by Emmanuel Lamptey — not a registered company.
+              No real payments are processed.
+            </p>
           </div>
-          <p className="text-gray-400 pl-5 italic text-[11px]">
-            ⚠ Replace the cégszám, adószám, and address above with your real registered company details before going live.
-          </p>
-        </div>
-
-        {/* EU ODR + NAIH — required by EU Reg. 524/2013 */}
-        <div className="grid sm:grid-cols-2 gap-3 mb-6">
-          <a
-            href="https://ec.europa.eu/consumers/odr/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 hover:bg-blue-100 transition-colors group"
-          >
-            <ExternalLink size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-semibold text-blue-800 group-hover:underline">
-                EU Online Dispute Resolution
-              </p>
-              <p className="text-[11px] text-blue-600 mt-0.5">
-                ec.europa.eu/consumers/odr — EU vitarendezési platform fogyasztói panaszokhoz
-              </p>
-            </div>
-          </a>
-
-          <a
-            href="https://naih.hu"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-100 transition-colors group"
-          >
-            <Shield size={14} className="text-gray-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-semibold text-gray-700 group-hover:underline">
-                NAIH — Nemzeti Adatvédelmi Hatóság
-              </p>
-              <p className="text-[11px] text-gray-500 mt-0.5">
-                naih.hu — adatvédelmi panasz benyújtásához forduljon a felügyeleti hatósághoz
-              </p>
-            </div>
-          </a>
         </div>
 
         {/* Bottom strip */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-5 border-t border-gray-100">
           <p className="text-[11px] text-gray-400">
-            © {year} Studeals Kft. Minden jog fenntartva. All rights reserved.
+            © {year} StudDeals · Emmanuel Lamptey
           </p>
           <p className="text-[11px] text-gray-400">
             Adattárolás: Supabase EU (Írország) · GDPR 2016/679 · ePrivacy irányelv
