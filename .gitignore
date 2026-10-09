@@ -28,3 +28,8 @@ npm-debug.log*
 *.pdf
 *.bak
 test_write.txt
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/

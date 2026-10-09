@@ -77,7 +77,7 @@ The demo vendor only ever sees demo students. There is intentionally **no admin 
 | Payments | Stripe (optional; demo mode without a key) |
 | QR | `qrcode`, `html5-qrcode`, and the native BarcodeDetector where available |
 | Hosting | Vercel (with Vercel Cron) |
-| Tests | Jest + ts-jest |
+| Tests | Jest + ts-jest (unit), Playwright (E2E smoke), GitHub Actions CI |
 
 ---
 
@@ -158,7 +158,13 @@ Then:
 npm test          # Jest unit tests
 npx tsc --noEmit  # type-check
 npm run build     # production build (type-checks too)
+npm run test:e2e  # Playwright smoke tests against BASE_URL (default: the live demo)
 ```
+
+The E2E smoke tests (`tests/e2e/`) only sign in to the demo accounts and open pages, so they are
+safe to run repeatedly against the live site. They run daily and on demand in the
+[E2E workflow](.github/workflows/e2e.yml); CI ([ci.yml](.github/workflows/ci.yml)) runs the
+type-check, unit tests and production build on every push and pull request.
 
 ### Environment variables
 
