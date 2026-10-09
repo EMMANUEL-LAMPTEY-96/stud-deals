@@ -80,6 +80,7 @@ export async function middleware(request: NextRequest) {
     ...VENDOR_ROUTES,
     ...ADMIN_ROUTES,
   ].some((route) => pathname.startsWith(route));
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
   if (!user && isProtectedRoute) {
     // /vendor/[slug] is a public page — allow unauthenticated visitors to view it
@@ -91,25 +92,29 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Public pages (/, /privacy, /stamp/..., etc.) need no role decision — the
+  // getUser() call above has already refreshed the session, so stop here and
+  // skip the profiles query.
+  if (!user || (!isProtectedRoute && !isAuthRoute)) {
+    return supabaseResponse;
+  }
+
   // VULN-19 fix: fetch profile ONCE for all rule checks instead of making two
   // separate DB queries for the same user on every authenticated request.
   // We include both 'role' and 'is_active' in the single SELECT so rules 2 & 3
   // can share the same result without additional round-trips.
   type SharedProfile = { role?: string; is_active?: boolean };
-  let sharedProfile: SharedProfile | null = null;
-  if (user) {
-    const { data: p } = await supabase
-      .from('profiles')
-      .select('role, is_active')
-      .eq('id', user.id)
-      .maybeSingle();
-    sharedProfile = p as SharedProfile | null;
-  }
+  const { data: p } = await supabase
+    .from('profiles')
+    .select('role, is_active')
+    .eq('id', user.id)
+    .maybeSingle();
+  const sharedProfile = p as SharedProfile | null;
 
   // ──────────────────────────────────────────────────────────────────────────
   // RULE 2: Authenticated user on auth pages → redirect to their dashboard
   // ──────────────────────────────────────────────────────────────────────────
-  if (user && AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (isAuthRoute) {
     const role = sharedProfile?.role ?? 'student';
     const dashboardPath = role === 'vendor' ? '/vendor'
                         : role === 'admin'  ? '/admin'
@@ -123,42 +128,40 @@ export async function middleware(request: NextRequest) {
   // Prevents a student from hitting /vendor/... and vice versa.
   // Banned users (is_active = false) are redirected to /sign-in.
   // ──────────────────────────────────────────────────────────────────────────
-  if (user) {
-    const profile = sharedProfile;
+  const profile = sharedProfile;
 
-    // Blocked accounts — sign them out and redirect to login
-    if (profile && (profile as { is_active?: boolean }).is_active === false) {
-      await supabase.auth.signOut();
-      const redirectUrl = new URL('/login', request.url);
-      redirectUrl.searchParams.set('error', 'account_suspended');
-      return NextResponse.redirect(redirectUrl);
+  // Blocked accounts — sign them out and redirect to login
+  if (profile && (profile as { is_active?: boolean }).is_active === false) {
+    await supabase.auth.signOut();
+    const redirectUrl = new URL('/login', request.url);
+    redirectUrl.searchParams.set('error', 'account_suspended');
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  const role = (profile as { role?: string } | null)?.role ?? 'student';
+
+  // Vendor trying to access student routes
+  if (role === 'vendor' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
+    return NextResponse.redirect(new URL('/vendor', request.url));
+  }
+
+  // Admin trying to access student routes → redirect to admin panel
+  if (role === 'admin' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
+    return NextResponse.redirect(new URL('/admin', request.url));
+  }
+
+  // Student trying to access vendor routes — but allow public vendor profile pages
+  if (role === 'student' && VENDOR_ROUTES.some((r) => pathname.startsWith(r))) {
+    // /vendor/[slug] is a public profile — students can view it
+    if (isPublicVendorRoute(pathname)) {
+      return supabaseResponse;
     }
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
-    const role = (profile as { role?: string } | null)?.role ?? 'student';
-
-    // Vendor trying to access student routes
-    if (role === 'vendor' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
-      return NextResponse.redirect(new URL('/vendor', request.url));
-    }
-
-    // Admin trying to access student routes → redirect to admin panel
-    if (role === 'admin' && STUDENT_ROUTES.some((r) => pathname.startsWith(r))) {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-
-    // Student trying to access vendor routes — but allow public vendor profile pages
-    if (role === 'student' && VENDOR_ROUTES.some((r) => pathname.startsWith(r))) {
-      // /vendor/[slug] is a public profile — students can view it
-      if (isPublicVendorRoute(pathname)) {
-        return supabaseResponse;
-      }
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-
-    // Non-admin trying to access admin routes
-    if (role !== 'admin' && ADMIN_ROUTES.some((r) => pathname.startsWith(r))) {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
+  // Non-admin trying to access admin routes
+  if (role !== 'admin' && ADMIN_ROUTES.some((r) => pathname.startsWith(r))) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return supabaseResponse;
@@ -166,7 +169,10 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run middleware on all routes EXCEPT static files and Next.js internals
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Run middleware on page routes only. Skipped:
+    //   - /api/*          — route handlers authenticate themselves (getUser())
+    //   - Next.js internals, PWA files (manifest.json, sw.js), /icons/*, /fonts/*
+    //   - any static file by extension (images, fonts, css/js, txt/xml/json)
+    '/((?!api(?:/|$)|_next/static|_next/image|favicon\\.ico|manifest\\.json|sw\\.js|icons/|fonts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf|eot|css|js|map|txt|xml|json|webmanifest)$).*)',
   ],
 };
