@@ -29,13 +29,19 @@ export async function GET() {
     .eq('id', user.id)
     .maybeSingle();
 
-  const { data: studentProfile } = await admin
+  const { data: studentProfileRow } = await admin
     .from('student_profiles')
     .select('*')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const share_with_vendors = user.user_metadata?.share_with_vendors !== false;
+  // Never return internal verification state (OTP hash, admin notes, ID document path).
+  const studentProfile = studentProfileRow
+    ? (({ verification_notes, verification_document_url, verified_by, ...rest }) => rest)(studentProfileRow)
+    : null;
+
+  // Opt-in only: stored on student_profiles (migration 017), default false.
+  const share_with_vendors = (studentProfileRow as { share_with_vendors?: boolean } | null)?.share_with_vendors === true;
 
   return NextResponse.json({
     profile,
@@ -89,14 +95,13 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Update user_metadata for consent
-  if (share_with_vendors !== undefined) {
-    const { error } = await admin.auth.admin.updateUserById(user.id, {
-      user_metadata: {
-        ...user.user_metadata,
-        share_with_vendors,
-      },
-    });
+  // Marketing consent lives on student_profiles (same as /api/student/consent)
+  if (typeof share_with_vendors === 'boolean') {
+    const now = new Date().toISOString();
+    const { error } = await admin
+      .from('student_profiles')
+      .update({ share_with_vendors, consent_updated_at: now, updated_at: now })
+      .eq('user_id', user.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// Pre-existing Supabase typed-client debt — suppressed until db types are regenerated.
 'use client';
 
 // =============================================================================
@@ -26,6 +24,16 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { QrCode, Keyboard, CheckCircle, XCircle, Loader2, RotateCcw, Camera, AlertTriangle } from 'lucide-react';
 import type { ConfirmRedemptionResponse } from '@/lib/types/database.types';
 import { normaliseVoucherCode, isValidVoucherCodeFormat } from '@/lib/utils/voucher';
+
+// BarcodeDetector (Shape Detection API) is not in TypeScript's DOM lib yet —
+// minimal typing for the bits used here.
+interface DetectedBarcode { rawValue: string }
+interface BarcodeDetectorInstance { detect(source: HTMLVideoElement): Promise<DetectedBarcode[]> }
+type BarcodeDetectorCtor = new (options: { formats: string[] }) => BarcodeDetectorInstance;
+const getBarcodeDetector = (): BarcodeDetectorCtor | undefined =>
+  typeof window === 'undefined'
+    ? undefined
+    : (window as Window & { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
 
 type ScanMode = 'manual' | 'camera';
 type ResultState = 'idle' | 'loading' | 'success' | 'error';
@@ -75,8 +83,9 @@ export default function RedemptionScanner() {
       }
 
       // Use BarcodeDetector API if available
-      if ('BarcodeDetector' in window) {
-        const detector = new (window as Window & { BarcodeDetector: typeof BarcodeDetector }).BarcodeDetector({
+      const BarcodeDetectorImpl = getBarcodeDetector();
+      if (BarcodeDetectorImpl) {
+        const detector = new BarcodeDetectorImpl({
           formats: ['qr_code'],
         });
         scanIntervalRef.current = setInterval(async () => {

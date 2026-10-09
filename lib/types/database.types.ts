@@ -52,6 +52,27 @@ export type Database = {
           },
         ]
       }
+      deletion_audit: {
+        Row: {
+          deleted_at: string
+          id: string
+          reason: string | null
+          role: string | null
+        }
+        Insert: {
+          deleted_at?: string
+          id?: string
+          reason?: string | null
+          role?: string | null
+        }
+        Update: {
+          deleted_at?: string
+          id?: string
+          reason?: string | null
+          role?: string | null
+        }
+        Relationships: []
+      }
       flash_deals: {
         Row: {
           created_at: string
@@ -406,6 +427,13 @@ export type Database = {
             foreignKeyName: "offers_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "vendor_profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
@@ -442,6 +470,7 @@ export type Database = {
           first_name: string | null
           id: string
           is_active: boolean
+          is_demo: boolean
           last_name: string | null
           last_seen_at: string | null
           phone: string | null
@@ -458,6 +487,7 @@ export type Database = {
           first_name?: string | null
           id: string
           is_active?: boolean
+          is_demo?: boolean
           last_name?: string | null
           last_seen_at?: string | null
           phone?: string | null
@@ -474,6 +504,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           is_active?: boolean
+          is_demo?: boolean
           last_name?: string | null
           last_seen_at?: string | null
           phone?: string | null
@@ -501,6 +532,7 @@ export type Database = {
           estimated_transaction_value: number | null
           expires_at: string
           id: string
+          metadata: Json | null
           offer_category: Database["public"]["Enums"]["offer_category"] | null
           offer_id: string
           qr_code_payload: string | null
@@ -532,8 +564,9 @@ export type Database = {
           device_type?: string | null
           discount_value_applied?: number | null
           estimated_transaction_value?: number | null
-          expires_at: string
+          expires_at?: string
           id?: string
+          metadata?: Json | null
           offer_category?: Database["public"]["Enums"]["offer_category"] | null
           offer_id: string
           qr_code_payload?: string | null
@@ -567,6 +600,7 @@ export type Database = {
           estimated_transaction_value?: number | null
           expires_at?: string
           id?: string
+          metadata?: Json | null
           offer_category?: Database["public"]["Enums"]["offer_category"] | null
           offer_id?: string
           qr_code_payload?: string | null
@@ -584,6 +618,13 @@ export type Database = {
           vendor_longitude?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "redemptions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "redemptions_offer_id_fkey"
             columns: ["offer_id"]
@@ -712,9 +753,42 @@ export type Database = {
           },
         ]
       }
+      staff_login_attempts: {
+        Row: {
+          attempted_at: string
+          id: number
+          ip: string | null
+          success: boolean
+          vendor_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: never
+          ip?: string | null
+          success?: boolean
+          vendor_id: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: never
+          ip?: string | null
+          success?: boolean
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_login_attempts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_profiles: {
         Row: {
           birthday_bonus_claimed_year: number | null
+          consent_updated_at: string | null
           created_at: string
           date_of_birth: string | null
           graduation_year: number | null
@@ -724,6 +798,7 @@ export type Database = {
           major: string | null
           referral_code: string | null
           referred_by_id: string | null
+          share_with_vendors: boolean
           student_email: string | null
           student_id_number: string | null
           total_offers_saved: number
@@ -741,6 +816,7 @@ export type Database = {
         }
         Insert: {
           birthday_bonus_claimed_year?: number | null
+          consent_updated_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           graduation_year?: number | null
@@ -750,6 +826,7 @@ export type Database = {
           major?: string | null
           referral_code?: string | null
           referred_by_id?: string | null
+          share_with_vendors?: boolean
           student_email?: string | null
           student_id_number?: string | null
           total_offers_saved?: number
@@ -767,6 +844,7 @@ export type Database = {
         }
         Update: {
           birthday_bonus_claimed_year?: number | null
+          consent_updated_at?: string | null
           created_at?: string
           date_of_birth?: string | null
           graduation_year?: number | null
@@ -776,6 +854,7 @@ export type Database = {
           major?: string | null
           referral_code?: string | null
           referred_by_id?: string | null
+          share_with_vendors?: boolean
           student_email?: string | null
           student_id_number?: string | null
           total_offers_saved?: number
@@ -816,6 +895,41 @@ export type Database = {
           {
             foreignKeyName: "student_profiles_verified_by_fkey"
             columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_attempts: {
+        Row: {
+          action: string
+          attempt_at: string
+          id: string
+          ip_hash: string | null
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          attempt_at?: string
+          id?: string
+          ip_hash?: string | null
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          action?: string
+          attempt_at?: string
+          id?: string
+          ip_hash?: string | null
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_attempts_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1068,6 +1182,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_profiles_public: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          business_email: string | null
+          business_hours: Json | null
+          business_name: string | null
+          business_phone: string | null
+          business_type: string | null
+          city: string | null
+          country: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          gallery_photos: string[] | null
+          id: string | null
+          is_verified: boolean | null
+          latitude: number | null
+          logo_url: string | null
+          longitude: number | null
+          postal_code: string | null
+          slug: string | null
+          state: string | null
+          total_active_offers: number | null
+          total_lifetime_redemptions: number | null
+          total_lifetime_views: number | null
+          website_url: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       expire_stale_redemptions: { Args: never; Returns: number }
@@ -1089,7 +1233,18 @@ export type Database = {
         | "fitness"
         | "other"
       offer_status: "draft" | "active" | "paused" | "expired" | "depleted"
-      redemption_status: "claimed" | "confirmed" | "expired" | "cancelled"
+      redemption_status:
+        | "claimed"
+        | "confirmed"
+        | "expired"
+        | "cancelled"
+        | "stamp"
+        | "reward_earned"
+        | "tier_reward"
+        | "referral_bonus"
+        | "birthday_bonus"
+        | "admin_void"
+        | "voided"
       user_role: "student" | "vendor" | "admin"
       vendor_plan: "free" | "starter" | "growth" | "pro"
       verification_method: "edu_email" | "id_upload" | "admin_override"
@@ -1232,7 +1387,11 @@ export const Constants = {
         "entertainment", "transport", "books_stationery", "fitness", "other",
       ],
       offer_status: ["draft", "active", "paused", "expired", "depleted"],
-      redemption_status: ["claimed", "confirmed", "expired", "cancelled"],
+      redemption_status: [
+        "claimed", "confirmed", "expired", "cancelled",
+        "stamp", "reward_earned", "tier_reward", "referral_bonus",
+        "birthday_bonus", "admin_void", "voided",
+      ],
       user_role: ["student", "vendor", "admin"],
       vendor_plan: ["free", "starter", "growth", "pro"],
       verification_method: ["edu_email", "id_upload", "admin_override"],
@@ -1243,6 +1402,11 @@ export const Constants = {
     },
   },
 } as const
+
+// NOTE: the generated block above was extended by hand with objects from
+// migrations 016–018 and 020 (profiles.is_demo, vendor_profiles_public, staff_login_attempts,
+// student_profiles.share_with_vendors/consent_updated_at,
+// verification_attempts, deletion_audit). Regenerate once they're applied.
 
 // =============================================================================
 // App-level convenience types — not generated, maintained manually
@@ -1270,28 +1434,76 @@ export type VendorPlanEnum     = DBEnums['vendor_plan']
 export type VerificationStatus = DBEnums['verification_status']
 export type VerificationMethod = DBEnums['verification_method']
 
+export type Institution    = DBTables['institutions']['Row']
+export type DiscountType   = DBEnums['discount_type']
+
 // Offer with nested vendor (used on student dashboard / offer cards)
 export interface OfferWithVendor extends Offer {
   vendor: {
     id: string
     business_name: string
     logo_url: string | null
-    city: string
+    city: string | null
     address_line1: string | null
     latitude: number | null
     longitude: number | null
   }
 }
 
-// API response shape returned by POST /api/redemptions/claim
+// ── API request / response shapes ────────────────────────────────────────────
+
+// POST /api/redemptions/claim
+export interface ClaimOfferRequest {
+  offer_id: string
+  device_type?: 'mobile' | 'tablet' | 'desktop'
+}
+
 export interface ClaimOfferResponse {
-  redemption_id:        string
-  redemption_code:      string
-  qr_code_data_url:     string | null
-  expires_at:           string
-  offer_title:          string
-  discount_label:       string
-  vendor_name:          string
-  vendor_address:       string
-  terms_and_conditions: string | null
+  success: boolean
+  redemption_id: string
+  redemption_code: string
+  qr_code_data_url: string | null
+  expires_at: string
+  offer: {
+    id: string
+    title: string
+    discount_label: string
+    terms_and_conditions: string | null
+  }
+  vendor: {
+    business_name: string
+    address_line1: string | null
+    city: string | null
+  }
+}
+
+// POST /api/redemptions/confirm
+export interface ConfirmRedemptionRequest {
+  redemption_code: string
+}
+
+export interface ConfirmRedemptionResponse {
+  success: boolean
+  redemption_id: string
+  student_display_name: string
+  offer_title: string
+  discount_label: string
+  confirmed_at: string
+  message: string
+}
+
+// POST /api/verification/check-email
+export interface VerifyEduEmailRequest {
+  email: string
+}
+
+export interface VerifyEduEmailResponse {
+  is_valid_edu_email: boolean
+  institution: {
+    id: string
+    name: string
+    short_name: string | null
+    logo_url: string | null
+  } | null
+  message: string
 }

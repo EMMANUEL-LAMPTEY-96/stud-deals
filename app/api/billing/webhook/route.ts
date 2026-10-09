@@ -21,12 +21,10 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getStripe, billingDisabledResponse } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { PlanTier, PlanStatus } from '@/lib/utils/plan-tier';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-  apiVersion: '2025-04-30.basil',
-});
 
 // Map Stripe subscription status → our plan_status
 function mapStripeStatus(stripeStatus: string): PlanStatus {
@@ -111,6 +109,9 @@ async function downgradeToFree(customerId: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripe();
+  if (!stripe) return billingDisabledResponse();
+
   const body      = await request.text();
   const signature = request.headers.get('stripe-signature') ?? '';
   const secret    = process.env.STRIPE_WEBHOOK_SECRET ?? '';
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.CheckoutSession;
+        const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode === 'subscription' && session.subscription) {
           const sub = await stripe.subscriptions.retrieve(
             session.subscription as string

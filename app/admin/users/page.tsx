@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
             >
               <Download size={14} /> Export CSV
             </a>
-            <button onClick={fetchUsers} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50">
+            <button onClick={() => fetchUsers()} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50">
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
           </div>

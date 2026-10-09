@@ -37,7 +37,7 @@ interface VendorDetail {
   rejection_notes: string | null;
   created_at: string;
   email: string | null;
-  staff_pin: string | null;
+  staff_count: number;
   approval_status: string;
   plan_tier: string | null;
   plan_status: string | null;
@@ -80,7 +80,7 @@ const PLAN_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   active:   'bg-green-100 text-green-700',
   trialing: 'bg-blue-100 text-blue-700',
-  canceled: 'bg-red-100 text-red-700',
+  cancelled: 'bg-red-100 text-red-700',
   past_due: 'bg-orange-100 text-orange-700',
 };
 
@@ -280,7 +280,7 @@ function PlanPanel({ vendor, onUpdated }: { vendor: VendorDetail; onUpdated: () 
           >
             <option value="active">Active</option>
             <option value="trialing">Trialing</option>
-            <option value="canceled">Canceled</option>
+            <option value="cancelled">Cancelled</option>
             <option value="past_due">Past due</option>
           </select>
         </div>
@@ -439,8 +439,8 @@ export default function VendorDeepDivePage() {
                         <Globe size={11} />{vendor.website_url.replace(/^https?:\/\//, '')}
                       </a>
                     )}
-                    {vendor.staff_pin && (
-                      <span className="flex items-center gap-1"><Key size={11} />PIN: {vendor.staff_pin}</span>
+                    {vendor.staff_count > 0 && (
+                      <span className="flex items-center gap-1"><Key size={11} />{vendor.staff_count} staff PIN{vendor.staff_count === 1 ? '' : 's'}</span>
                     )}
                     <span className="flex items-center gap-1">
                       <Clock size={11} />Joined {new Date(vendor.created_at).toLocaleDateString('hu-HU', { day: 'numeric', month: 'short', year: 'numeric' })}

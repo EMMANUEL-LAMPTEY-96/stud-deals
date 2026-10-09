@@ -23,6 +23,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { randomBytes } from 'crypto';
 import { parseLoyaltyConfig } from '@/lib/utils/loyalty';
 
 const BIRTHDAY_BONUS_STAMPS = 3;
@@ -224,12 +225,15 @@ export async function POST() {
   // Each stamp is a separate row so punch-card progress calculations work
   // identically to regular stamps (count-based).
   if (targetVendorId && targetOfferId) {
+    // redemption_code is NOT NULL with no default, so each row needs its own code.
     const stampInserts = Array.from({ length: BIRTHDAY_BONUS_STAMPS }, () => ({
-      student_id:   sp.id,
-      vendor_id:    targetVendorId,
-      offer_id:     targetOfferId,
-      status:       'birthday_bonus',
-      confirmed_at: now,
+      student_id:      sp.id,
+      vendor_id:       targetVendorId,
+      offer_id:        targetOfferId,
+      status:          'birthday_bonus' as const,
+      redemption_code: `BDAY-${randomBytes(12).toString('hex').toUpperCase()}`,
+      claimed_at:      now,
+      confirmed_at:    now,
     }));
     await admin.from('redemptions').insert(stampInserts);
   }

@@ -18,6 +18,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { parseLoyaltyConfig } from '@/lib/utils/loyalty';
 import {
   Stamp, Coffee, CheckCircle2, Clock, AlertCircle,
   GraduationCap, Star, Zap, Gift, ArrowRight, Loader2,
@@ -31,7 +32,6 @@ interface VendorInfo {
   business_name: string;
   city: string | null;
   logo_url: string | null;
-  is_approved: boolean;
 }
 
 interface ActiveOffer {
@@ -219,10 +219,10 @@ export default function StampPage() {
           return;
         }
 
-        // 3. Vendor info
+        // 3. Vendor info (the public view only contains verified vendors)
         const { data: vp } = await supabase
-          .from('vendor_profiles')
-          .select('id, business_name, city, logo_url, is_approved')
+          .from('vendor_profiles_public')
+          .select('id, business_name, city, logo_url')
           .eq('id', vendorId)
           .maybeSingle();
 
@@ -233,33 +233,42 @@ export default function StampPage() {
           return;
         }
 
-        if (!vp.is_approved) {
-          setPageState('error');
-          setErrorMsg('This vendor is not yet approved on Studeals.');
-          return;
-        }
+        // View columns are nullable; the row exists so id/business_name are set in practice
+        setVendor({
+          id: vp.id ?? vendorId,
+          business_name: vp.business_name ?? 'Unknown venue',
+          city: vp.city,
+          logo_url: vp.logo_url,
+        });
 
-        setVendor(vp);
-
-        // 4. Active offer
-        const { data: offer } = await supabase
+        // 4. Active offer — same selection as POST /api/loyalty/stamp: the oldest
+        // active offer carrying a [[LOYALTY:…]] config, else the oldest active offer.
+        const { data: offers } = await supabase
           .from('offers')
-          .select('id, title, required_visits, reward_label, is_active')
+          .select('id, title, terms_and_conditions')
           .eq('vendor_id', vendorId)
-          .eq('offer_type', 'punch_card')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .eq('status', 'active')
+          .order('created_at', { ascending: true })
+          .limit(10);
 
         if (cancelled) return;
+
+        const offer =
+          offers?.find(o => parseLoyaltyConfig(o.terms_and_conditions) !== null) ?? offers?.[0] ?? null;
 
         if (!offer) {
           setPageState('no_offer');
           return;
         }
 
-        setActiveOffer(offer);
+        const cfg = parseLoyaltyConfig(offer.terms_and_conditions);
+        setActiveOffer({
+          id: offer.id,
+          title: offer.title,
+          required_visits: cfg?.required_visits && cfg.required_visits > 0 ? cfg.required_visits : 5,
+          reward_label: cfg?.reward_label ?? 'Free item',
+          is_active: true,
+        });
         setPageState('ready');
       } catch (_) {
         if (!cancelled) {

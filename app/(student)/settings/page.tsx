@@ -6,7 +6,7 @@
 // Lets students manage:
 //   • Marketing consent (share_with_vendors) — GDPR opt-in / opt-out
 //   • Account info display (name, email, verification status)
-//   • Link to /verify for document re-upload
+//   • Link to /verification for document re-upload
 //   • Link to /api/account/delete for GDPR deletion
 // =============================================================================
 
@@ -171,7 +171,11 @@ export default function StudentSettingsPage() {
   async function handleDeleteAccount() {
     setDeletingAccount(true);
     try {
-      const res = await fetch('/api/account/delete', { method: 'DELETE' });
+      const res = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE_MY_ACCOUNT' }),
+      });
       if (!res.ok) {
         const json = await res.json();
         throw new Error(json.error ?? 'Failed to delete account.');
@@ -299,7 +303,7 @@ export default function StudentSettingsPage() {
             </div>
             {['unverified', 'rejected', 'expired'].includes(statusKey) && (
               <Link
-                href="/verify"
+                href="/verification"
                 className="text-xs text-purple-400 hover:text-white flex items-center gap-1 transition-colors"
               >
                 Verify now <ChevronRight className="w-3.5 h-3.5" />
@@ -436,7 +440,7 @@ export default function StudentSettingsPage() {
             <h2 className="font-semibold text-white">Security</h2>
           </div>
           <Link
-            href="/verify"
+            href="/verification"
             className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
           >
             <div>

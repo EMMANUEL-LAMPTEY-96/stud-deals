@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { safeLog } from '@/lib/utils/safe-logger';
+import { Constants } from '@/lib/types/database.types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +33,11 @@ export async function GET(request: NextRequest) {
 
     // ── Query params ──────────────────────────────────────────────────────────
     const url = new URL(request.url);
-    const status = url.searchParams.get('status') ?? 'pending_review';
+    const statusParam = url.searchParams.get('status') ?? 'pending_review';
+    const status = Constants.public.Enums.verification_status.find((v) => v === statusParam);
+    if (!status) {
+      return NextResponse.json({ error: 'Invalid status.' }, { status: 400 });
+    }
     const page = parseInt(url.searchParams.get('page') ?? '1', 10);
     const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '20', 10), 50);
     const offset = (page - 1) * limit;
@@ -51,7 +56,7 @@ export async function GET(request: NextRequest) {
         institution_name_manual,
         created_at,
         updated_at,
-        profiles!inner (
+        profiles!student_profiles_user_id_fkey!inner (
           id,
           display_name,
           first_name,

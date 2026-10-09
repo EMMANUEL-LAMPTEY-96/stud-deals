@@ -302,7 +302,7 @@ export default function StudentDashboard() {
       .from('offers')
       .select(`
         *,
-        vendor:vendor_profiles (id, business_name, logo_url, city, address_line1)
+        vendor:vendor_profiles_public (id, business_name, logo_url, city, address_line1)
       `)
       .eq('status', 'active')
       .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())

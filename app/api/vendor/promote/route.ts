@@ -24,11 +24,13 @@
 import { safeLog } from '@/lib/utils/safe-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { createAdminClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/utils/validation';
 import { hasAccess } from '@/lib/utils/plan-tier';
 import type { VendorPlan } from '@/lib/utils/plan-tier';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 const PromoteBodySchema = z.object({
   target: z.enum(['all', 'loyal', 'lapsed']),
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
   // ── Vendor profile check ──────────────────────────────────────────────────
   const { data: vp } = await supabase
     .from('vendor_profiles')
-    .select('id, business_name, is_approved, plan_tier, plan_status, trial_ends_at')
+    .select('id, business_name, is_verified, plan_tier, plan_status, trial_ends_at')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Vendor profile not found' }, { status: 404 });
   }
 
-  if (!vp.is_approved) {
+  if (!vp.is_verified) {
     return NextResponse.json({ error: 'Vendor account not yet approved' }, { status: 403 });
   }
 
@@ -123,11 +125,24 @@ export async function POST(req: NextRequest) {
 
   const { target, title, message, offer_id } = parsedBody.data;
 
+  // Cross-user reads/writes (other students' profiles and notifications) need
+  // the service role; RLS only lets a user see their own rows.
+  const admin = createAdminClient();
+
+  // A promotion links to the vendor, or to one of the vendor's own offers.
+  const { data: ownOffers } = await admin.from('offers').select('id').eq('vendor_id', vp.id);
+  const ownOfferIds = (ownOffers ?? []).map((o: { id: string }) => o.id);
+  if (offer_id && !ownOfferIds.includes(offer_id)) {
+    return NextResponse.json({ error: 'Offer not found' }, { status: 404 });
+  }
+
   // ── Rate limit: check last campaign sent ───────────────────────────────────
-  const { data: lastPromo } = await supabase
+  // notifications has no vendor_id column — promotions are tagged with
+  // related_entity_id = vendor id or one of its offer ids.
+  const { data: lastPromo } = await admin
     .from('notifications')
     .select('created_at')
-    .eq('vendor_id', vp.id)
+    .in('related_entity_id', [vp.id, ...ownOfferIds])
     .eq('type', 'promotion')
     .order('created_at', { ascending: false })
     .limit(1)
@@ -207,6 +222,14 @@ export async function POST(req: NextRequest) {
     if (include) targetStudentIds.push(sid);
   }
 
+  // The demo vendor (public login) must never message real students.
+  if (await isDemoUser(user.id)) {
+    const demoStudents = new Set(await getDemoStudentProfileIds());
+    for (let i = targetStudentIds.length - 1; i >= 0; i--) {
+      if (!demoStudents.has(targetStudentIds[i])) targetStudentIds.splice(i, 1);
+    }
+  }
+
   if (targetStudentIds.length === 0) {
     return NextResponse.json({
       sent_to: 0,
@@ -215,7 +238,7 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Look up user_ids from student_profiles ──────────────────────────────────
-  const { data: studentProfiles } = await supabase
+  const { data: studentProfiles } = await admin
     .from('student_profiles')
     .select('id, user_id')
     .in('id', targetStudentIds);
@@ -227,13 +250,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Build notification rows ─────────────────────────────────────────────────
-  const notifRows = studentRows.map((sp) => ({
+  const notifRows = studentRows.map((sp: { user_id: string }) => ({
     user_id: sp.user_id,
-    vendor_id: vp.id,
-    type: 'promotion' as const,
+    type: 'promotion',
     title: title.trim(),
-    message: message.trim(),
-    ...(offer_id ? { offer_id } : {}),
+    body: message.trim(),
+    related_entity_type: offer_id ? 'offer' : 'vendor',
+    related_entity_id: offer_id ?? vp.id,
     is_read: false,
   }));
 
@@ -244,10 +267,9 @@ export async function POST(req: NextRequest) {
 
   for (let i = 0; i < notifRows.length; i += BATCH_SIZE) {
     const batch = notifRows.slice(i, i + BATCH_SIZE);
-    const { error, count } = await supabase
+    const { error } = await admin
       .from('notifications')
-      .insert(batch)
-      .select('id', { count: 'exact', head: true });
+      .insert(batch);
 
     if (error) {
       safeLog.error('[/api/vendor/promote] Insert error:', error.message);

@@ -34,6 +34,7 @@ import { isValidVoucherCodeFormat, normaliseVoucherCode, parseQrPayload } from '
 import type { ConfirmRedemptionRequest, ConfirmRedemptionResponse } from '@/lib/types/database.types';
 import { sendEmail } from '@/lib/email/resend';
 import { redemptionEmail } from '@/lib/email/templates';
+import { isDemoUser, getDemoStudentProfileIds } from '@/lib/utils/demo';
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,14 +107,14 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 4. Fetch the redemption ───────────────────────────────────────────
-    const { data: redemption, error: fetchError } = await supabase
+    const { data: redemptionRow, error: fetchError } = await supabase
       .from('redemptions')
       .select(`
         id, status, expires_at, vendor_id, offer_id, student_id,
         offer:offers (id, title, discount_label),
         student:student_profiles (
           id,
-          user:profiles (first_name, last_name)
+          user:profiles!student_profiles_user_id_fkey (first_name, last_name)
         )
       `)
       .eq('redemption_code', normalisedCode)
@@ -122,6 +123,15 @@ export async function POST(request: NextRequest) {
     if (fetchError) {
       safeLog.error('[confirm] DB error fetching redemption:', fetchError);
       return NextResponse.json({ error: 'Server error looking up code.' }, { status: 500 });
+    }
+
+    let redemption = redemptionRow;
+
+    // The demo vendor (public login) can only confirm demo students' vouchers —
+    // otherwise it would reveal a real student's name.
+    if (redemption && (await isDemoUser(user.id))) {
+      const demoStudents = await getDemoStudentProfileIds();
+      if (!demoStudents.includes(redemption.student_id)) redemption = null;
     }
 
     if (!redemption) {
@@ -191,7 +201,7 @@ export async function POST(request: NextRequest) {
 
     // ── 9. Build privacy-safe student display name ────────────────────────
     // We show "Emmanuel A." — enough for personal service, not full PII
-    const studentUser = (redemption.student as { user: { first_name: string | null; last_name: string | null } | null } | null)?.user;
+    const studentUser = redemption.student?.user ?? null;
     const firstName = studentUser?.first_name ?? 'Student';
     const lastInitial = studentUser?.last_name ? `${studentUser.last_name[0].toUpperCase()}.` : '';
     const displayName = `${firstName} ${lastInitial}`.trim();

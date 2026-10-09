@@ -2,8 +2,10 @@
  * DELETE /api/account/delete
  *
  * GDPR-compliant full account deletion.
- * Cascade deletes: auth user, profiles, student_profiles (+ Storage ID scan),
- * redemptions, loyalty_cards, stamps, notifications, verification_attempts.
+ * Deletes: Storage ID documents, redemptions/stamps + offer views (as student
+ * or vendor), student/vendor profile (cascading saved offers, reviews,
+ * referrals, loyalty cards, offers, flash deals), verification attempts,
+ * profile (cascading notifications) and finally the auth user.
  *
  * Requires: authenticated session + confirmation token in body.
  * Records a PII-free audit log entry.
@@ -15,6 +17,7 @@ import { safeLog } from '@/lib/utils/safe-logger';
 
 // Supabase admin client uses SERVICE_ROLE to bypass RLS for cascade deletes
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { isDemoUser, demoForbiddenResponse } from '@/lib/utils/demo';
 
 function getAdminClient() {
   return createAdminClient(
@@ -44,9 +47,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     const userId = user.id;
+
+    // Public demo accounts can't be deleted (their password is published).
+    if (await isDemoUser(userId)) return demoForbiddenResponse('be deleted');
     const admin = getAdminClient();
 
-    // 3. Fetch the user's role and any storage document to delete
+    // Every step must succeed before the auth user is removed — otherwise we'd
+    // report success while leaving personal data behind.
+    const failures: string[] = [];
+    const check = (step: string, res: { error: { message: string } | null }) => {
+      if (res.error) failures.push(`${step}: ${res.error.message}`);
+    };
+
+    // 3. Fetch the user's role
     const { data: profile } = await admin
       .from('profiles')
       .select('role')
@@ -55,57 +68,69 @@ export async function DELETE(request: NextRequest) {
 
     const userRole = profile?.role ?? 'unknown';
 
-    // 4. If student â delete the ID scan from Storage before removing DB rows
-    if (userRole === 'student') {
-      const { data: studentProfile } = await admin
-        .from('student_profiles')
-        .select('verification_document_url')
-        .eq('user_id', userId)
-        .maybeSingle();
+    // 4. Student data. redemptions.student_id and offer_views.student_id
+    //    reference student_profiles.id (NOT auth user id) with no cascade, so
+    //    they must go before the student profile. saved_offers, vendor_reviews,
+    //    referrals and loyalty_cards cascade from student_profiles.
+    const { data: studentProfile } = await admin
+      .from('student_profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-      if (studentProfile?.verification_document_url) {
-        // Extract storage path from full URL
-        const storagePath = studentProfile.verification_document_url
-          .replace(/.*\/storage\/v1\/object\/public\//, '')
-          .replace(/.*\/storage\/v1\/object\//, '');
-
-        const [bucket, ...pathParts] = storagePath.split('/');
-        const filePath = pathParts.join('/');
-
-        if (bucket && filePath) {
-          const { error: storageError } = await admin.storage
-            .from(bucket)
-            .remove([filePath]);
-
-          if (storageError) {
-            safeLog.warn('GDPR delete: storage removal issue', storageError.message);
-          } else {
-            safeLog.audit('gdpr_storage_deleted', { userId, bucket });
-          }
-        }
+    if (studentProfile) {
+      // ID documents live in the private student-ids bucket under {userId}/
+      const { data: files } = await admin.storage.from('student-ids').list(userId, { limit: 1000 });
+      if (files?.length) {
+        const { error: storageError } = await admin.storage
+          .from('student-ids')
+          .remove(files.map((f) => `${userId}/${f.name}`));
+        if (storageError) failures.push(`storage: ${storageError.message}`);
+        else safeLog.audit('gdpr_storage_deleted', { userId, bucket: 'student-ids', count: files.length });
       }
 
-      // Delete student-specific tables
-      await admin.from('student_profiles').delete().eq('user_id', userId);
+      check('redemptions', await admin.from('redemptions').delete().eq('student_id', studentProfile.id));
+      check('offer_views', await admin.from('offer_views').delete().eq('student_id', studentProfile.id));
+      if (!failures.length) {
+        check('student_profiles', await admin.from('student_profiles').delete().eq('id', studentProfile.id));
+      }
     }
 
-    // 5. If vendor â delete vendor_profiles
-    if (userRole === 'vendor') {
-      // Offers, stamps etc. will cascade if FK is ON DELETE CASCADE
-      // Flash deals, redemptions linked to vendor also cascade
-      await admin.from('vendor_profiles').delete().eq('user_id', userId);
+    // 5. Vendor data. redemptions/offer_views reference vendor_profiles.id
+    //    without cascade; offers, flash_deals, reviews and loyalty_cards cascade.
+    const { data: vendorProfile } = await admin
+      .from('vendor_profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (vendorProfile && !failures.length) {
+      check('vendor redemptions', await admin.from('redemptions').delete().eq('vendor_id', vendorProfile.id));
+      check('vendor offer_views', await admin.from('offer_views').delete().eq('vendor_id', vendorProfile.id));
+      if (!failures.length) {
+        check('vendor_profiles', await admin.from('vendor_profiles').delete().eq('id', vendorProfile.id));
+      }
     }
 
-    // 6. Delete shared tables (cascade from profiles should handle most)
-    await Promise.allSettled([
-      admin.from('verification_attempts').delete().eq('user_id', userId),
-      admin.from('redemptions').delete().eq('student_id', userId),
-      admin.from('loyalty_cards').delete().eq('student_id', userId),
-      admin.from('notifications').delete().eq('user_id', userId),
-    ]);
+    // 6. Rows that reference the user's profile without cascade
+    if (!failures.length) {
+      check('confirmed_by', await admin.from('redemptions').update({ confirmed_by_vendor_user_id: null }).eq('confirmed_by_vendor_user_id', userId));
+      check('verified_by', await admin.from('student_profiles').update({ verified_by: null }).eq('verified_by', userId));
+      check('verification_attempts', await admin.from('verification_attempts').delete().eq('user_id', userId));
+    }
 
-    // 7. Delete the profile row
-    await admin.from('profiles').delete().eq('id', userId);
+    // 7. Delete the profile row (notifications cascade)
+    if (!failures.length) {
+      check('profiles', await admin.from('profiles').delete().eq('id', userId));
+    }
+
+    if (failures.length) {
+      safeLog.error('GDPR delete: aborted before auth deletion', failures);
+      return NextResponse.json(
+        { error: 'Account deletion could not be completed. Please contact support.' },
+        { status: 500 }
+      );
+    }
 
     // 8. Delete the auth.users record (this is the nuclear step)
     const { error: deleteAuthError } = await admin.auth.admin.deleteUser(userId);

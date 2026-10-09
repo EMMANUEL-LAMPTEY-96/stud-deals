@@ -23,6 +23,7 @@
 //   rejected → is_verified = false AND verified_at IS NOT NULL  (use verified_at as rejection marker)
 // =============================================================================
 
+import type { Database } from '@/lib/types/database.types';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 
@@ -31,6 +32,8 @@ function getVendorStatus(vp: { is_verified: boolean; verified_at: string | null 
   if (!vp.is_verified && vp.verified_at) return 'rejected'; // verified_at set but is_verified false = rejected
   return 'pending';
 }
+
+type VendorProfileUpdate = Database['public']['Tables']['vendor_profiles']['Update'];
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -137,7 +140,7 @@ export async function POST(request: NextRequest) {
 
   // On approval start a 60-day Growth trial automatically
   const trialEndsAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
-  const update =
+  const update: VendorProfileUpdate =
     action === 'approve'
       ? {
           is_verified:     true,
@@ -178,7 +181,8 @@ export async function POST(request: NextRequest) {
         : `Your application needs attention. ${notes ?? 'Please review your business details and resubmit.'}`,
       type: action === 'approve' ? 'vendor_approved' : 'vendor_rejected',
       is_read: false,
-      data: JSON.stringify({ vendor_profile_id, action }),
+      related_entity_type: 'vendor',
+      related_entity_id: vendor_profile_id,
     });
   }
 

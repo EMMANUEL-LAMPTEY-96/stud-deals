@@ -93,7 +93,7 @@ export function looksLikeEduEmail(email: string): boolean {
  */
 export function determineVerificationPath(
   email: string,
-  matchedInstitution: Institution | null
+  matchedInstitution: Pick<Institution, 'name'> | null
 ): {
   path: 'edu_email' | 'id_upload' | 'not_eligible';
   reason: string;
