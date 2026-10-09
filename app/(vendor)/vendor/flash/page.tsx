@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/analytics';
 import VendorNav from '@/components/vendor/VendorNav';
 import {
   Zap, Clock, Users, Target, CheckCircle2, AlertTriangle,
@@ -110,6 +111,12 @@ export default function VendorFlashPage() {
 
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Failed to send flash deal.'); return; }
+      track('flash_deal_created', {
+        duration_minutes: durationMins,
+        max_redemptions: maxRedemptions ?? null,
+        radius_km: radiusKm ?? null,
+        students_notified: typeof data.students_notified === 'number' ? data.students_notified : null,
+      });
 
       setSuccess({ message: data.message, notified: data.students_notified });
       setTitle(''); setDiscountText(''); setDescription('');

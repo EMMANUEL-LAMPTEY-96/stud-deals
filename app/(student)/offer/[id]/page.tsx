@@ -19,6 +19,7 @@ import {
   Dumbbell, Book, Shirt,
 } from 'lucide-react';
 import type { Offer, ClaimOfferResponse } from '@/lib/types/database.types';
+import { offerProperties, track } from '@/lib/analytics';
 
 // Shape of the vendor_profiles_public embed selected below (view columns are nullable)
 interface OfferVendor {
@@ -93,6 +94,7 @@ export default function OfferDetailPage() {
 
       if (!data) { router.push('/dashboard'); return; }
       setOffer(data);
+      track('offer_viewed', { ...offerProperties(data), source: 'offer_page' });
 
       if (user) {
         // Verification status + student_profiles.id (saved_offers is keyed on it)
@@ -129,6 +131,7 @@ export default function OfferDetailPage() {
       if (!res.ok) throw new Error('save failed');
       const body: { saved?: boolean } = await res.json();
       setIsSaved(!!body.saved);
+      if (body.saved && offer) track('offer_saved', { ...offerProperties(offer), source: 'offer_page' });
     } catch {
       setIsSaved(previous);
     }
@@ -150,6 +153,7 @@ export default function OfferDetailPage() {
         setClaimError(data.error ?? 'Something went wrong. Please try again.');
       } else {
         setVoucher(data as ClaimOfferResponse);
+        if (offer) track('voucher_claimed', { ...offerProperties(offer), source: 'offer_page' });
       }
     } catch (_) {
       setClaimError('Network error. Please try again.');

@@ -39,7 +39,14 @@ OTP_HMAC_SECRET=                # Optional — keys the email-OTP hash (falls ba
 STAFF_SESSION_SECRET=           # Optional — signs staff PIN sessions / PIN hashes (falls back to the service role key)
 RESEND_API_KEY=                 # Sends OTP + vendor emails; OTP sending fails without it in production
 STRIPE_SECRET_KEY= / STRIPE_WEBHOOK_SECRET=
+NEXT_PUBLIC_POSTHOG_KEY=        # Optional — PostHog EU product analytics; no-op when unset
 ```
+
+### Product analytics
+
+PostHog (EU) only starts after analytics consent in the cookie banner (`components/shared/AnalyticsProvider.tsx`).
+Use `track()` / `trackOnce()` from `lib/analytics` with names from `lib/analytics/events.ts`, and document new
+events in `docs/analytics/events.md`. Never put names, emails or codes in event properties.
 
 ---
 

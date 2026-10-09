@@ -150,7 +150,7 @@
     "alwaysOn": "Always on",
     "necessaryDesc": "Login session and security tokens. Cannot be disabled.",
     "analytics": "Analytics",
-    "analyticsDesc": "Anonymous page-view counts to improve the app. No personal data.",
+    "analyticsDesc": "Product analytics (PostHog, EU servers) so we can see which features are used. Linked to a pseudonymous account ID only — never your name or email.",
     "marketing": "Marketing",
     "marketingDesc": "Currently unused. We will notify you before activating this.",
     "privacy": "Privacy",

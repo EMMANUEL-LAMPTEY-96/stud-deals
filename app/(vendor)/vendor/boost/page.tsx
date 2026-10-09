@@ -21,6 +21,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/analytics';
 import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
 import {
@@ -367,6 +368,14 @@ export default function BoostPage() {
       });
 
       if (error) throw error;
+      track('offer_created', {
+        vendor_id: vendorId,
+        category: lastOffer?.category ?? 'other',
+        status: 'active',
+        source: 'boost',
+        boost_template: selectedTemplate,
+        duration_hours: durationHours,
+      });
 
       await load(vendorId);
       setToast({ type: 'ok', msg: `🚀 Boost launched! Active for ${DURATIONS.find(d=>d.hours===durationHours)?.label}.` });

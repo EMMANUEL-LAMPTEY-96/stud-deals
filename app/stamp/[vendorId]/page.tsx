@@ -18,6 +18,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { trackStampResult } from '@/lib/analytics';
 import { parseLoyaltyConfig } from '@/lib/utils/loyalty';
 import {
   Stamp, Coffee, CheckCircle2, Clock, AlertCircle,
@@ -326,6 +327,7 @@ export default function StampPage() {
       }
 
       // Success
+      trackStampResult(vendorId, json, 'stamp_page');
       setStampResult(json);
       setPageState(json.reward_triggered ? 'reward' : 'success');
     } catch (_) {

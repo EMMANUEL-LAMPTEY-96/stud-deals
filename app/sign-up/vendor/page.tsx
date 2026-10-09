@@ -11,6 +11,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { identify, track } from '@/lib/analytics';
 import { useT } from '@/lib/i18n';
 import {
   Building2, Mail, Lock, User, Tag,
@@ -63,7 +64,7 @@ export default function VendorSignUpPage() {
 
     const supabase = createClient();
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -81,6 +82,11 @@ export default function VendorSignUpPage() {
       setError(signUpError.message);
       setLoading(false);
       return;
+    }
+
+    if (data.user) {
+      identify(data.user.id, { role: 'vendor', is_demo: false, city: null, institution: null });
+      track('vendor_signed_up', { business_category: businessCategory || null });
     }
 
     router.push(`/verify-email?email=${encodeURIComponent(email)}`);

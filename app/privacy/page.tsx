@@ -122,7 +122,7 @@ const HU = {
             <ul className="list-disc ml-5 space-y-1 text-gray-600">
               <li>Munkamenet-sütik (a bejelentkezés fenntartásához szükségesek)</li>
               <li>Süti-hozzájárulási beállítás (böngészőjében tárolva)</li>
-              <li>Névtelen oldalmegtekintés-számlálók (analitika, ha elfogadja a választható sütiket)</li>
+              <li>Termékanalitika (PostHog, álnevesített fiókazonosítóval — csak ha elfogadja az analitikai sütiket)</li>
             </ul>
           </div>
           <p className="text-xs text-gray-400 italic mt-2">
@@ -213,6 +213,10 @@ const HU = {
               {
                 party: 'Vercel (infrastruktúra-feldolgozó)',
                 scope: 'Webhosting és szerver nélküli funkcióvégrehajtás. Személyes adat nem kerül tárolásra.',
+              },
+              {
+                party: 'PostHog (analitikai adatfeldolgozó)',
+                scope: 'Termékanalitika, csak az analitikai sütik elfogadása után. EU-s felhő (Frankfurt); álnevesített fiókazonosító, név és e-mail nélkül.',
               },
               {
                 party: 'Adminisztrátorok',
@@ -348,7 +352,7 @@ const HU = {
             },
             {
               name: '📊 Analitikai sütik (választható)',
-              desc: 'Névtelen oldalmegtekintés-számlálók, amelyek segítenek megérteni, mely funkciókat használják a hallgatók. Személyes adat nem szerepel bennük. A süti-banneren elfogadhatja vagy elutasíthatja ezeket.',
+              desc: 'PostHog termékanalitika (EU-s felhő), amely megmutatja, mely funkciókat használják a hallgatók és a vállalkozások. Az eseményeket álnevesített fiókazonosítóhoz kötjük (szerepkör, város, egyetem) — nevet és e-mail-címet soha nem küldünk. Csak akkor indul el, ha a süti-banneren elfogadja.',
             },
             {
               name: '📢 Marketing sütik (választható, jelenleg nem aktív)',
@@ -471,7 +475,7 @@ const EN = {
             <ul className="list-disc ml-5 space-y-1 text-gray-600">
               <li>Session cookies (required to keep you logged in)</li>
               <li>Cookie consent preference (stored in your browser)</li>
-              <li>Anonymous page-view counts (analytics only, if you accept optional cookies)</li>
+              <li>Product analytics events (PostHog, keyed to a pseudonymous account ID — only if you accept analytics cookies)</li>
             </ul>
           </div>
           <p className="text-xs text-gray-400 italic mt-2">
@@ -563,6 +567,10 @@ const EN = {
               {
                 party: 'Vercel (infrastructure processor)',
                 scope: 'Web hosting and serverless function execution. No personal data stored.',
+              },
+              {
+                party: 'PostHog (analytics processor)',
+                scope: 'Product analytics, only after you accept analytics cookies. EU cloud (Frankfurt); pseudonymous account ID, no name or email.',
               },
               {
                 party: 'Admins',
@@ -698,7 +706,7 @@ const EN = {
             },
             {
               name: '📊 Analytics cookies (optional)',
-              desc: 'Anonymous page-view counts to help us understand which features students use. No personal data is included. You can accept or decline these via the cookie banner.',
+              desc: 'PostHog product analytics (EU cloud) to understand which features students and businesses use. Events are linked to a pseudonymous account ID with your role, city and university — never your name or email. Analytics only starts if you accept it in the cookie banner.',
             },
             {
               name: '📢 Marketing cookies (optional, currently inactive)',

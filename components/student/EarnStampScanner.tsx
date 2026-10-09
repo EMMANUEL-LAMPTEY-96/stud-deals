@@ -18,6 +18,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { trackStampResult } from '@/lib/analytics';
 import {
   X, Stamp, Gift, CheckCircle, AlertCircle,
   Loader2, QrCode, Star, Sparkles, Zap,
@@ -105,6 +106,8 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
         setErrorMsg(data.error ?? 'Something went wrong. Please try again.');
         return;
       }
+
+      trackStampResult(vendorId, data, 'in_app_scanner');
 
       const stampResult: StampResult = {
         vendor_name:     data.vendor_name,

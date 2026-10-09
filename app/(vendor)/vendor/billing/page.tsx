@@ -11,6 +11,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/analytics';
 import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
 import {
@@ -295,7 +296,12 @@ export default function BillingPage() {
         .select('plan_tier, plan_status, trial_ends_at')
         .eq('user_id', user.id as string)
         .maybeSingle();
-      if (billingRaw) setPlan((billingRaw as unknown) as VendorPlan);
+      const current = billingRaw ? ((billingRaw as unknown) as VendorPlan) : null;
+      if (current) setPlan(current);
+      track('plan_page_viewed', {
+        current_tier: current?.plan_tier ?? null,
+        plan_status: current?.plan_status ?? null,
+      });
       setLoading(false);
     })();
 
@@ -314,6 +320,13 @@ export default function BillingPage() {
   const paymentsDisabled = billingEnabled !== true;
 
   const handleUpgrade = async (tier: 'growth' | 'pro', isAnnual: boolean) => {
+    track('upgrade_clicked', {
+      tier,
+      billing_interval: isAnnual ? 'annual' : 'monthly',
+      current_tier: plan?.plan_tier ?? null,
+      plan_status: plan?.plan_status ?? null,
+      payments_enabled: !paymentsDisabled,
+    });
     if (paymentsDisabled) return;
     setCheckoutLoading(true);
     try {

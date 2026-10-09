@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { track } from '@/lib/analytics';
 import Navbar from '@/components/shared/Navbar';
 import VendorNav from '@/components/vendor/VendorNav';
 import {
@@ -327,6 +328,13 @@ export default function OffersPage() {
       save_count: 0,
     }).select().maybeSingle();
     if (error) { flash('error', 'Failed to duplicate offer.'); return; }
+    track('offer_created', {
+      vendor_id: vendorId,
+      category: offer.category,
+      discount_type: offer.discount_type,
+      status: 'draft',
+      source: 'duplicate',
+    });
     if (data) {
       setAllOffers((prev) => [data, ...prev]);
       flash('success', 'Offer duplicated as draft.');

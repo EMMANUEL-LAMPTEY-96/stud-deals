@@ -150,7 +150,7 @@
     "alwaysOn": "Mindig aktív",
     "necessaryDesc": "Bejelentkezési munkamenet és biztonsági tokenek. Ezeket nem lehet letiltani.",
     "analytics": "Analitikai",
-    "analyticsDesc": "Névtelen oldalmegtekintés-számlálók az alkalmazás fejlesztéséhez. Nincs személyes adat.",
+    "analyticsDesc": "Termékanalitika (PostHog, EU-s szerverek), hogy lássuk, mely funkciókat használják. Csak álnevesített fiókazonosítóhoz kötve — soha nem a nevedhez vagy e-mail-címedhez.",
     "marketing": "Marketing",
     "marketingDesc": "Jelenleg nem használjuk. Aktiválás előtt értesítünk.",
     "privacy": "Adatvédelem",
