@@ -1,7 +1,7 @@
 'use client';
 
 // =============================================================================
-// lib/i18n/index.tsx — Lightweight i18n for Studeals
+// lib/i18n/index.tsx — Lightweight i18n for StudDeals
 //
 // English-first with Hungarian translation support.
 // Locale is stored in the "studeals_locale" cookie and read on every page load.

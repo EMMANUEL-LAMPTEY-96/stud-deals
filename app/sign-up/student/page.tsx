@@ -77,7 +77,7 @@ function StudentSignUpForm() {
     if (dateOfBirth) {
       const minAgeDate = new Date(Date.now() - 16 * 365.25 * 24 * 3600 * 1000);
       if (new Date(dateOfBirth) > minAgeDate) {
-        setError('You must be at least 16 years old to use Studeals (GDPR Art. 8).');
+        setError('You must be at least 16 years old to use StudDeals (GDPR Art. 8).');
         setLoading(false);
         return;
       }
@@ -165,7 +165,7 @@ function StudentSignUpForm() {
             <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-white font-bold text-xl">Studeals</span>
+            <span className="text-white font-bold text-xl">StudDeals</span>
           </div>
           <h1 className="text-2xl font-bold text-white">{t('auth.signUpTitle')}</h1>
           <p className="text-purple-300 mt-1">{t('auth.signUpSubtitle')}</p>

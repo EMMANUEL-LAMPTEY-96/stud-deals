@@ -40,7 +40,7 @@ function formatArgs(args: unknown[]): string {
   return args.map(a => scrub(a)).join(' ');
 }
 
-const PREFIX = '[Studeals]';
+const PREFIX = '[StudDeals]';
 
 export const safeLog = {
   info: (...args: unknown[]) => {

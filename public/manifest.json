@@ -1,6 +1,6 @@
 {
-  "name": "Studeals",
-  "short_name": "Studeals",
+  "name": "StudDeals",
+  "short_name": "StudDeals",
   "description": "Exclusive student deals near your campus",
   "start_url": "/",
   "display": "standalone",

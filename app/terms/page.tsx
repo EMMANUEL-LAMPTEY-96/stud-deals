@@ -72,7 +72,7 @@ const HU = {
       title: '1. A feltételek elfogadása',
       content: (
         <p>
-          A Studeals platformon (elérhető:{' '}
+          A StudDeals platformon (elérhető:{' '}
           <a href="https://studeals.vercel.app" className="text-brand-600 underline">
             studeals.vercel.app
           </a>
@@ -99,7 +99,7 @@ const HU = {
           </ul>
           <p className="mt-2">
             Hamis igazolás benyújtása a jelen feltételek megsértésének minősül, és azonnali fiók-felfüggesztéshez,
-            valamint az illetékes intézmény értesítéséhez vezethet. A Studeals fenntartja a jogot az
+            valamint az illetékes intézmény értesítéséhez vezethet. A StudDeals fenntartja a jogot az
             ellenőrzés bármikori megismétlésére.
           </p>
         </div>
@@ -112,15 +112,15 @@ const HU = {
         <div className="space-y-3">
           <p>A platformon ajánlatot hirdető kereskedők vállalják, hogy:</p>
           <ul className="list-disc ml-5 space-y-1.5 text-gray-600">
-            <li>Minden közzétett kedvezményt és akciót teljesítenek érvényes, nem lejárt Studeals utalvány vagy QR-bélyegző bemutatásakor.</li>
+            <li>Minden közzétett kedvezményt és akciót teljesítenek érvényes, nem lejárt StudDeals utalvány vagy QR-bélyegző bemutatásakor.</li>
             <li>Az ajánlatok leírása, a kedvezmény mértéke és a lejárati dátum a közzétételkor pontos.</li>
-            <li>Nem teszik hátrányos megkülönböztetés tárgyává a Studeals utalványt bemutató hallgatókat.</li>
+            <li>Nem teszik hátrányos megkülönböztetés tárgyává a StudDeals utalványt bemutató hallgatókat.</li>
             <li>A beváltások megerősítéséhez a platform QR-leolvasóját használják.</li>
             <li>Betartják az alkalmazandó magyar fogyasztóvédelmi jogszabályokat és reklámstandardokat.</li>
             <li>A platform révén megismert hallgatói adatokat kizárólag az adott beváltás megerősítéséhez használják fel.</li>
           </ul>
           <p className="mt-2">
-            A Studeals fenntartja a jogot a kereskedői hirdetések eltávolítására, a fiókok felfüggesztésére
+            A StudDeals fenntartja a jogot a kereskedői hirdetések eltávolítására, a fiókok felfüggesztésére
             vagy a hozzáférés megszüntetésére az ajánlatok ismételt nem teljesítése vagy a feltételek megsértése esetén.
           </p>
         </div>
@@ -135,7 +135,7 @@ const HU = {
             { term: 'Lejárat', detail: 'A QR-utalványok a generálástól számított 24 óra elteltével érvényüket vesztik. A hűségbélyegzők a kereskedő által beállított lejárati ablak szerint járnak le (alapértelmezés: nincs lejárat, hacsak a kereskedő nem állít be ilyet).' },
             { term: 'Egyszeri felhasználás', detail: 'Minden igényelt utalvány egyetlen beváltásra érvényes a kibocsátó kereskedőnél. Az utalványkódokat tilos megosztani, képernyőfotózni vagy más személyre átruházni.' },
             { term: 'Nem átruházható', detail: 'Az utalványok és bélyegzőkártyák az Ön hitelesített hallgatói fiókjához kötöttek. Pénzbeli vagy csereértékkel nem rendelkeznek, és nem értékesíthetők, illetve nem ruházhatók át.' },
-            { term: 'Nincs készpénzegyenérték', detail: 'A kedvezményeket a kereskedő alkalmazza az értékesítés helyén. A Studeals semmilyen pénzügyi tranzakciót nem kezel, és nem vesz részt az adásvételben.' },
+            { term: 'Nincs készpénzegyenérték', detail: 'A kedvezményeket a kereskedő alkalmazza az értékesítés helyén. A StudDeals semmilyen pénzügyi tranzakciót nem kezel, és nem vesz részt az adásvételben.' },
             { term: 'Csalárd felhasználás', detail: 'Az utalványok vagy bélyegzők hamisítása, újrafelhasználása vagy módosítása a jelen feltételek megsértése, és a magyar jog szerint bűncselekménynek minősülhet.' },
             { term: 'Hűségjutalmak', detail: 'A jutalomküszöböket (pl. „ingyenes kávé 10 bélyegző után") a kereskedő határozza meg, és azokat ésszerű előzetes értesítéssel módosíthatja.' },
           ].map(({ term, detail }) => (
@@ -174,7 +174,7 @@ const HU = {
       content: (
         <div className="space-y-3">
           <p>
-            <strong>A Studeals piactér-közvetítő.</strong> Összekötjük a hallgatókat a kereskedőkkel,
+            <strong>A StudDeals piactér-közvetítő.</strong> Összekötjük a hallgatókat a kereskedőkkel,
             de nem vagyunk részese közöttük zajló tranzakciónak. Nem vállalunk jótállást arra, hogy:
           </p>
           <ul className="list-disc ml-5 space-y-1.5 text-gray-600">
@@ -183,12 +183,12 @@ const HU = {
             <li>A megjelenített megtakarítási összegek garantáltak vagy tényleges pénzügyi megtakarítást képviselnek.</li>
           </ul>
           <p className="mt-3">
-            A magyar jog által megengedett legnagyobb mértékben a Studeals nem felel a platform
+            A magyar jog által megengedett legnagyobb mértékben a StudDeals nem felel a platform
             használatából eredő közvetett, járulékos vagy következményes károkért, beleértve a
             kereskedő általi utalvány-nem-teljesítésből eredő veszteségeket is.
           </p>
           <p className="mt-3">
-            A jelen feltételek nem korlátozzák a Studeals felelősségét a gondatlanságból, csalásból
+            A jelen feltételek nem korlátozzák a StudDeals felelősségét a gondatlanságból, csalásból
             vagy a jogszabály által kizárt egyéb esetekből eredő halálesetért vagy személyi sérülésért.
           </p>
         </div>
@@ -199,10 +199,10 @@ const HU = {
       title: '7. Szellemi tulajdon',
       content: (
         <p>
-          A Studealshez tartozó platformtartalom, márkajelzések, kódok és arculat szerzői jogi és
+          A StudDealshez tartozó platformtartalom, márkajelzések, kódok és arculat szerzői jogi és
           szellemi tulajdonjogi védelem alatt állnak. A kereskedők megtartják üzleti adataik és
-          ajánlattartalmuk tulajdonjogát, de engedélyt adnak a Studealsnek azok platformon való
-          megjelenítésére. A Studeals tartalmát tilos reprodukálni, továbbterjeszteni vagy abból
+          ajánlattartalmuk tulajdonjogát, de engedélyt adnak a StudDealsnek azok platformon való
+          megjelenítésére. A StudDeals tartalmát tilos reprodukálni, továbbterjeszteni vagy abból
           származékos művet alkotni kifejezett írásbeli engedély nélkül.
         </p>
       ),
@@ -219,7 +219,7 @@ const HU = {
             <Link href="/privacy?lang=hu" className="text-brand-600 underline">Adatvédelmi tájékoztatónkat</Link>).
           </p>
           <p className="mt-2">
-            <strong>A Studeals</strong> azonnali értesítés nélkül felfüggesztheti vagy megszüntetheti
+            <strong>A StudDeals</strong> azonnali értesítés nélkül felfüggesztheti vagy megszüntetheti
             fiókját, ha megsérti a jelen feltételeket, csalárd tevékenységet folytat, vagy ha azt
             jogszabály írja elő. A megszüntetés nem érinti a megszerzett jogokat vagy kötelezettségeket.
           </p>
@@ -302,7 +302,7 @@ const EN = {
     <>
       <strong>Jurisdiction: Hungary.</strong> These Terms are governed by Hungarian law (Civil Code,
       Ptk.) and applicable EU consumer protection regulations. These Terms form a binding agreement
-      between you and Studeals when you use the platform.
+      between you and StudDeals when you use the platform.
     </>
   ),
   odrBanner: (
@@ -340,7 +340,7 @@ const EN = {
       title: '1. Acceptance of Terms',
       content: (
         <p>
-          By creating an account on Studeals (available at{' '}
+          By creating an account on StudDeals (available at{' '}
           <a href="https://studeals.vercel.app" className="text-brand-600 underline">
             studeals.vercel.app
           </a>
@@ -367,7 +367,7 @@ const EN = {
           </ul>
           <p className="mt-2">
             Providing false verification documents is a violation of these Terms and may result in
-            immediate account suspension and referral to the relevant institution. Studeals reserves
+            immediate account suspension and referral to the relevant institution. StudDeals reserves
             the right to re-verify your status at any time.
           </p>
         </div>
@@ -380,15 +380,15 @@ const EN = {
         <div className="space-y-3">
           <p>Vendors ("businesses") who list offers on the platform agree to:</p>
           <ul className="list-disc ml-5 space-y-1.5 text-gray-600">
-            <li>Honour all published discounts and promotions when presented with a valid, unexpired Studeals voucher or QR stamp.</li>
+            <li>Honour all published discounts and promotions when presented with a valid, unexpired StudDeals voucher or QR stamp.</li>
             <li>Ensure offer descriptions, discount values, and expiry dates are accurate at the time of publication.</li>
-            <li>Not discriminate against students presenting Studeals vouchers in a manner inconsistent with the advertised offer.</li>
+            <li>Not discriminate against students presenting StudDeals vouchers in a manner inconsistent with the advertised offer.</li>
             <li>Use the platform&apos;s QR scanner to confirm redemptions.</li>
             <li>Comply with all applicable Hungarian consumer protection laws and advertising standards.</li>
             <li>Not use student data obtained through the platform for any purpose other than confirming the specific redemption at hand.</li>
           </ul>
           <p className="mt-2">
-            Studeals reserves the right to remove vendor listings, suspend accounts, or terminate
+            StudDeals reserves the right to remove vendor listings, suspend accounts, or terminate
             vendor access for repeated non-fulfilment of advertised offers or breach of these Terms.
           </p>
         </div>
@@ -403,7 +403,7 @@ const EN = {
             { term: 'Expiry', detail: "QR vouchers expire 24 hours after generation. Loyalty stamps expire per the vendor's configured stamp expiry window (default: no expiry unless the vendor sets one)." },
             { term: 'Single use', detail: 'Each claimed voucher is valid for a single redemption at the issuing vendor. Voucher codes must not be shared, screenshotted, or transferred to another person.' },
             { term: 'Non-transferable', detail: 'Vouchers and stamp cards are tied to your verified student account. They have no monetary or exchange value and cannot be sold or transferred.' },
-            { term: 'No cash equivalent', detail: "Discounts are applied at the point of sale by the vendor. Studeals does not process any financial transaction and is not a party to the sale." },
+            { term: 'No cash equivalent', detail: "Discounts are applied at the point of sale by the vendor. StudDeals does not process any financial transaction and is not a party to the sale." },
             { term: 'Fraudulent use', detail: 'Attempting to forge, reuse, or alter vouchers or stamps is a breach of these Terms and may constitute fraud under Hungarian law.' },
             { term: 'Loyalty rewards', detail: "Reward thresholds (e.g., \"free coffee after 10 stamps\") are set by the vendor and may change at the vendor's discretion with reasonable notice." },
           ].map(({ term, detail }) => (
@@ -442,7 +442,7 @@ const EN = {
       content: (
         <div className="space-y-3">
           <p>
-            <strong>Studeals is a marketplace intermediary.</strong> We connect students with vendors
+            <strong>StudDeals is a marketplace intermediary.</strong> We connect students with vendors
             but are not a party to any transaction between them. We make no warranty that:
           </p>
           <ul className="list-disc ml-5 space-y-1.5 text-gray-600">
@@ -451,12 +451,12 @@ const EN = {
             <li>Savings figures displayed are guaranteed or represent actual cash savings.</li>
           </ul>
           <p className="mt-3">
-            To the maximum extent permitted by Hungarian law, Studeals shall not be liable for
+            To the maximum extent permitted by Hungarian law, StudDeals shall not be liable for
             indirect, incidental, or consequential damages arising from your use of the platform,
             including losses resulting from a vendor&apos;s failure to honour a voucher.
           </p>
           <p className="mt-3">
-            Nothing in these Terms limits Studeals&apos; liability for death or personal injury
+            Nothing in these Terms limits StudDeals&apos; liability for death or personal injury
             caused by negligence, fraud, or fraudulent misrepresentation, or any other liability
             that cannot be excluded by law.
           </p>
@@ -468,10 +468,10 @@ const EN = {
       title: '7. Intellectual Property',
       content: (
         <p>
-          All platform content, branding, code, and design belonging to Studeals is protected by
+          All platform content, branding, code, and design belonging to StudDeals is protected by
           copyright and intellectual property law. Vendors retain ownership of their business
-          information and offer content, but grant Studeals a licence to display it on the platform.
-          You may not reproduce, redistribute, or create derivative works from Studeals content
+          information and offer content, but grant StudDeals a licence to display it on the platform.
+          You may not reproduce, redistribute, or create derivative works from StudDeals content
           without express written permission.
         </p>
       ),
@@ -488,7 +488,7 @@ const EN = {
             <Link href="/privacy" className="text-brand-600 underline">Privacy Policy</Link>).
           </p>
           <p className="mt-2">
-            <strong>Studeals</strong> may suspend or terminate your account immediately and without
+            <strong>StudDeals</strong> may suspend or terminate your account immediately and without
             notice if you breach these Terms, engage in fraudulent activity, or if we are required
             to do so by law. Termination does not affect any accrued rights or obligations.
           </p>

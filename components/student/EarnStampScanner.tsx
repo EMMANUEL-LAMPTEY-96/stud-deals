@@ -237,7 +237,7 @@ export default function EarnStampScanner({ onClose, onStampSuccess, isVerified =
                 </div>
               </div>
               <p className="text-center text-sm text-gray-500">
-                Point your camera at the <strong>Stud Deals QR code</strong> at the counter
+                Point your camera at the <strong>StudDeals QR code</strong> at the counter
               </p>
             </div>
           )}

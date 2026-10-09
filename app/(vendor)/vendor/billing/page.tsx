@@ -306,7 +306,7 @@ export default function BillingPage() {
 
     // Success / cancelled flash from Stripe redirect
     const params = new URLSearchParams(window.location.search);
-    if (params.get('success'))   setToast({ msg: '🎉 Subscription activated! Welcome to Studeals paid.', ok: true });
+    if (params.get('success'))   setToast({ msg: '🎉 Subscription activated! Welcome to StudDeals paid.', ok: true });
     if (params.get('cancelled')) setToast({ msg: 'Checkout cancelled. You can subscribe anytime below.', ok: false });
     window.history.replaceState({}, '', window.location.pathname);
   }, []);

@@ -155,7 +155,7 @@ export default function CookieConsent() {
         {/* Description */}
         <div className="px-5 pb-3">
           <p id="cookie-dialog-desc" className="text-xs text-gray-600 leading-relaxed">
-            A Studeals sütiket és helyi tárolást használ a bejelentkezés és a preferenciák megőrzéséhez.
+            A StudDeals sütiket és helyi tárolást használ a bejelentkezés és a preferenciák megőrzéséhez.
             Adatait nem adjuk el, és nem használunk hirdetési nyomkövetőket.{' '}
             <span className="text-gray-400">(We use cookies to keep you logged in. We do not sell data or run ad trackers.)</span>
           </p>

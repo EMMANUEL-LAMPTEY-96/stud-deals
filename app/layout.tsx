@@ -7,20 +7,20 @@ import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar'
 import { I18nProvider } from '@/lib/i18n'
 
 export const metadata: Metadata = {
-  title: 'Studeals — Exclusive Student Discounts in Hungary',
+  title: 'StudDeals — Exclusive Student Discounts in Hungary',
   description: 'Verified student discounts at local businesses near your campus. Save money every day with exclusive deals for Hungarian university students.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Studeals',
+    title: 'StudDeals',
   },
   icons: {
     icon: '/icons/icon-192.png',
     apple: '/icons/icon-192.png',
   },
   openGraph: {
-    title: 'Studeals — Exclusive Student Discounts',
+    title: 'StudDeals — Exclusive Student Discounts',
     description: 'Verified student discounts at local businesses near your campus. Save money every day.',
     type: 'website',
     locale: 'en_US',
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Studeals" />
+        <meta name="apple-mobile-web-app-title" content="StudDeals" />
         {/* PWA — Android / Chrome */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />

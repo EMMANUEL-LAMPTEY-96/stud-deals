@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
       _meta: {
         export_generated_at:  new Date().toISOString(),
         gdpr_article:         'Article 20 — Right to Data Portability',
-        data_controller:      'Studeals Kft.',
+        data_controller:      'StudDeals (portfolio project by Emmanuel Lamptey)',
         data_controller_email: 'privacy@studeals.app',
         supervisory_authority: 'NAIH — naih.hu',
         platform:             'studeals.vercel.app',

@@ -79,7 +79,7 @@ INSERT INTO public.vendor_profiles (
 ) VALUES (
   'de300000-0000-4000-a000-000000000201', 'de300000-0000-4000-a000-000000000002',
   'Demo Café', 'cafe',
-  'A cosy campus café next to ELTE — specialty coffee, fresh pastries and a shelf of second-hand textbooks. (Demo business for the Studeals portfolio.)',
+  'A cosy campus café next to ELTE — specialty coffee, fresh pastries and a shelf of second-hand textbooks. (Demo business for the StudDeals portfolio.)',
   'Budapest', 'Hungary', 'Egyetem tér 5', '1053', 47.4905, 19.0587,
   '+36 1 000 0000', 'demo-vendor@studeals.demo',
   true, now() - interval '40 days', 'growth', 'active', 'demo-cafe'
@@ -225,7 +225,7 @@ INSERT INTO public.vendor_reviews (vendor_id, student_id, rating, title, body, v
 -- ── Notifications for the demo student ───────────────────────────────────────
 INSERT INTO public.notifications (user_id, type, title, body, related_entity_type, related_entity_id, is_read, created_at) VALUES
   ('de300000-0000-4000-a000-000000000001', 'promotion', 'Demo Café: pastries 20% off this week',
-   'Show your Studeals voucher at the counter.', 'offer', 'de300000-0000-4000-a000-000000000302', false, now() - interval '2 hours'),
+   'Show your StudDeals voucher at the counter.', 'offer', 'de300000-0000-4000-a000-000000000302', false, now() - interval '2 hours'),
   ('de300000-0000-4000-a000-000000000001', 'almost_there', 'You''re over halfway there',
    '5 of 8 stamps at Demo Café — 3 more for a free coffee.', 'vendor', 'de300000-0000-4000-a000-000000000201', true, now() - interval '1 day');
 

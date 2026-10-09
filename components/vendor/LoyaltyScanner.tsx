@@ -133,7 +133,7 @@ export default function LoyaltyScanner() {
               const payload = barcodes[0].rawValue;
               // Deduplicate: only process once per unique payload
               if (payload === lastScannedRef.current) return;
-              // Only process Studeals QR codes
+              // Only process StudDeals QR codes
               if (!payload.startsWith('STUDEALS_STAMP:')) return;
               lastScannedRef.current = payload;
               stopCamera();
@@ -328,7 +328,7 @@ export default function LoyaltyScanner() {
       <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
         <Smartphone size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-blue-700 leading-relaxed">
-          Ask the student to open their <strong>Loyalty</strong> page in the Studeals app.
+          Ask the student to open their <strong>Loyalty</strong> page in the StudDeals app.
           Their personal QR code will appear — scan it with your camera.
         </p>
       </div>

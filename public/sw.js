@@ -1,5 +1,5 @@
 // =============================================================================
-// public/sw.js — Studeals Service Worker
+// public/sw.js — StudDeals Service Worker
 //
 // Strategy:
 //   • App shell (HTML pages): Network-first with cache fallback.
