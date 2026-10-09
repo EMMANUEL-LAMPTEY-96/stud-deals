@@ -13,11 +13,15 @@
 // Format: { necessary: true, analytics: boolean, marketing: boolean, ts: number }
 //
 // Previous 'studeals_cookie_consent' key is migrated on first load.
+//
+// Copy follows the current UI language (messages/*.json → "cookies"):
+// English by default, Hungarian when the language switcher is set to HU.
 // =============================================================================
 
 import { useState, useEffect } from 'react';
-import { Shield, X, ChevronDown, ChevronUp, Check, ExternalLink } from 'lucide-react';
+import { Shield, X, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import Link from 'next/link';
+import { useI18n } from '@/lib/i18n';
 
 const CONSENT_KEY = 'studeals_consent_v2';
 const LEGACY_KEY  = 'studeals_cookie_consent';
@@ -88,6 +92,8 @@ function Toggle({
 }
 
 export default function CookieConsent() {
+  const { t, locale } = useI18n();
+  const legalSuffix = locale === 'hu' ? '?lang=hu' : '';
   const [visible, setVisible]   = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [analytics, setAnalytics] = useState(true);
@@ -136,17 +142,17 @@ export default function CookieConsent() {
             </div>
             <div>
               <h2 id="cookie-dialog-title" className="text-sm font-bold text-gray-900">
-                Adatvédelem / Cookie settings
+                {t('cookies.title')}
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Adattárolás: <span className="font-medium text-gray-700">EU (Írország)</span>
+                {t('cookies.storage')} <span className="font-medium text-gray-700">{t('cookies.storageRegion')}</span>
               </p>
             </div>
           </div>
           <button
             onClick={declineAll}
             className="text-gray-400 hover:text-gray-600 transition-colors mt-0.5 flex-shrink-0"
-            aria-label="Elutasítás és bezárás / Decline and close"
+            aria-label={t('cookies.decline')}
           >
             <X size={17} />
           </button>
@@ -155,9 +161,7 @@ export default function CookieConsent() {
         {/* Description */}
         <div className="px-5 pb-3">
           <p id="cookie-dialog-desc" className="text-xs text-gray-600 leading-relaxed">
-            A StudDeals sütiket és helyi tárolást használ a bejelentkezés és a preferenciák megőrzéséhez.
-            Adatait nem adjuk el, és nem használunk hirdetési nyomkövetőket.{' '}
-            <span className="text-gray-400">(We use cookies to keep you logged in. We do not sell data or run ad trackers.)</span>
+            {t('cookies.desc')}
           </p>
         </div>
 
@@ -169,7 +173,7 @@ export default function CookieConsent() {
             aria-expanded={expanded}
           >
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            {expanded ? 'Kevesebb / Less detail' : 'Részletek / More detail'}
+            {expanded ? t('cookies.less') : t('cookies.more')}
           </button>
 
           {expanded && (
@@ -178,14 +182,13 @@ export default function CookieConsent() {
               <div className="flex items-start justify-between gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
                 <div>
                   <p className="text-xs font-semibold text-gray-800">
-                    Szükséges / Necessary
+                    {t('cookies.necessary')}
                     <span className="ml-2 text-[10px] font-normal text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">
-                      Mindig aktív / Always on
+                      {t('cookies.alwaysOn')}
                     </span>
                   </p>
                   <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
-                    Bejelentkezési munkamenet, biztonsági tokenek. Ezeket nem lehet letiltani. ·
-                    Login session and security tokens. Cannot be disabled.
+                    {t('cookies.necessaryDesc')}
                   </p>
                 </div>
                 <Toggle id="toggle-necessary" checked={true} disabled />
@@ -194,10 +197,9 @@ export default function CookieConsent() {
               {/* Analytics */}
               <div className="flex items-start justify-between gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
                 <label htmlFor="toggle-analytics" className="cursor-pointer flex-1">
-                  <p className="text-xs font-semibold text-gray-800">Analitikai / Analytics</p>
+                  <p className="text-xs font-semibold text-gray-800">{t('cookies.analytics')}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
-                    Névtelen oldalmegtekintés-számlálók az alkalmazás fejlesztéséhez. Nincs személyes adat. ·
-                    Anonymous page-view counts to improve the app. No personal data.
+                    {t('cookies.analyticsDesc')}
                   </p>
                 </label>
                 <Toggle
@@ -210,10 +212,9 @@ export default function CookieConsent() {
               {/* Marketing */}
               <div className="flex items-start justify-between gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
                 <label htmlFor="toggle-marketing" className="cursor-pointer flex-1">
-                  <p className="text-xs font-semibold text-gray-800">Marketing</p>
+                  <p className="text-xs font-semibold text-gray-800">{t('cookies.marketing')}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
-                    Jelenleg nem használjuk. Ha aktiváljuk, erről értesítünk. ·
-                    Currently unused. We will notify you before activating this.
+                    {t('cookies.marketingDesc')}
                   </p>
                 </label>
                 <Toggle
@@ -222,17 +223,6 @@ export default function CookieConsent() {
                   onChange={setMarketing}
                 />
               </div>
-
-              {/* ODR link */}
-              <a
-                href="https://ec.europa.eu/consumers/odr/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-[11px] text-blue-600 hover:underline px-1"
-              >
-                <ExternalLink size={11} />
-                EU vitarendezési platform / EU Online Dispute Resolution
-              </a>
             </div>
           )}
         </div>
@@ -240,16 +230,12 @@ export default function CookieConsent() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-5 py-4 border-t border-gray-100">
           <div className="flex items-center gap-3">
-            <Link href="/privacy?lang=hu" className="text-[11px] text-gray-400 hover:text-gray-600 underline underline-offset-2">
-              Adatvédelem
+            <Link href={`/privacy${legalSuffix}`} className="text-[11px] text-gray-400 hover:text-gray-600 underline underline-offset-2">
+              {t('cookies.privacy')}
             </Link>
             <span className="text-gray-200">·</span>
-            <Link href="/terms?lang=hu" className="text-[11px] text-gray-400 hover:text-gray-600 underline underline-offset-2">
-              Feltételek
-            </Link>
-            <span className="text-gray-200">·</span>
-            <Link href="/privacy" className="text-[11px] text-gray-400 hover:text-gray-600 underline underline-offset-2">
-              Privacy
+            <Link href={`/terms${legalSuffix}`} className="text-[11px] text-gray-400 hover:text-gray-600 underline underline-offset-2">
+              {t('cookies.terms')}
             </Link>
           </div>
           <div className="flex items-center gap-2">
@@ -257,21 +243,21 @@ export default function CookieConsent() {
               onClick={declineAll}
               className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
             >
-              Csak szükséges / Essential only
+              {t('cookies.essentialOnly')}
             </button>
             {expanded ? (
               <button
                 onClick={saveChoices}
                 className="px-3 py-1.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors flex items-center gap-1"
               >
-                <Check size={12} /> Mentés / Save
+                <Check size={12} /> {t('cookies.save')}
               </button>
             ) : (
               <button
                 onClick={acceptAll}
                 className="px-3 py-1.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors"
               >
-                Összes elfogadása / Accept all
+                {t('cookies.acceptAll')}
               </button>
             )}
           </div>

@@ -137,5 +137,26 @@
     "privacy": "Privacy",
     "contact": "Contact",
     "madeIn": "Made in Budapest"
+  },
+  "cookies": {
+    "title": "Privacy & cookie settings",
+    "storage": "Data storage:",
+    "storageRegion": "EU (Ireland)",
+    "decline": "Decline and close",
+    "desc": "StudDeals uses cookies and local storage to keep you signed in and remember your preferences. We don't sell your data or use ad trackers.",
+    "more": "More detail",
+    "less": "Less detail",
+    "necessary": "Necessary",
+    "alwaysOn": "Always on",
+    "necessaryDesc": "Login session and security tokens. Cannot be disabled.",
+    "analytics": "Analytics",
+    "analyticsDesc": "Anonymous page-view counts to improve the app. No personal data.",
+    "marketing": "Marketing",
+    "marketingDesc": "Currently unused. We will notify you before activating this.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "essentialOnly": "Essential only",
+    "save": "Save",
+    "acceptAll": "Accept all"
   }
 }
