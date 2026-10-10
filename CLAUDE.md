@@ -48,6 +48,10 @@ PostHog (EU) only starts after analytics consent in the cookie banner (`componen
 Use `track()` / `trackOnce()` from `lib/analytics` with names from `lib/analytics/events.ts`, and document new
 events in `docs/analytics/events.md`. Never put names, emails or codes in event properties.
 
+Growth/RevOps metrics live in the `analytics` schema (migration 021): views over real tables that exclude
+demo accounts, read by the `looker_reader` role from Looker Studio. The schema must never be exposed through
+the Data API. Definitions and Looker setup: `docs/analytics/dashboard.md`.
+
 ---
 
 ## Architecture
@@ -157,7 +161,7 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - Vendor stamp QR carries a server-signed token from `/api/vendor/stamp-qr`; `/api/loyalty/stamp` rejects anything else.
 - Handing over a loyalty reward never changes its status — it sets `redemptions.metadata.reward_claimed_at` (`lib/utils/reward-claim.ts`).
 - `redemptions.student_id` is `student_profiles.id`, not the auth user id. `notifications` columns: `title, body, related_entity_type, related_entity_id`.
-- Migrations live in `supabase/migrations/`. Applied to mktqusaucpunasdnfulx: 015a, 017, 018, 020. Still to apply before deploying this branch: 015b, 016, 019. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
+- Migrations live in `supabase/migrations/`. Applied to mktqusaucpunasdnfulx: 015a, 017, 018, 020, 021. Still to apply before deploying this branch: 015b, 016, 019. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
 - Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students. Billing runs in demo mode when `STRIPE_SECRET_KEY` is unset (`lib/billing/stripe.ts`).
 
 ### Components

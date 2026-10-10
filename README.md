@@ -257,6 +257,15 @@ type-check, unit tests and production build on every push and pull request.
 | `NEXT_PUBLIC_POSTHOG_KEY` | optional | PostHog project API key. Analytics is off without it, and starts only after cookie consent |
 | `NEXT_PUBLIC_POSTHOG_HOST` | optional | Defaults to `https://eu.i.posthog.com` (EU cloud) |
 
+### Analytics
+
+- **Product analytics:** PostHog EU, loaded only after cookie consent. The event taxonomy is in
+  [docs/analytics/events.md](docs/analytics/events.md).
+- **Growth metrics:** SQL views in a private `analytics` schema (migration 021). They cover the student
+  funnel, weekly retention cohorts, vendor activation, daily redemptions, referral K-factor and plan MRR,
+  and they exclude demo accounts. A read-only `looker_reader` role connects Looker Studio. Metric
+  definitions and setup are in [docs/analytics/dashboard.md](docs/analytics/dashboard.md).
+
 ### Deployment
 
 The app deploys to Vercel from `main`. `vercel.json` schedules a daily cron (`/api/cron/keep-alive`) that runs one cheap query. This stops the free-tier Supabase project from pausing.
