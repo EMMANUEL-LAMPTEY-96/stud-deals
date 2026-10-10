@@ -1215,9 +1215,6 @@ export type Database = {
     }
     Functions: {
       expire_stale_redemptions: { Args: never; Returns: number }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
-      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       discount_type: "percentage" | "fixed_amount" | "buy_x_get_y" | "free_item"
