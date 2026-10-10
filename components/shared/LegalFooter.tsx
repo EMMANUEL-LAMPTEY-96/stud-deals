@@ -34,14 +34,16 @@ export default function LegalFooter() {
             </p>
           </div>
 
-          {/* Navigation links */}
+          {/* Navigation links — student pages aren't prefetched: for a logged-out
+              visitor middleware answers with a redirect to /login, and the
+              client router would cache it. */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
             <div>
               <p className="font-semibold text-gray-700 mb-1.5">Platform</p>
               <div className="flex flex-col gap-1">
-                <Link href="/dashboard" className="text-gray-500 hover:text-gray-800 transition-colors">Browse deals</Link>
-                <Link href="/explore" className="text-gray-500 hover:text-gray-800 transition-colors">Explore</Link>
-                <Link href="/loyalty" className="text-gray-500 hover:text-gray-800 transition-colors">Loyalty cards</Link>
+                <Link href="/dashboard" prefetch={false} className="text-gray-500 hover:text-gray-800 transition-colors">Browse deals</Link>
+                <Link href="/explore" prefetch={false} className="text-gray-500 hover:text-gray-800 transition-colors">Explore</Link>
+                <Link href="/loyalty" prefetch={false} className="text-gray-500 hover:text-gray-800 transition-colors">Loyalty cards</Link>
               </div>
             </div>
             <div>
