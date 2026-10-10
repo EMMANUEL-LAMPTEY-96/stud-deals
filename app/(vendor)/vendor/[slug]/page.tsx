@@ -50,6 +50,17 @@ interface PublicReview {
   created_at: string;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The URL segment is a slug or (fallback) a vendor id. Query one column only:
+ * comparing the uuid `id` column with a slug like "demo-cafe" is a Postgres
+ * error, which made every slug URL 404.
+ */
+function vendorLookupColumn(slug: string): 'id' | 'slug' {
+  return UUID_RE.test(slug) ? 'id' : 'slug';
+}
+
 // ── Metadata (SEO) ────────────────────────────────────────────────────────────
 
 export async function generateMetadata(
@@ -60,7 +71,7 @@ export async function generateMetadata(
   const { data: vpMetaRaw } = await admin
     .from('vendor_profiles')
     .select('business_name, city, description')
-    .or(`slug.eq.${slug},id.eq.${slug}`)
+    .eq(vendorLookupColumn(slug), slug)
     .maybeSingle();
   const vp = (vpMetaRaw as unknown) as { business_name: string; city: string | null; description: string | null } | null;
 
@@ -209,7 +220,7 @@ export default async function VendorPublicProfilePage(
         business_hours, gallery_photos,
         total_lifetime_redemptions, total_active_offers
       `)
-      .or(`slug.eq.${slug},id.eq.${slug}`)
+      .eq(vendorLookupColumn(slug), slug)
       .maybeSingle(),
     supabase.auth.getUser(),
   ]);
