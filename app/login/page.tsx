@@ -11,7 +11,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useT } from '@/lib/i18n';
 import {
@@ -78,7 +78,6 @@ type LoginRole = 'student' | 'vendor';
 
 // ── Form ───────────────────────────────────────────────────────────────────────
 function LoginForm() {
-  const router       = useRouter();
   const searchParams = useSearchParams();
   const t            = useT();
   const redirectTo   = safeRedirectPath(searchParams.get('redirect'));
@@ -117,6 +116,14 @@ function LoginForm() {
   const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
   const [demoLoading, setDemoLoading] = useState<LoginRole | null>(null);
 
+  // Full page load, not router.push: the client router may hold a prefetch of
+  // a protected page (e.g. the footer's /dashboard link) made while logged
+  // out, which middleware answered with a redirect back to /login. Replaying
+  // that cached redirect bounced students straight back to the login page.
+  function goAfterSignIn(dest: string) {
+    window.location.assign(dest);
+  }
+
   async function handleDemoLogin(demoRole: LoginRole) {
     if (!demoPassword) return;
     setDemoLoading(demoRole);
@@ -131,8 +138,7 @@ function LoginForm() {
       setDemoLoading(null);
       return;
     }
-    router.push(demoRole === 'vendor' ? '/vendor' : '/dashboard');
-    router.refresh();
+    goAfterSignIn(demoRole === 'vendor' ? '/vendor' : '/dashboard');
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -176,9 +182,7 @@ function LoginForm() {
       return;
     }
 
-    const dest = redirectTo || cfg.destination;
-    router.push(dest);
-    router.refresh();
+    goAfterSignIn(redirectTo || cfg.destination);
   }
 
   function switchRole(next: LoginRole) {
