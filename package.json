@@ -18,7 +18,7 @@
     "framer-motion": "^11.18.2",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.416.0",
-    "next": "^15.5.28",
+    "next": "^16.4.3",
     "posthog-js": "^1.444.0",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
