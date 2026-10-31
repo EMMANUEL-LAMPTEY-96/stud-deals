@@ -166,10 +166,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Writes below use the service role (no user UPDATE policy on redemptions since
+    // migration 025); ownership was checked above (redemption.vendor_id === vendorProfile.id).
+
     // ── 7. Guard: Code has not expired ───────────────────────────────────
     if (new Date(redemption.expires_at) < new Date()) {
       // Proactively update to expired in DB (cron job handles bulk expiry, this handles edge case)
-      await supabase
+      await createAdminClient()
         .from('redemptions')
         .update({ status: 'expired' })
         .eq('id', redemption.id);
@@ -184,7 +187,7 @@ export async function POST(request: NextRequest) {
     // This is the CONVERSION EVENT. The DB trigger fires here.
     const confirmedAt = new Date().toISOString();
 
-    const { error: confirmError } = await supabase
+    const { error: confirmError } = await createAdminClient()
       .from('redemptions')
       .update({
         status: 'confirmed',

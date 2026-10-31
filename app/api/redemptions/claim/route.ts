@@ -138,7 +138,9 @@ export async function POST(request: NextRequest) {
       .eq('id', offer_id)
       .maybeSingle();
 
-    if (offerError || !offer) {
+    // vendor_profiles_public only returns verified vendors, so a missing vendor
+    // means the business isn't approved yet.
+    if (offerError || !offer || !offer.vendor) {
       return NextResponse.json({ error: 'Offer not found.' }, { status: 404 });
     }
 
@@ -276,7 +278,9 @@ export async function POST(request: NextRequest) {
         discountValueApplied = offer.discount_value;
       }
 
-      const { data: newRedemption, error: insertError } = await supabase
+      // Written with the service role: users have no INSERT policy on redemptions
+      // (migration 025), so every field here is set by this route, not the client.
+      const { data: newRedemption, error: insertError } = await createAdminClient()
         .from('redemptions')
         .insert({
           offer_id: offer_id,

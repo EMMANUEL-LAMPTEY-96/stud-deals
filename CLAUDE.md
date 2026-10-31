@@ -161,7 +161,10 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - Vendor stamp QR carries a server-signed token from `/api/vendor/stamp-qr`; `/api/loyalty/stamp` rejects anything else.
 - Handing over a loyalty reward never changes its status — it sets `redemptions.metadata.reward_claimed_at` (`lib/utils/reward-claim.ts`).
 - `redemptions.student_id` is `student_profiles.id`, not the auth user id. `notifications` columns: `title, body, related_entity_type, related_entity_id`.
-- Migrations live in `supabase/migrations/`. Applied to mktqusaucpunasdnfulx: 015a, 017, 018, 020, 021, 022. Still to apply before deploying this branch: 015b, 016, 019. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
+- Migrations live in `supabase/migrations/`. All of 015a–025 are applied to mktqusaucpunasdnfulx (015b/016/019 were applied via the SQL editor, so not all appear in `supabase_migrations.schema_migrations`; verified 2026-10-31).
+- **Users never write `redemptions` directly** (025): claims, confirms and expiry go through `/api/redemptions/*` with `createAdminClient()` after the route's checks. Don't add user INSERT/UPDATE policies back.
+- Guard triggers block privileged columns for user sessions: `guard_profiles`, `guard_student_profiles`, `guard_vendor_profiles`, `guard_vendor_reviews` (vendors only reply; students only edit their words), `guard_offers` (counters, vendor_id), `guard_offer_views` (vendor_id from the offer).
+- Students only see offers from verified vendors (`private.is_verified_vendor()` in the offers policy). `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
 - Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students. Billing runs in demo mode when `STRIPE_SECRET_KEY` is unset (`lib/billing/stripe.ts`).
 
 ### Components
