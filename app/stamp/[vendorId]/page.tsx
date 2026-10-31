@@ -388,7 +388,7 @@ export default function StampPage() {
               <GraduationCap size={36} className="text-white" />
             </div>
             <h1 className="text-2xl font-black text-gray-900 mb-2">Sign in to earn stamps</h1>
-            <p className="text-gray-500 text-sm">Join StudDeals and collect loyalty stamps at hundreds of student-friendly spots.</p>
+            <p className="text-gray-500 text-sm">Join StudDeals and collect loyalty stamps at student-friendly spots.</p>
           </div>
           <Link
             href={`/sign-in?next=/stamp/${vendorId}`}
@@ -417,7 +417,7 @@ export default function StampPage() {
           </div>
           <h1 className="text-2xl font-black text-gray-900 mb-2">Verify your student status</h1>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-            StudDeals is exclusively for verified students. It only takes 60 seconds — then you can earn stamps here and at hundreds of other spots.
+            StudDeals is exclusively for verified students. It only takes 60 seconds — then you can earn stamps here and at other partner spots.
           </p>
           <Link
             href={`/verification?next=/stamp/${vendorId}`}

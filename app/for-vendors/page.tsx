@@ -27,7 +27,7 @@ import {
 export const metadata: Metadata = {
   title: 'For Businesses — StudDeals | Reach verified Hungarian university students',
   description:
-    'List your student discounts on StudDeals and reach tens of thousands of verified university students near your venue. Free to start. No commission.',
+    'List your student discounts on StudDeals and reach verified university students near your venue. Free to start. No commission.',
 };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -288,7 +288,7 @@ export default async function ForVendorsPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-white/75 max-w-2xl mx-auto mb-10">
-            StudDeals connects Hungarian campus businesses with tens of thousands of verified
+            StudDeals connects Hungarian campus businesses with verified
             university students — through QR vouchers, loyalty stamps, and targeted flash deals.
           </p>
 
@@ -477,7 +477,7 @@ export default async function ForVendorsPage() {
             Ready to grow your student customer base?
           </h2>
           <p className="text-gray-500 text-base mb-8 max-w-md mx-auto">
-            Join hundreds of campus businesses already on StudDeals.
+            Be one of the first campus businesses on StudDeals.
             Free to list, live in 24 hours, no commission.
           </p>
           <Link

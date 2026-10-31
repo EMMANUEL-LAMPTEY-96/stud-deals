@@ -36,7 +36,7 @@ const ROLE_CONFIG = {
     signupLabel:   'Create student account',
     signupIcon:    <GraduationCap className="w-4 h-4" />,
     headline:      'Your campus, your discounts.',
-    subline:       'Sign in to discover hundreds of verified student deals — show your QR code at the till and save instantly.',
+    subline:       'Sign in to discover verified student deals — show your QR code at the till and save instantly.',
     panelFooter:   'Free forever for students · No credit card required',
     destination:   '/dashboard',
     statsKeys: ['students', 'deals', 'vendors'] as const,
@@ -67,7 +67,7 @@ const ROLE_CONFIG = {
     statsKeys: ['vendors', 'deals', 'students'] as const,
     perks: [
       { icon: <BarChart3 size={16} />, text: 'Live redemption & revenue analytics' },
-      { icon: <Users size={16} />,     text: 'Reach thousands of verified students' },
+      { icon: <Users size={16} />,     text: 'Reach verified students near you' },
       { icon: <Tag size={16} />,       text: 'Loyalty programs & punch cards' },
       { icon: <TrendingUp size={16} />,text: 'Track ROI down to the last redemption' },
     ],

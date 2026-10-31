@@ -473,7 +473,7 @@ export default async function VendorPublicProfilePage(
               </div>
               <h3 className="text-white font-black text-lg mb-1">Get exclusive student deals</h3>
               <p className="text-white/70 text-sm mb-5">
-                Verify your student status once, then claim deals at {vp.business_name} and thousands of other venues.
+                Verify your student status once, then claim deals at {vp.business_name} and other student-friendly venues.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link

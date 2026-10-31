@@ -723,7 +723,7 @@ export default function LoyaltyPage() {
             <div className="mt-8 bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-5 text-white text-center">
               <Star size={24} className="mx-auto mb-2 opacity-80" />
               <h3 className="font-black mb-1">Discover more venues</h3>
-              <p className="text-xs text-white/70 mb-4">Hundreds of student-friendly spots are waiting for you</p>
+              <p className="text-xs text-white/70 mb-4">Student-friendly spots are waiting for you</p>
               <Link
                 href="/dashboard"
                 className="inline-flex items-center gap-2 bg-white text-brand-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-brand-50 transition-colors"

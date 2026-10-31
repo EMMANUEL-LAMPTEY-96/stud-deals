@@ -427,7 +427,7 @@ export default function ReviewsPage() {
                         {reviews.filter(r => r.vendor_reply).length} of {reviews.length} replied
                       </p>
                       <p className="text-[10px] text-gray-400 mt-0.5">
-                        Businesses that reply get 23% more reviews
+                        Replying shows students you're listening
                       </p>
                     </div>
                   </div>

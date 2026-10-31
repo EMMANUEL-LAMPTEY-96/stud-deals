@@ -58,7 +58,7 @@ export default function SignUpPage() {
             </div>
             <h2 className="text-xl font-bold text-white mb-2">I&apos;m a Business</h2>
             <p className="text-purple-300 text-sm mb-5">
-              Reach thousands of verified students near your location with targeted discount offers.
+              Reach verified students near your location with targeted discount offers.
             </p>
             <ul className="space-y-2 mb-6">
               {['Free to list', 'QR code verification', 'Real-time analytics', 'Student audience insights'].map(item => (

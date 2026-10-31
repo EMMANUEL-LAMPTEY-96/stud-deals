@@ -191,7 +191,7 @@ components/
 - **Task #25**: Vendor Customers page (`/vendor/customers`) — the API route `app/api/vendor/customers/route.ts` exists but the page at `app/(vendor)/vendor/customers/page.tsx` needs wiring.
 - **Student review submission UI** — `vendor_reviews` table and vendor read-side exist, but there is no student-facing page or API route to submit a new review.
 - **Vendor public profile page** — no public-facing `/vendor/[slug]` page exists yet (viral/sharing loop).
-- **Hardcoded landing page stats** — "47,000+ students", "2,400+ deals" etc. in `app/page.tsx` are marketing copy, not live DB queries.
+- **No invented numbers in copy.** `app/page.tsx` only redirects to `/login`. Marketing text must not claim user, vendor or deal counts (e.g. "thousands of students") or performance stats unless they come from live data — removed 2026-10-31.
 
 ---
 
@@ -207,6 +207,7 @@ components/
 
 ## Deployment Notes
 
+- **Function region:** `dub1` (Dublin) via `vercel.json`, next to the Supabase DB in eu-west-1 — keeps personal data in the EU.
 - **Vercel project:** `unideals` at `https://vercel.com/nellamptey-3909s-projects/unideals`
 - **Live URL:** `https://studeals.vercel.app`
 - Every push to `main` triggers an automatic Vercel deployment.

@@ -109,7 +109,7 @@ export default function VendorSignUpPage() {
             <span className="text-white font-bold text-xl">StudDeals</span>
           </div>
           <h1 className="text-2xl font-bold text-white">{t('auth.signUpTitle')}</h1>
-          <p className="text-purple-300 mt-1">{t('auth.vendorSignUpSubtitle', 'Reach thousands of verified students')}</p>
+          <p className="text-purple-300 mt-1">{t('auth.vendorSignUpSubtitle', 'Reach verified students near you')}</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
