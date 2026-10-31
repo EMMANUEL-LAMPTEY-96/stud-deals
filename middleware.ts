@@ -36,6 +36,15 @@ function isPublicVendorRoute(pathname: string): boolean {
   return /^[a-z0-9][a-z0-9-]*$/.test(segment) && !VENDOR_APP_SECTIONS.has(segment);
 }
 
+// Two-factor login for admins (Supabase TOTP). Set ADMIN_MFA_REQUIRED=false in
+// Vercel only as an emergency switch if an admin loses their authenticator.
+const ADMIN_MFA_REQUIRED = process.env.ADMIN_MFA_REQUIRED !== 'false';
+
+async function hasAal2(supabase: { auth: { mfa: { getAuthenticatorAssuranceLevel: () => Promise<{ data: { currentLevel: string | null } | null }> } } }): Promise<boolean> {
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return data?.currentLevel === 'aal2';
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -71,6 +80,23 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // RULE 0: Admin API needs a two-factor (aal2) session.
+  // The admin routes still check the admin role themselves; this adds the
+  // second factor in one place. Kill switch: ADMIN_MFA_REQUIRED=false.
+  // ──────────────────────────────────────────────────────────────────────────
+  if (pathname.startsWith('/api/')) {
+    if (!pathname.startsWith('/api/admin')) return supabaseResponse;
+    if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    if (ADMIN_MFA_REQUIRED && !(await hasAal2(supabase))) {
+      return NextResponse.json(
+        { error: 'Two-factor verification required.', code: 'mfa_required' },
+        { status: 401 },
+      );
+    }
+    return supabaseResponse;
+  }
 
   // ──────────────────────────────────────────────────────────────────────────
   // RULE 1: Unauthenticated user trying to access protected routes → Login
@@ -159,6 +185,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // Admin pages need a two-factor session; /admin-mfa is where it's set up.
+  const isAdminPanel = pathname === '/admin' || pathname.startsWith('/admin/');
+  if (role === 'admin' && isAdminPanel && ADMIN_MFA_REQUIRED && !(await hasAal2(supabase))) {
+    const mfaUrl = new URL('/admin-mfa', request.url);
+    mfaUrl.searchParams.set('next', pathname);
+    return NextResponse.redirect(mfaUrl);
+  }
+
   // Non-admin trying to access admin routes
   if (role !== 'admin' && ADMIN_ROUTES.some((r) => pathname.startsWith(r))) {
     return NextResponse.redirect(new URL('/', request.url));
@@ -169,6 +203,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // Admin API: only for the two-factor check (RULE 0).
+    '/api/admin/:path*',
     // Run middleware on page routes only. Skipped:
     //   - /api/*          — route handlers authenticate themselves (getUser())
     //   - Next.js internals, PWA files (manifest.json, sw.js), /icons/*, /fonts/*
