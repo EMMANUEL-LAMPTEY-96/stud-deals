@@ -66,6 +66,7 @@ app/
 ├── (student)/                    # Route group — student-only pages
 │   ├── dashboard/                # Main offer feed
 │   ├── verification/             # 3-step student verification flow
+│   ├── cafes/                    # Real cafés near campus (listed_cafes) — no offers
 │   ├── loyalty/ + my-loyalty/    # Stamp cards
 │   ├── notifications/
 │   └── offer/[id]/
@@ -129,6 +130,7 @@ Always use the correct client for the context:
 | `offer_views` | Analytics view tracking | `offer_id`, `student_id` |
 | `notifications` | In-app notifications | `user_id`, `type`, `is_read` |
 | `institutions` | Hungarian universities | `name`, `city`, `country`, `lat`, `lng` |
+| `listed_cafes` | Real cafés shown at `/cafes` **without offers** (not partners) | `name`, `city`, `address_line1`, `latitude`, `longitude`, `claimed_vendor_id` |
 
 ### Loyalty Stamp System — Critical Design Detail
 
@@ -161,7 +163,7 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - Vendor stamp QR carries a server-signed token from `/api/vendor/stamp-qr`; `/api/loyalty/stamp` rejects anything else.
 - Handing over a loyalty reward never changes its status — it sets `redemptions.metadata.reward_claimed_at` (`lib/utils/reward-claim.ts`).
 - `redemptions.student_id` is `student_profiles.id`, not the auth user id. `notifications` columns: `title, body, related_entity_type, related_entity_id`.
-- Migrations live in `supabase/migrations/`. All of 015a–025 are applied to mktqusaucpunasdnfulx (015b/016/019 were applied via the SQL editor, so not all appear in `supabase_migrations.schema_migrations`; verified 2026-10-31).
+- Migrations live in `supabase/migrations/`. All of 015a–026 are applied to mktqusaucpunasdnfulx (015b/016/019 were applied via the SQL editor, so not all appear in `supabase_migrations.schema_migrations`; verified 2026-10-31).
 - **Users never write `redemptions` directly** (025): claims, confirms and expiry go through `/api/redemptions/*` with `createAdminClient()` after the route's checks. Don't add user INSERT/UPDATE policies back.
 - Guard triggers block privileged columns for user sessions: `guard_profiles`, `guard_student_profiles`, `guard_vendor_profiles`, `guard_vendor_reviews` (vendors only reply; students only edit their words), `guard_offers` (counters, vendor_id), `guard_offer_views` (vendor_id from the offer).
 - Offers are NOT gated on vendor approval (owner's decision, 2026-10-31).
@@ -195,6 +197,8 @@ components/
 ```
 
 ### Pending Work
+
+- **Listed cafés are not partners.** Never attach offers or discounts to `listed_cafes`. When a café signs up, set `claimed_vendor_id` (or `is_active = false`) so it isn't shown twice. The old placeholder vendors (The Coffee House, Pizza Palace, City Gym, Chapter & Verse, The Pint & Plate, Demo Coffee House) were deleted on 2026-10-31; only the Demo Café demo vendor remains.
 
 - **Task #25**: Vendor Customers page (`/vendor/customers`) — the API route `app/api/vendor/customers/route.ts` exists but the page at `app/(vendor)/vendor/customers/page.tsx` needs wiring.
 - **Student review submission UI** — `vendor_reviews` table and vendor read-side exist, but there is no student-facing page or API route to submit a new review.

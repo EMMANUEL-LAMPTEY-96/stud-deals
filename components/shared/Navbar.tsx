@@ -40,6 +40,7 @@ import {
   Search,
   Settings,
   Trophy,
+  Coffee,
 } from 'lucide-react';
 
 interface NavUser {
@@ -200,6 +201,7 @@ export default function Navbar() {
   const studentLinks = [
     { href: '/dashboard', label: 'Home',       icon: <Sparkles size={15} /> },
     { href: '/explore',   label: 'Explore',    icon: <Search size={15} /> },
+    { href: '/cafes',     label: 'Cafés',      icon: <Coffee size={15} /> },
     { href: '/my-vouchers', label: 'Vouchers', icon: <Tag size={15} /> },
     { href: '/reviews',   label: 'Reviews',    icon: <Star size={15} /> },
   ];

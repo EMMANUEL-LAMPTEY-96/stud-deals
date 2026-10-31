@@ -186,6 +186,68 @@ export type Database = {
         }
         Relationships: []
       }
+      listed_cafes: {
+        Row: {
+          address_line1: string
+          city: string
+          claimed_vendor_id: string | null
+          country: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          name: string
+          postal_code: string | null
+          slug: string
+          source_url: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          address_line1: string
+          city: string
+          claimed_vendor_id?: string | null
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          name: string
+          postal_code?: string | null
+          slug: string
+          source_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          address_line1?: string
+          city?: string
+          claimed_vendor_id?: string | null
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          name?: string
+          postal_code?: string | null
+          slug?: string
+          source_url?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listed_cafes_claimed_vendor_id_fkey"
+            columns: ["claimed_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_cards: {
         Row: {
           completed_cycles: number
