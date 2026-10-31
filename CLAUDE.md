@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **StudDeals** (repo: `stud-deals`, live at `studeals.vercel.app`) is a hyper-local student discount marketplace targeting Hungarian university students. Verified students claim exclusive deals from campus businesses using QR-code vouchers and a loyalty stamp system.
 
-- **Tech stack:** Next.js 14 App Router · TypeScript · Tailwind CSS · Supabase (Postgres + Auth + Storage) · Vercel
+- **Tech stack:** Next.js 15 App Router (React 19) · TypeScript · Tailwind CSS · Supabase (Postgres + Auth + Storage) · Vercel
 - **Deployment:** Auto-deploys from `main` branch on Vercel. Project name on Vercel is `unideals` under account `nellamptey-3909`.
 - **Supabase project:** `mktqusaucpunasdnfulx` · region `eu-west-1` (Ireland) · Free / Nano plan
 - **Currency / locale:** Hungarian Forint (HUF) everywhere. Use `lib/currency.ts` helpers (`fmtHUF`, `fmtEUR`, `fmtDate`). Locale is always `hu-HU`. Never use GBP, USD, or `en-GB`.
@@ -167,6 +167,7 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - Offers are NOT gated on vendor approval (owner's decision, 2026-10-31).
 - **Admin two-factor login** (TOTP): middleware requires an `aal2` session for `/admin/*` (redirects to `/admin-mfa`) and for `/api/admin/*` (401 `mfa_required`). Emergency switch: `ADMIN_MFA_REQUIRED=false` in Vercel env.
 - **Access-rule tests:** run `supabase/tests/access_rules.sql` (rolled back, uses demo accounts) after any policy/trigger change — every row must say PASS.
+- **Dependencies:** Next.js 15.5.x, React 19, zod 4. `postcss` is pinned and forced via `overrides` (Next bundles an old copy). Keep `npm audit --omit=dev` at 0; Dependabot opens weekly PRs.
 - **Security headers** (CSP frame-ancestors etc., X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) are set in `next.config.mjs`. The QR scanners need `camera=(self)`; keep it if you edit Permissions-Policy.
 - **University auto-verification** (026): `institutions.email_domains` holds STUDENT mail domains only (e.g. `student.elte.hu`), never a staff/root domain — sub-domain matching would let staff verify as students. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
 - Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students. Billing runs in demo mode when `STRIPE_SECRET_KEY` is unset (`lib/billing/stripe.ts`).

@@ -17,10 +17,8 @@ const VALID_TIERS   = ['free', 'growth', 'pro'] as const;
 // 'cancelled' (double l) matches the billing webhook, lib/utils/plan-tier.ts and /api/admin/billing.
 const VALID_STATUSES = ['active', 'trialing', 'cancelled', 'past_due'] as const;
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
