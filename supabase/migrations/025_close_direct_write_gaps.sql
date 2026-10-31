@@ -2,8 +2,7 @@
 -- 025 · Close direct-write gaps + RLS hygiene  (2026-10-31)
 --
 -- Security
---  1. Students only see offers from VERIFIED vendors (unapproved vendors could
---     publish active offers that students saw).
+--  1. (Dropped: gating offers on vendor approval — owner's decision 2026-10-31.)
 --  2. No user-session writes to redemptions. Claim/confirm/expire run through
 --     the API with the service role after the route's checks. Before, a student
 --     could insert a claim with any discount_value_applied / expires_at, and a
@@ -21,19 +20,6 @@
 --  - Indexes on the 9 unindexed foreign keys.
 --  - Explicit deny policies on service-role-only tables.
 -- =============================================================================
-
--- ── helper: verified-vendor check usable inside student policies ────────────
-CREATE SCHEMA IF NOT EXISTS private;
-REVOKE ALL ON SCHEMA private FROM PUBLIC;
-GRANT USAGE ON SCHEMA private TO authenticated;
-
-CREATE OR REPLACE FUNCTION private.is_verified_vendor(vid uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = ''
-AS $$ SELECT EXISTS (SELECT 1 FROM public.vendor_profiles WHERE id = vid AND is_verified) $$;
-REVOKE ALL ON FUNCTION private.is_verified_vendor(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION private.is_verified_vendor(uuid) TO authenticated;
 
 -- ── admin_audit_log ─────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "Admins can read audit log" ON public.admin_audit_log;
@@ -80,7 +66,6 @@ CREATE POLICY "Verified students can view active offers" ON public.offers FOR SE
   USING (
     status = 'active'
     AND (expires_at IS NULL OR expires_at > now())
-    AND private.is_verified_vendor(vendor_id)
     AND EXISTS (SELECT 1 FROM public.student_profiles sp
                 WHERE sp.user_id = (SELECT auth.uid()) AND sp.verification_status = 'verified')
   );
