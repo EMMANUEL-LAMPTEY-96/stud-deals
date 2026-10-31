@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Don't advertise the framework: drops the `X-Powered-By: Next.js` response header.
+  // (`server: Vercel` is set by Vercel's network and can't be removed from the app.)
+  poweredByHeader: false,
   eslint: {
     // ESLint rule violations (unescaped entities, etc.) do not block shipping.
     // The rules are kept in .eslintrc.json for editor hints.
