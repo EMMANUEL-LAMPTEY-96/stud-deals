@@ -165,6 +165,7 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - **Users never write `redemptions` directly** (025): claims, confirms and expiry go through `/api/redemptions/*` with `createAdminClient()` after the route's checks. Don't add user INSERT/UPDATE policies back.
 - Guard triggers block privileged columns for user sessions: `guard_profiles`, `guard_student_profiles`, `guard_vendor_profiles`, `guard_vendor_reviews` (vendors only reply; students only edit their words), `guard_offers` (counters, vendor_id), `guard_offer_views` (vendor_id from the offer).
 - Offers are NOT gated on vendor approval (owner's decision, 2026-10-31).
+- **Admin two-factor login** (TOTP): middleware requires an `aal2` session for `/admin/*` (redirects to `/admin-mfa`) and for `/api/admin/*` (401 `mfa_required`). Emergency switch: `ADMIN_MFA_REQUIRED=false` in Vercel env.
 - **Access-rule tests:** run `supabase/tests/access_rules.sql` (rolled back, uses demo accounts) after any policy/trigger change — every row must say PASS.
 - **Security headers** (CSP frame-ancestors etc., X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) are set in `next.config.mjs`. The QR scanners need `camera=(self)`; keep it if you edit Permissions-Policy.
 - **University auto-verification** (026): `institutions.email_domains` holds STUDENT mail domains only (e.g. `student.elte.hu`), never a staff/root domain — sub-domain matching would let staff verify as students. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
