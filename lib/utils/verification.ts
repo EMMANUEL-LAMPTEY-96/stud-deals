@@ -78,6 +78,10 @@ export function looksLikeEduEmail(email: string): boolean {
     /\.ac\.za$/i,        // South Africa
     /\.edu\.gh$/i,       // Ghana
     /\.edu\.ng$/i,       // Nigeria
+    // Hungarian universities (root domains). Student sub-domains match too.
+    // These only route to ID upload; automatic verification needs the exact
+    // student domain in institutions.email_domains.
+    /(^|\.)(u-szeged|szte|elte|bme|uni-corvinus|semmelweis|unideb|pte|uni-obuda|ppke|uni-mate|mate|uni-miskolc|sze|uni-bge|bge|uni-nke|mome|lisztacademy|mke|andrassyuni|metropolitan)\.hu$/i,
   ];
 
   return EDU_PATTERNS.some((pattern) => pattern.test(domain));

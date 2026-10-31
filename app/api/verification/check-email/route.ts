@@ -17,7 +17,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
   extractEmailDomain,
-  looksLikeEduEmail,
   domainMatchesInstitution,
   determineVerificationPath,
 } from '@/lib/utils/verification';
@@ -54,15 +53,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Quick pre-filter: does this even look educational? ────────────────
-    if (!looksLikeEduEmail(normalised)) {
-      return NextResponse.json<VerifyEduEmailResponse>({
-        is_valid_edu_email: false,
-        institution: null,
-        message:
-          'Please use your official university email address (e.g., you@university.edu) to verify.',
-      });
-    }
+    // No .edu-only pre-filter here: Hungarian student addresses (e.g.
+    // @student.elte.hu) don't end in .edu, so we always check the institutions
+    // table first and only then fall back to determineVerificationPath().
 
     // ── Query institutions table ──────────────────────────────────────────
     // We fetch ALL active institutions and check domain client-side.

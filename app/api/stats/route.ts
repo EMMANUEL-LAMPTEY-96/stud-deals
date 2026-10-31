@@ -17,23 +17,28 @@ export async function GET() {
   try {
     const admin = createAdminClient();
 
+    // Public numbers must not include demo accounts (profiles.is_demo).
+    const { data: demoUsers } = await admin.from('profiles').select('id').eq('is_demo', true);
+    const demoUserIds = (demoUsers ?? []).map((u: { id: string }) => u.id);
+    const { data: demoVendors } = demoUserIds.length
+      ? await admin.from('vendor_profiles').select('id').in('user_id', demoUserIds)
+      : { data: [] as { id: string }[] };
+    const demoVendorIds = (demoVendors ?? []).map((v: { id: string }) => v.id);
+    const notIn = (ids: string[]) => `(${ids.join(',')})`;
+
+    const students = admin.from('profiles').select('id', { count: 'exact', head: true })
+      .eq('role', 'student').eq('is_demo', false);
+    let deals = admin.from('offers').select('id', { count: 'exact', head: true }).eq('status', 'active');
+    let vendors = admin.from('vendor_profiles').select('id', { count: 'exact', head: true }).eq('is_verified', true);
+    let redemptions = admin.from('redemptions').select('id', { count: 'exact', head: true }).eq('status', 'confirmed');
+    if (demoVendorIds.length) {
+      deals = deals.not('vendor_id', 'in', notIn(demoVendorIds));
+      vendors = vendors.not('id', 'in', notIn(demoVendorIds));
+      redemptions = redemptions.not('vendor_id', 'in', notIn(demoVendorIds));
+    }
+
     const [studentsRes, dealsRes, vendorsRes, redemptionsRes] = await Promise.all([
-      admin
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('role', 'student'),
-      admin
-        .from('offers')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'active'),
-      admin
-        .from('vendor_profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_verified', true),
-      admin
-        .from('redemptions')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'confirmed'),
+      students, deals, vendors, redemptions,
     ]);
 
     return NextResponse.json(

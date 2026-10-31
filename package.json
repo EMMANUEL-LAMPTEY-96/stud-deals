@@ -18,8 +18,8 @@
     "framer-motion": "^11.18.2",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.416.0",
-    "next": "14.2.5",
-    "posthog-js": "1.434.2",
+    "next": "^14.2.35",
+    "posthog-js": "^1.444.0",
     "qrcode": "^1.5.4",
     "qrcode.react": "^3.2.0",
     "react": "^18",
@@ -29,7 +29,7 @@
     "stripe": "^17.7.0",
     "tailwind-merge": "^2.4.0",
     "typescript": "^5",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
@@ -40,7 +40,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.20",
     "eslint": "^8",
-    "eslint-config-next": "14.2.5",
+    "eslint-config-next": "^14.2.35",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.47",

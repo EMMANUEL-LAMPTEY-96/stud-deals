@@ -164,7 +164,10 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - Migrations live in `supabase/migrations/`. All of 015a–025 are applied to mktqusaucpunasdnfulx (015b/016/019 were applied via the SQL editor, so not all appear in `supabase_migrations.schema_migrations`; verified 2026-10-31).
 - **Users never write `redemptions` directly** (025): claims, confirms and expiry go through `/api/redemptions/*` with `createAdminClient()` after the route's checks. Don't add user INSERT/UPDATE policies back.
 - Guard triggers block privileged columns for user sessions: `guard_profiles`, `guard_student_profiles`, `guard_vendor_profiles`, `guard_vendor_reviews` (vendors only reply; students only edit their words), `guard_offers` (counters, vendor_id), `guard_offer_views` (vendor_id from the offer).
-- Offers are NOT gated on vendor approval (owner's decision, 2026-10-31). `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
+- Offers are NOT gated on vendor approval (owner's decision, 2026-10-31).
+- **Access-rule tests:** run `supabase/tests/access_rules.sql` (rolled back, uses demo accounts) after any policy/trigger change — every row must say PASS.
+- **Security headers** (CSP frame-ancestors etc., X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) are set in `next.config.mjs`. The QR scanners need `camera=(self)`; keep it if you edit Permissions-Policy.
+- **University auto-verification** (026): `institutions.email_domains` holds STUDENT mail domains only (e.g. `student.elte.hu`), never a staff/root domain — sub-domain matching would let staff verify as students. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
 - Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students. Billing runs in demo mode when `STRIPE_SECRET_KEY` is unset (`lib/billing/stripe.ts`).
 
 ### Components
