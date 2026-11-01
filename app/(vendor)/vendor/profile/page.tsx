@@ -133,6 +133,7 @@ function ImageUploader({
   bucket: string; path: string; onUploaded: (url: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(currentUrl);
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
@@ -144,10 +145,15 @@ function ImageUploader({
     const filePath = `${path}.${ext}`;
     const localPreview = URL.createObjectURL(file);
     setPreview(localPreview);
+    setUploadError(null);
     const { error } = await supabase.storage.from(bucket).upload(filePath, file, { upsert: true });
     if (!error) {
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
       onUploaded(urlData.publicUrl);
+    } else {
+      // vendor-assets accepts PNG/JPG/WebP/GIF up to 5 MB (migration 028)
+      setPreview(currentUrl);
+      setUploadError('Upload failed. Use a PNG, JPG, WebP or GIF image under 5 MB.');
     }
     setUploading(false);
   };
@@ -181,8 +187,9 @@ function ImageUploader({
           </div>
         )}
       </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
       <p className="text-xs text-gray-400">{hint}</p>
+      {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
     </div>
   );
 }
@@ -290,7 +297,7 @@ function GalleryUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/webp,image/gif"
         multiple
         className="hidden"
         onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); }}

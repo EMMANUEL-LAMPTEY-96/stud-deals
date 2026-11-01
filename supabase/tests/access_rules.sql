@@ -153,6 +153,23 @@ INSERT INTO t_results(test, ok, detail)
   SELECT 'new business starts live on the Free plan', is_verified AND plan_tier = 'free', 'verified=' || is_verified || ' plan=' || plan_tier
   FROM public.vendor_profiles WHERE user_id = '0f0f0f0f-0000-4000-a000-00000000cc01';
 
+-- ── vendor-supplied URLs (028) ───────────────────────────────────────────────
+SELECT set_config('request.jwt.claims', '{"sub":"de300000-0000-4000-a000-000000000002","role":"authenticated"}', true);
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN
+  UPDATE public.vendor_profiles SET website_url = 'javascript:alert(1)' WHERE id = 'de300000-0000-4000-a000-000000000201';
+  INSERT INTO t_results(test, ok, detail) VALUES ('vendor website cannot be javascript:', false, 'accepted');
+EXCEPTION WHEN invalid_parameter_value THEN
+  INSERT INTO t_results(test, ok, detail) VALUES ('vendor website cannot be javascript:', true, 'rejected');
+END $$;
+DO $$ BEGIN
+  UPDATE public.vendor_profiles SET logo_url = 'https://evil.example/pixel.png' WHERE id = 'de300000-0000-4000-a000-000000000201';
+  INSERT INTO t_results(test, ok, detail) VALUES ('vendor logo must be an own upload', false, 'accepted');
+EXCEPTION WHEN invalid_parameter_value THEN
+  INSERT INTO t_results(test, ok, detail) VALUES ('vendor logo must be an own upload', true, 'rejected');
+END $$;
+RESET ROLE;
+
 SELECT n, CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END AS result, test, detail FROM t_results ORDER BY n;
 
 ROLLBACK;
