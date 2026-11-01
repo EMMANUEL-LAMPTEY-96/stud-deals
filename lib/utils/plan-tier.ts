@@ -81,6 +81,18 @@ export function trialDaysRemaining(vendor: VendorPlan): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+/** Active-offer limits per plan (enforced in the DB by migration 027). null = unlimited. */
+export const ACTIVE_OFFER_LIMIT: Record<PlanTier, number | null> = { free: 1, growth: 10, pro: null };
+
+/**
+ * If a Supabase error is the database's plan-limit refusal, returns its
+ * vendor-friendly message ("Your Free plan allows 1 active offer…"); else null.
+ */
+export function planLimitMessage(err: { message?: string; hint?: string } | null | undefined): string | null {
+  if (!err?.message) return null;
+  return err.hint === 'plan_limit' || /plan allows \d+ active offer/.test(err.message) ? err.message : null;
+}
+
 /**
  * Human-readable plan name for display.
  */

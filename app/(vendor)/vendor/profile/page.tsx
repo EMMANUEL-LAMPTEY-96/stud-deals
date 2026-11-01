@@ -47,24 +47,27 @@ const BUSINESS_TYPES = [
 
 interface PlanInfo { label: string; color: string; features: string[]; cta: boolean }
 
-// 'pro' has no card of its own yet and falls back to the free card below
+// Mirrors the plans sold on /vendor/billing (limits enforced by DB migration 027).
+// Legacy 'starter' rows show the Growth card.
+const GROWTH_CARD: PlanInfo = {
+  label: 'Growth',
+  color: 'text-brand-700 bg-brand-50 border border-brand-200',
+  features: ['Up to 10 active offers', 'Full analytics & ROI calculator', 'Flash deals & Boost tool', 'Staff PIN login'],
+  cta: true,
+};
 const PLAN_INFO: Partial<Record<VendorPlanEnum, PlanInfo>> & { free: PlanInfo } = {
   free: {
     label: 'Free',
     color: 'text-gray-600 bg-gray-100',
-    features: ['Up to 2 active offers', 'Basic analytics (30 days)', 'QR scanner', 'Email support'],
+    features: ['1 active offer', 'Basic stamp card', 'QR scanner', 'Email support'],
     cta: true,
   },
-  starter: {
-    label: 'Starter',
-    color: 'text-blue-700 bg-blue-50 border border-blue-200',
-    features: ['Up to 10 active offers', 'Full analytics history', 'Peak-hours chart', 'Priority support'],
-    cta: false,
-  },
-  growth: {
-    label: 'Growth',
-    color: 'text-brand-700 bg-brand-50 border border-brand-200',
-    features: ['Unlimited offers', 'University breakdown', 'Looker Studio export', 'Dedicated account manager'],
+  starter: GROWTH_CARD,
+  growth: GROWTH_CARD,
+  pro: {
+    label: 'Pro',
+    color: 'text-amber-800 bg-amber-50 border border-amber-200',
+    features: ['Unlimited active offers', 'Priority placement in feed', 'Monthly PDF performance report', 'Dedicated onboarding support'],
     cta: false,
   },
 };
@@ -820,7 +823,7 @@ export default function VendorProfilePage() {
                   </span>
                   {(vp as any)?.plan_expires_at && (
                     <p className="text-xs text-gray-400 mt-1.5">
-                      Renews {new Date((vp as any).plan_expires_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      Renews {new Date((vp as any).plan_expires_at).toLocaleDateString('hu-HU', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                   )}
                 </div>

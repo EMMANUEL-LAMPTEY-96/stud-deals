@@ -25,6 +25,7 @@ import {
   ChevronUp, ChevronDown, Search, X, Loader2,
 } from 'lucide-react';
 import type { Offer, VendorProfile } from '@/lib/types/database.types';
+import { planLimitMessage } from '@/lib/utils/plan-tier';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -308,7 +309,7 @@ export default function OffersPage() {
     const { error } = await supabase.from('offers').update({ status: newStatus }).eq('id', id);
     if (error) {
       setAllOffers((prev) => prev.map((o) => o.id === id ? { ...o, status: newStatus === 'active' ? 'paused' : 'active' } : o));
-      flash('error', 'Failed to update offer status.');
+      flash('error', planLimitMessage(error) ?? 'Failed to update offer status.');
     } else {
       flash('success', newStatus === 'active' ? 'Offer resumed.' : 'Offer paused.');
     }

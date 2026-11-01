@@ -109,6 +109,50 @@ INSERT INTO t_results(test, ok, detail)
   SELECT 'student can edit own review rating', count(*) >= 1, count(*)::text FROM public.vendor_reviews WHERE rating = 3
   AND student_id IN (SELECT sp.id FROM public.student_profiles sp WHERE sp.user_id = (current_setting('request.jwt.claims')::json->>'sub')::uuid);
 
+-- ── plan limits + auto-approval (027) ───────────────────────────────────────
+UPDATE public.vendor_profiles SET plan_tier = 'growth', plan_status = 'cancelled'
+  WHERE id = 'de300000-0000-4000-a000-000000000201';          -- cancelled ⇒ Free limits (1 active)
+SELECT set_config('request.jwt.claims', '{"sub":"de300000-0000-4000-a000-000000000002","role":"authenticated"}', true);
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN
+  INSERT INTO public.offers(vendor_id, title, discount_label, category, discount_type, status)
+  VALUES ('de300000-0000-4000-a000-000000000201', 'rls-test', '10%', 'food_drink', 'percentage', 'active');
+  INSERT INTO t_results(test, ok, detail) VALUES ('Free plan blocks a 2nd active offer', false, 'allowed');
+EXCEPTION WHEN raise_exception THEN
+  INSERT INTO t_results(test, ok, detail) VALUES ('Free plan blocks a 2nd active offer', true, SQLERRM);
+END $$;
+DO $$ BEGIN
+  INSERT INTO public.offers(vendor_id, title, discount_label, category, discount_type, status)
+  VALUES ('de300000-0000-4000-a000-000000000201', 'rls-test-draft', '10%', 'food_drink', 'percentage', 'draft');
+  INSERT INTO t_results(test, ok, detail) VALUES ('Free plan still allows drafts', true, 'allowed');
+EXCEPTION WHEN raise_exception THEN
+  INSERT INTO t_results(test, ok, detail) VALUES ('Free plan still allows drafts', false, SQLERRM);
+END $$;
+RESET ROLE;
+UPDATE public.vendor_profiles SET plan_tier = 'pro', plan_status = 'active' WHERE id = 'de300000-0000-4000-a000-000000000201';
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN
+  INSERT INTO public.offers(vendor_id, title, discount_label, category, discount_type, status)
+  SELECT 'de300000-0000-4000-a000-000000000201', 'rls-test-pro-' || g, '10%', 'food_drink', 'percentage', 'active' FROM generate_series(1, 12) g;
+  INSERT INTO t_results(test, ok, detail) VALUES ('Pro plan has no offer limit', true, '12 added');
+EXCEPTION WHEN raise_exception THEN
+  INSERT INTO t_results(test, ok, detail) VALUES ('Pro plan has no offer limit', false, SQLERRM);
+END $$;
+RESET ROLE;
+
+-- a brand-new business signs up (throwaway user, rolled back)
+INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
+VALUES ('00000000-0000-0000-0000-000000000000', '0f0f0f0f-0000-4000-a000-00000000cc01', 'authenticated', 'authenticated', 'rls-test-vendor@studeals.invalid', 'x', now(), '{}', '{}', now(), now(), '', '', '', '');
+INSERT INTO public.profiles(id, role, display_name, is_demo) VALUES ('0f0f0f0f-0000-4000-a000-00000000cc01', 'vendor', 'RLS test', true);
+SELECT set_config('request.jwt.claims', '{"sub":"0f0f0f0f-0000-4000-a000-00000000cc01","role":"authenticated"}', true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.vendor_profiles(user_id, business_name, city, is_verified, plan_tier)
+VALUES ('0f0f0f0f-0000-4000-a000-00000000cc01', 'RLS Test Café', 'Szeged', false, 'pro');
+RESET ROLE;
+INSERT INTO t_results(test, ok, detail)
+  SELECT 'new business starts live on the Free plan', is_verified AND plan_tier = 'free', 'verified=' || is_verified || ' plan=' || plan_tier
+  FROM public.vendor_profiles WHERE user_id = '0f0f0f0f-0000-4000-a000-00000000cc01';
+
 SELECT n, CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END AS result, test, detail FROM t_results ORDER BY n;
 
 ROLLBACK;

@@ -263,9 +263,9 @@ export default function VendorDashboard() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 mb-6">
               <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-amber-900">Business pending verification</p>
+                <p className="text-sm font-semibold text-amber-900">Your business is not visible to students</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Your loyalty programs won&apos;t be visible to students until we verify your business details. Usually within 24 hours.
+                  Your listing has been deactivated, so students can&apos;t see or claim your offers. Contact support to reactivate it.
                 </p>
               </div>
             </div>

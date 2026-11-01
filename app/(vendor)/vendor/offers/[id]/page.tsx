@@ -25,6 +25,7 @@ import {
   DollarSign, Gift, Coffee, Tag, X, Save,
 } from 'lucide-react';
 import type { Offer, Redemption, DiscountType, OfferCategory } from '@/lib/types/database.types';
+import { planLimitMessage } from '@/lib/utils/plan-tier';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -239,7 +240,8 @@ export default function OfferDetailPage() {
   // ── Status change ──────────────────────────────────────────────────────────
   const handleStatusChange = async (newStatus: 'active' | 'paused') => {
     if (!offer) return;
-    await supabase.from('offers').update({ status: newStatus }).eq('id', offer.id);
+    const { error: statusError } = await supabase.from('offers').update({ status: newStatus }).eq('id', offer.id);
+    if (statusError) { setError(planLimitMessage(statusError) ?? 'Failed to update offer status.'); return; }
     setOffer((prev) => prev ? { ...prev, status: newStatus } : null);
     showFlash(newStatus === 'active' ? 'Offer resumed.' : 'Offer paused.');
   };
