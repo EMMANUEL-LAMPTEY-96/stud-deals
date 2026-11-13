@@ -7,7 +7,7 @@ Verified students claim QR-code vouchers and collect digital stamp cards at camp
 businesses; vendors run offers, loyalty programmes and analytics from one dashboard.
 
 > Portfolio project — live at **[studeals.vercel.app](https://studeals.vercel.app)**.
-> No real payments are taken; billing runs in a disabled demo mode unless a Stripe key is configured.
+> No online payments are taken; vendors upgrade by email and an admin changes the plan.
 
 <!-- SCREENSHOT: landing page / student dashboard (e.g. docs/screenshots/dashboard.png) -->
 
@@ -68,7 +68,7 @@ The demo vendor only ever sees demo students. There is intentionally **no admin 
 - **Analytics:** views, redemptions, punch-card funnel, peak hours/days, peer benchmark and CSV export.
 - **Customers & reviews:** a consent-aware customer directory, reviews with replies, promotions and flash deals.
 - **Public profile page** at `/vendor/<slug>`.
-- **Plans** (Free / Growth / Pro), billed through Stripe Checkout and the billing portal when a Stripe key is configured.
+- **Plans** (Free / Growth / Pro); vendors upgrade by email and an admin sets the plan (no online payments yet).
 
 <!-- SCREENSHOT: vendor analytics -->
 
@@ -88,7 +88,6 @@ The demo vendor only ever sees demo students. There is intentionally **no admin 
 | Data / auth | Supabase: Postgres with Row Level Security, Auth and Storage |
 | Validation | zod |
 | Email | Resend (REST) |
-| Payments | Stripe (optional; demo mode without a key) |
 | Analytics | PostHog EU (consent-gated product events) + SQL growth views for Looker Studio — see [docs/analytics](docs/analytics/events.md) |
 | QR | `qrcode`, `html5-qrcode`, and the native BarcodeDetector where available |
 | Hosting | Vercel (with Vercel Cron) |
@@ -116,7 +115,6 @@ flowchart LR
     end
 
     RS["Resend<br/>OTP + vendor email"]
-    STR["Stripe<br/>(optional)"]
     PH["PostHog EU<br/>(after consent)"]
 
     B --> MW --> P
@@ -127,7 +125,6 @@ flowchart LR
     API --> AUTH
     API --> ST
     API --> RS
-    API <-->|"checkout · portal · webhook"| STR
     CRON --> API
     B -. "product events" .-> PH
 ```
@@ -251,9 +248,7 @@ type-check, unit tests and production build on every push and pull request.
 | `RESEND_API_KEY` | optional* | Sends OTP and notification emails (*required for email verification in production) |
 | `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME` | optional | Sender identity |
 | `OTP_HMAC_SECRET`, `STAFF_SESSION_SECRET` | optional | Dedicated secrets; both fall back to the service-role key |
-| `NEXT_PUBLIC_APP_URL` | optional | Absolute URL used in emails and Stripe redirects |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | optional | Turns on real billing; without them billing shows "Demo — payments disabled" |
-| `NEXT_PUBLIC_STRIPE_{GROWTH,PRO}{,_ANNUAL}_PRICE_ID` | optional | Stripe price IDs for the plans |
+| `NEXT_PUBLIC_APP_URL` | optional | Absolute URL used in emails |
 | `NEXT_PUBLIC_POSTHOG_KEY` | optional | PostHog project API key. Analytics is off without it, and starts only after cookie consent |
 | `NEXT_PUBLIC_POSTHOG_HOST` | optional | Defaults to `https://eu.i.posthog.com` (EU cloud) |
 

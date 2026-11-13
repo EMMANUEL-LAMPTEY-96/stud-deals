@@ -35,16 +35,16 @@ const TIER_RANK: Record<PlanTier, number> = {
  *  - 'past_due' gets a 7-day grace period (still active), then downgrades
  *  - 'cancelled' / 'free' → only free features
  *
- * Trial expiry is enforced by the Stripe webhook / cron that sets
- * plan_status = 'free' and plan_tier = 'free' when trial_ends_at passes.
+ * Plans are set by an admin by hand (online payments were removed 2026-11-13);
+ * the admin sets plan_status = 'free' and plan_tier = 'free' when a plan ends.
  */
 export function hasAccess(vendor: VendorPlan, requiredTier: PlanTier): boolean {
   const { plan_tier, plan_status } = vendor;
 
   if (plan_status === 'cancelled' || plan_status === 'free') return false;
 
-  // past_due: keep access for up to 7 days (Stripe retries in that window)
-  // The webhook will flip status to 'cancelled' if still unpaid after retries.
+  // past_due: keep access while the overdue payment is sorted out by hand
+  // (an admin sets 'cancelled' if it stays unpaid).
   if (plan_status === 'past_due') {
     return TIER_RANK[plan_tier] >= TIER_RANK[requiredTier];
   }

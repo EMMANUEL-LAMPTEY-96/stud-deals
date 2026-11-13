@@ -3,9 +3,9 @@
 // =============================================================================
 // app/(vendor)/vendor/billing/page.tsx
 //
-// Vendor billing & subscription management page.
-// Shows current plan status, monthly/annual pricing toggle, upgrade CTAs,
-// and links to the Stripe customer portal for active subscribers.
+// Vendor plans page. Online payments (Stripe) were removed on 2026-11-13:
+// vendors see their plan, its limits and prices, and upgrade by emailing us —
+// an admin then sets vendor_profiles.plan_tier / plan_status by hand.
 // =============================================================================
 
 import { useState, useEffect } from 'react';
@@ -86,7 +86,7 @@ function StatusBanner({ plan }: { plan: VendorPlan }) {
           <p className="font-semibold text-sm text-green-800">Subscription active</p>
           <p className="text-sm mt-0.5 text-green-600">
             You&apos;re on the <strong>{plan.plan_tier === 'pro' ? 'Pro' : 'Growth'}</strong> plan.
-            {' '}Manage or cancel anytime from the billing portal below.
+            {' '}Email us anytime to change or cancel it.
           </p>
         </div>
       </div>
@@ -100,8 +100,8 @@ function StatusBanner({ plan }: { plan: VendorPlan }) {
         <div>
           <p className="font-semibold text-sm text-red-800">Payment failed — action required</p>
           <p className="text-sm mt-0.5 text-red-600">
-            We couldn&apos;t charge your card. Open the billing portal to update your payment method.
-            Your features will be paused if payment isn&apos;t resolved within 7 days.
+            Your payment is overdue. Please contact us to sort it out —
+            your features will be paused if it isn&apos;t resolved within 7 days.
           </p>
         </div>
       </div>
@@ -127,6 +127,9 @@ function StatusBanner({ plan }: { plan: VendorPlan }) {
 
 // ── Feature lists ─────────────────────────────────────────────────────────────
 const FREE_FEATURES    = ['1 active offer', 'Basic stamp card', 'QR scanner', 'Email support'];
+// Where vendors email to change plans (also used on the site's legal pages).
+const UPGRADE_EMAIL = 'hello@studeals.app';
+
 const GROWTH_FEATURES  = ['Up to 10 active offers', 'Full analytics & ROI calculator', 'Flash deals & Boost tool', 'Staff PIN login', 'Customer directory', 'Offer template library', 'Advanced loyalty config', 'Priority email support'];
 const PRO_FEATURES     = ['Everything in Growth', 'Unlimited active offers', 'Priority placement in feed', 'Monthly PDF performance report', 'Configurable cooldown (1–24h)', 'Dedicated onboarding support', 'Early access to new features'];
 
@@ -137,12 +140,9 @@ interface PricingCardProps {
   currentStatus: PlanStatus;
   annual: boolean;
   onUpgrade: (tier: 'growth' | 'pro', annual: boolean) => void;
-  loading: boolean;
-  /** True when this deployment has no Stripe key (portfolio demo). */
-  paymentsDisabled: boolean;
 }
 
-function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade, loading, paymentsDisabled }: PricingCardProps) {
+function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade }: PricingCardProps) {
   const isGrowth  = tier === 'growth';
   const isCurrent = currentTier === tier && (currentStatus === 'active' || currentStatus === 'trialing' || currentStatus === 'past_due');
   const isUpgrade = currentTier === 'growth' && tier === 'pro';
@@ -213,31 +213,26 @@ function PricingCard({ tier, currentTier, currentStatus, annual, onUpgrade, load
 
       <button
         onClick={() => onUpgrade(tier, annual)}
-        disabled={loading || isCurrent || paymentsDisabled}
+        disabled={isCurrent}
         className={`w-full py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2
           ${isCurrent
             ? isGrowth ? 'bg-blue-100 text-blue-500 cursor-default' : 'bg-purple-100 text-purple-500 cursor-default'
-            : paymentsDisabled
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : isGrowth
             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
             : 'bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg'
           }`}
       >
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-        {loading ? 'Redirecting…'
-          : isCurrent ? (
+        {isCurrent ? (
             <>
               <CheckCircle2 className="w-4 h-4" />
               Current plan
             </>
           )
-          : paymentsDisabled ? 'Payments disabled (demo)'
           : isUpgrade ? (
-            <>Upgrade to Pro <ChevronRight className="w-4 h-4" /></>
+            <>Contact us for Pro <ChevronRight className="w-4 h-4" /></>
           )
           : (
-            <>Subscribe now <ChevronRight className="w-4 h-4" /></>
+            <>Contact us to upgrade <ChevronRight className="w-4 h-4" /></>
           )}
       </button>
     </div>
@@ -281,11 +276,7 @@ export default function BillingPage() {
   const [plan, setPlan]                   = useState<VendorPlan | null>(null);
   const [loading, setLoading]             = useState(true);
   const [annual, setAnnual]               = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [portalLoading, setPortalLoading]   = useState(false);
   const [toast, setToast]                 = useState<{ msg: string; ok: boolean } | null>(null);
-  // null = still checking; false = demo deployment without Stripe
-  const [billingEnabled, setBillingEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -305,65 +296,22 @@ export default function BillingPage() {
       setLoading(false);
     })();
 
-    fetch('/api/billing/status')
-      .then(r => r.json())
-      .then(d => setBillingEnabled(d.enabled === true))
-      .catch(() => setBillingEnabled(false));
-
-    // Success / cancelled flash from Stripe redirect
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('success'))   setToast({ msg: '🎉 Subscription activated! Welcome to StudDeals paid.', ok: true });
-    if (params.get('cancelled')) setToast({ msg: 'Checkout cancelled. You can subscribe anytime below.', ok: false });
-    window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
-  const paymentsDisabled = billingEnabled !== true;
-
-  const handleUpgrade = async (tier: 'growth' | 'pro', isAnnual: boolean) => {
+  // Upgrades are handled by email for now (no online payments).
+  const handleUpgrade = (tier: 'growth' | 'pro', isAnnual: boolean) => {
     track('upgrade_clicked', {
       tier,
       billing_interval: isAnnual ? 'annual' : 'monthly',
       current_tier: plan?.plan_tier ?? null,
       plan_status: plan?.plan_status ?? null,
-      payments_enabled: !paymentsDisabled,
+      payments_enabled: false,
     });
-    if (paymentsDisabled) return;
-    setCheckoutLoading(true);
-    try {
-      const priceId = isAnnual
-        ? (tier === 'growth'
-          ? process.env.NEXT_PUBLIC_STRIPE_GROWTH_ANNUAL_PRICE_ID
-          : process.env.NEXT_PUBLIC_STRIPE_PRO_ANNUAL_PRICE_ID)
-        : (tier === 'growth'
-          ? process.env.NEXT_PUBLIC_STRIPE_GROWTH_PRICE_ID
-          : process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID);
-
-      const res = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
-      });
-      const { url, error } = await res.json();
-      if (error) throw new Error(error);
-      window.location.href = url;
-    } catch (e: any) {
-      setToast({ msg: e.message ?? 'Something went wrong. Please try again.', ok: false });
-      setCheckoutLoading(false);
-    }
-  };
-
-  const handlePortal = async () => {
-    if (paymentsDisabled) return;
-    setPortalLoading(true);
-    try {
-      const res = await fetch('/api/billing/portal', { method: 'POST' });
-      const { url, error } = await res.json();
-      if (error) throw new Error(error);
-      window.location.href = url;
-    } catch {
-      setToast({ msg: 'Could not open billing portal. Please try again.', ok: false });
-      setPortalLoading(false);
-    }
+    const planName = tier === 'pro' ? 'Pro' : 'Growth';
+    const subject = encodeURIComponent(`StudDeals ${planName} plan (${isAnnual ? 'annual' : 'monthly'})`);
+    const body = encodeURIComponent(`Hi StudDeals team,\n\nI'd like to move my business to the ${planName} plan, billed ${isAnnual ? 'annually' : 'monthly'}.\n\nThanks!`);
+    window.location.href = `mailto:${UPGRADE_EMAIL}?subject=${subject}&body=${body}`;
+    setToast({ msg: `Opening your email app — or write to ${UPGRADE_EMAIL}.`, ok: true });
   };
 
   if (loading) {
@@ -380,7 +328,6 @@ export default function BillingPage() {
 
   const currentPlan = plan ?? { plan_tier: 'free' as PlanTier, plan_status: 'free' as PlanStatus, trial_ends_at: null };
   const isFreeOrCancelled = currentPlan.plan_status === 'free' || currentPlan.plan_status === 'cancelled';
-  const isManageable = currentPlan.plan_status === 'active' || currentPlan.plan_status === 'past_due';
 
   return (
     <>
@@ -415,27 +362,17 @@ export default function BillingPage() {
               </div>
             </div>
 
-            {isManageable && (
-              <button
-                onClick={handlePortal}
-                disabled={portalLoading || paymentsDisabled}
-                className="self-start sm:self-auto flex items-center gap-2 px-4 py-2.5 border border-gray-200 bg-white rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-              >
-                {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-                {portalLoading ? 'Opening…' : 'Billing portal'}
-              </button>
-            )}
           </div>
 
           {/* Status banner */}
           <StatusBanner plan={currentPlan} />
 
-          {billingEnabled === false && (
-            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <span className="font-bold">Demo — payments disabled.</span>{' '}
-              This is a portfolio deployment without a payment provider, so subscribing and the billing portal are turned off.
-            </div>
-          )}
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <span className="font-bold">Upgrading:</span>{' '}
+            online payment isn&apos;t available yet. Email{' '}
+            <a href={`mailto:${UPGRADE_EMAIL}`} className="underline font-semibold">{UPGRADE_EMAIL}</a>{' '}
+            and we&apos;ll switch your plan and send an invoice.
+          </div>
 
           {/* Monthly / Annual toggle */}
           <div className="flex items-center justify-center gap-3 mb-8">
@@ -461,8 +398,6 @@ export default function BillingPage() {
               currentStatus={currentPlan.plan_status}
               annual={annual}
               onUpgrade={handleUpgrade}
-              loading={checkoutLoading}
-              paymentsDisabled={paymentsDisabled}
             />
             <PricingCard
               tier="pro"
@@ -470,38 +405,18 @@ export default function BillingPage() {
               currentStatus={currentPlan.plan_status}
               annual={annual}
               onUpgrade={handleUpgrade}
-              loading={checkoutLoading}
-              paymentsDisabled={paymentsDisabled}
             />
           </div>
-
-          {/* Portal CTA for past_due */}
-          {currentPlan.plan_status === 'past_due' && (
-            <div className="mb-8 border border-red-200 rounded-2xl p-5 bg-red-50">
-              <h2 className="font-bold text-red-900 mb-1">Update your payment method</h2>
-              <p className="text-sm text-red-700 mb-4">
-                Your last payment failed. Open the billing portal to fix your card before your features are paused.
-              </p>
-              <button
-                onClick={handlePortal}
-                disabled={portalLoading || paymentsDisabled}
-                className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors"
-              >
-                {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-                {portalLoading ? 'Opening…' : 'Fix payment'}
-              </button>
-            </div>
-          )}
 
           {/* FAQ */}
           <div className="space-y-3">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Frequently asked questions</h2>
             {[
-              ['Can I cancel anytime?', 'Yes. Cancel from the billing portal and you keep access until the end of your billing period. No questions asked.'],
-              ['What happens when my trial ends?', 'Your account moves to the Free plan (1 offer, no analytics). All your data stays intact — subscribe anytime to restore full access.'],
+              ['How do I upgrade or cancel?', `Email ${UPGRADE_EMAIL}. We switch your plan by hand and confirm by email; when you cancel you keep access until the end of the period you paid for.`],
+              ['What happens when my trial ends?', 'Your account moves to the Free plan (1 offer, no analytics). All your data stays intact — email us anytime to restore full access.'],
               ['Is annual billing really 2 months free?', 'Yes. Annual Growth is 139 900 Ft vs 167 880 Ft if paid monthly (12 × 13 990 Ft) — a saving of 27 980 Ft, equivalent to 2 months free.'],
-              ['Is there a founding vendor discount?', 'Vendors who subscribed within the first 2 months of launch get 25% off for the lifetime of their subscription. Applied automatically via promo code at checkout.'],
-              ['Do prices include VAT?', 'Yes — all prices shown include Hungarian ÁFA (27%). You\'ll receive a VAT invoice for each billing cycle.'],
+              ['Is there a founding vendor discount?', 'Vendors who subscribed within the first 2 months of launch get 25% off for the lifetime of their subscription. Mention it when you email us to upgrade.'],
+              ['Do prices include VAT?', 'Yes — all prices shown include Hungarian ÁFA (27%). We send a VAT invoice for each billing period.'],
             ].map(([q, a]) => (
               <div key={q} className="bg-white border border-gray-100 rounded-2xl p-5">
                 <p className="text-sm font-bold text-gray-900 mb-1.5">{q}</p>

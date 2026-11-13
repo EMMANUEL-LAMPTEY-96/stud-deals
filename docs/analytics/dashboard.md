@@ -128,8 +128,8 @@ Real vendors by plan, with **theoretical MRR** from list prices.
 | `trial_pipeline_mrr_huf` | The same for `trialing`: MRR if every trial converts |
 | `pct_of_vendors` | Share of all real vendors |
 
-"Theoretical" means two things. Annual plans are counted at the monthly list price, and Stripe discounts
-are ignored. For booked revenue, use Stripe.
+"Theoretical" means two things. Annual plans are counted at the monthly list price, and discounts
+are ignored. For booked revenue, use the invoices actually sent.
 
 ### Building blocks (also queryable)
 

@@ -71,10 +71,10 @@ PostHog as a funnel step ("performed event ≥ 2 times"). In SQL it is the last 
 | `loyalty_program_created` | Create form saved with a loyalty mode (fires together with `offer_created`) | `offer_created` props + `required_visits`, `has_tiers`, `first_visit_bonus`, `stamp_expiry`, `double_stamp_windows` | Vendor: 3b. Loyalty live |
 | `flash_deal_created` | `POST /api/vendor/flash-deal` succeeded | `duration_minutes`, `max_redemptions`, `radius_km`, `students_notified` | Vendor engagement |
 | `plan_page_viewed` | `/vendor/billing` loaded | `current_tier`, `plan_status` | Monetisation: 1. Saw plans |
-| `upgrade_clicked` | Subscribe button on a Growth/Pro plan card | `tier`, `billing_interval`, `current_tier`, `plan_status`, `payments_enabled` | Monetisation: 2. Upgrade intent |
+| `upgrade_clicked` | "Contact us to upgrade" button on a Growth/Pro plan card (opens an email) | `tier`, `billing_interval`, `current_tier`, `plan_status`, `payments_enabled` | Monetisation: 2. Upgrade intent |
 
-> In the demo deployment (no Stripe key) the subscribe buttons are disabled, so `upgrade_clicked` only
-> fires where billing is enabled.
+> Online payments were removed on 2026-11-13, so `payments_enabled` is always `false`: the button opens
+> an email to hello@studeals.app and an admin changes the plan by hand.
 
 ## Suggested PostHog insights
 

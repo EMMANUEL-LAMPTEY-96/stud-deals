@@ -38,7 +38,6 @@ STAMP_QR_SECRET=                # Required in production — signs vendor stamp 
 OTP_HMAC_SECRET=                # Optional — keys the email-OTP hash (falls back to the service role key)
 STAFF_SESSION_SECRET=           # Optional — signs staff PIN sessions / PIN hashes (falls back to the service role key)
 RESEND_API_KEY=                 # Sends OTP + vendor emails; OTP sending fails without it in production
-STRIPE_SECRET_KEY= / STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_POSTHOG_KEY=        # Optional — PostHog EU product analytics; no-op when unset
 ```
 
@@ -175,7 +174,8 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - **Dependencies:** Next.js 15.5.x, React 19, zod 4. `postcss` is pinned and forced via `overrides` (Next bundles an old copy). Keep `npm audit --omit=dev` at 0; Dependabot opens weekly PRs.
 - **Security headers** (CSP frame-ancestors etc., X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) are set in `next.config.mjs`. The QR scanners need `camera=(self)`; keep it if you edit Permissions-Policy.
 - **University auto-verification** (026): `institutions.email_domains` holds STUDENT mail domains only (e.g. `student.elte.hu`), never a staff/root domain — sub-domain matching would let staff verify as students. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
-- Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students. Billing runs in demo mode when `STRIPE_SECRET_KEY` is unset (`lib/billing/stripe.ts`).
+- Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students.
+- **No online payments** (removed 2026-11-13): `/vendor/billing` shows plans and an email-to-upgrade button (hello@studeals.app); an admin sets `vendor_profiles.plan_tier` / `plan_status` by hand. The `stripe_*` columns are kept but unused.
 
 ### Components
 
