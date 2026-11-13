@@ -3,17 +3,16 @@
 // =============================================================================
 // components/vendor/RoiWidget.tsx
 //
-// ROI insight card shown on the vendor dashboard.
-// Uses real stamp + redemption data to estimate revenue impact:
+// Loyalty results card shown on the vendor dashboard. Real data only:
 //
-//   - Loyalty members (unique students with ≥1 stamp)
-//   - Stamps this month
-//   - Avg estimated spend per visit (configurable)
-//   - 2.4× repeat-visit multiplier (research-backed for loyalty programmes)
-//   - Estimated extra revenue vs non-loyalty baseline
+//   - Loyalty members (unique students with ≥1 stamp) and stamps this month
+//   - Students who came back (stamped more than once)
+//   - Rewards redeemed
+//   - Spend from loyalty visits = recorded stamp visits × the average spend
+//     the vendor picks. The only estimate is the vendor's own average spend.
 //
-// Numbers are estimates — shown clearly as such. Purpose is to demonstrate
-// the value of the loyalty programme so vendors stay engaged and upgrade.
+// No industry multipliers or ad-cost assumptions (removed 2026-11-13 — they
+// had no source; see "No invented numbers" in CLAUDE.md).
 // =============================================================================
 
 import { useEffect, useState } from 'react';
@@ -28,10 +27,7 @@ interface RoiData {
   loyaltyMembers: number;    // unique students with ≥1 stamp
   stampsThisMonth: number;
   rewardsGiven: number;      // confirmed rewards
-  repeatVisitMultiplier: number; // 2.4
-  avgSpendEstimate: number;  // HUF per visit estimate (default: 1500)
-  estimatedExtraRevenue: number;
-  estimatedSavingsOnAcq: number; // cost if acquired via ads
+  stampVisits: number;       // all recorded stamp visits
   returnVisitRate: number;   // % students who came back
 }
 
@@ -107,26 +103,14 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
         const returners = Object.values(stampCount).filter(c => c > 1).length;
         const returnVisitRate = loyaltyMembers > 0 ? (returners / loyaltyMembers) * 100 : 0;
 
-        // ROI estimates
-        const multiplier = 2.4;
-        const baselineVisits = loyaltyMembers;
-        const loyaltyVisits  = loyaltyMembers * multiplier;
-        const extraVisits    = loyaltyVisits - baselineVisits;
-        const estimatedExtraRevenue = Math.round(extraVisits * avgSpend);
-
-        // Acquisition cost saving: avg cost to acquire a customer via ads ~3000 HUF
-        const acqCostPerCustomer = 3000;
-        const estimatedSavingsOnAcq = loyaltyMembers * acqCostPerCustomer;
+        const stampVisits = rows.filter(r => isStamp(r.status)).length;
 
         if (!cancelled) {
           setData({
             loyaltyMembers,
             stampsThisMonth,
             rewardsGiven,
-            repeatVisitMultiplier: multiplier,
-            avgSpendEstimate: avgSpend,
-            estimatedExtraRevenue,
-            estimatedSavingsOnAcq,
+            stampVisits,
             returnVisitRate,
           });
         }
@@ -139,7 +123,7 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
 
     load();
     return () => { cancelled = true; };
-  }, [vendorId, avgSpend]);
+  }, [vendorId]);
 
   if (loading || !data || data.loyaltyMembers === 0) return null;
 
@@ -149,9 +133,9 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp size={16} className="opacity-80" />
-            <p className="text-sm font-bold opacity-90">Your loyalty ROI estimate</p>
+            <p className="text-sm font-bold opacity-90">Your loyalty results</p>
           </div>
-          <p className="text-xs text-white/60">Based on {data.loyaltyMembers} loyalty members · {data.repeatVisitMultiplier}× repeat-visit multiplier</p>
+          <p className="text-xs text-white/60">{data.loyaltyMembers} loyalty member{data.loyaltyMembers === 1 ? '' : 's'} · {data.stampVisits} stamp visit{data.stampVisits === 1 ? '' : 's'} recorded</p>
         </div>
         <Link
           href="/vendor/analytics"
@@ -165,19 +149,18 @@ export default function RoiWidget({ vendorId }: { vendorId: string }) {
         {/* Extra revenue estimate */}
         <div className="bg-white/15 rounded-xl p-3.5">
           <p className="text-2xl font-black leading-none mb-1">
-            <AnimatedNumber value={Math.round(data.estimatedExtraRevenue / 1000)} suffix="K" />
+            <AnimatedNumber value={Math.round((data.stampVisits * avgSpend) / 1000)} suffix="K" />
             <span className="text-sm font-bold ml-1 opacity-70">HUF</span>
           </p>
-          <p className="text-[10px] text-white/70 font-medium leading-tight">Estimated extra revenue<br/>from loyalty effect</p>
+          <p className="text-[10px] text-white/70 font-medium leading-tight">Spend from loyalty visits<br/>(at your avg spend below)</p>
         </div>
 
         {/* Acquisition savings */}
         <div className="bg-white/15 rounded-xl p-3.5">
           <p className="text-2xl font-black leading-none mb-1">
-            <AnimatedNumber value={Math.round(data.estimatedSavingsOnAcq / 1000)} suffix="K" />
-            <span className="text-sm font-bold ml-1 opacity-70">HUF</span>
+            <AnimatedNumber value={data.stampsThisMonth} />
           </p>
-          <p className="text-[10px] text-white/70 font-medium leading-tight">Saved vs paid ads<br/>for same reach</p>
+          <p className="text-[10px] text-white/70 font-medium leading-tight">Stamps<br/>this month</p>
         </div>
 
         {/* Return visit rate */}

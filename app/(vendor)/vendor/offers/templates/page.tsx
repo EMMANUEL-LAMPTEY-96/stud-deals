@@ -57,7 +57,7 @@ const TEMPLATES: OfferTemplate[] = [
     tag: '⭐ Most popular',
     tagColor: 'bg-amber-100 text-amber-700',
     icon: <Coffee size={20} className="text-amber-600" />,
-    highlight: '2.4× more repeat visits',
+    highlight: 'Builds repeat visits',
     params: {
       mode: 'punch_card',
       title: 'Buy 5 Coffees, Get 1 Free',

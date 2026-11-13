@@ -334,7 +334,7 @@ function HoursEditor({ hours, onChange }: { hours: BusinessHours; onChange: (h: 
         return (
           <div
             key={key}
-            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+            className={`flex flex-wrap items-center gap-x-3 gap-y-2 p-3 rounded-xl transition-colors ${
               day.open ? 'bg-vendor-50 border border-vendor-100' : 'bg-gray-50 border border-gray-100'
             }`}
           >
@@ -342,6 +342,9 @@ function HoursEditor({ hours, onChange }: { hours: BusinessHours; onChange: (h: 
             <button
               type="button"
               onClick={() => setDay(key, { open: !day.open })}
+              role="switch"
+              aria-checked={day.open}
+              aria-label={`${label}: ${day.open ? 'open' : 'closed'}`}
               className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
                 day.open ? 'bg-vendor-600' : 'bg-gray-300'
               }`}
@@ -358,7 +361,7 @@ function HoursEditor({ hours, onChange }: { hours: BusinessHours; onChange: (h: 
 
             {/* Hours */}
             {day.open ? (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1">
                 <input
                   type="time"
                   value={day.from}
@@ -597,7 +600,7 @@ export default function VendorProfilePage() {
             {slug && (
               <div className="bg-gradient-to-r from-vendor-600 to-vendor-800 rounded-2xl p-5 text-white shadow-lg">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="flex-1 min-w-0">
+                  <div className="w-full sm:w-auto sm:flex-1 min-w-0">
                     <p className="text-xs font-bold text-vendor-200 uppercase tracking-wider mb-1">Your public profile</p>
                     <p className="font-black text-lg leading-tight truncate">
                       studeals.vercel.app/vendor/{slug}

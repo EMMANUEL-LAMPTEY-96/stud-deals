@@ -335,7 +335,7 @@ export default function VendorDashboard() {
           <div className="grid lg:grid-cols-3 gap-6">
 
             {/* LEFT: Loyalty programs (2/3 width) */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-4 min-w-0">
               <div className="card overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                   <div className="flex items-center gap-2">
@@ -404,7 +404,7 @@ export default function VendorDashboard() {
             </div>
 
             {/* RIGHT: Recent activity (1/3 width) */}
-            <div className="space-y-4">
+            <div className="space-y-4 min-w-0">
               <div className="card overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                   <div className="flex items-center gap-2">

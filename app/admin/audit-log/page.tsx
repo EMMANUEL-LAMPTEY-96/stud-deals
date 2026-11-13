@@ -49,6 +49,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string; icon: React.
   student_rejected:    { label: 'Student Rejected',    color: 'bg-red-100 text-red-700',       icon: <ShieldX    size={12} /> },
   vendor_approved:     { label: 'Vendor Approved',     color: 'bg-blue-100 text-blue-700',     icon: <Store      size={12} /> },
   vendor_rejected:     { label: 'Vendor Rejected',     color: 'bg-orange-100 text-orange-700', icon: <XCircle    size={12} /> },
+  vendor_plan_changed: { label: 'Plan Changed',        color: 'bg-purple-100 text-purple-700', icon: <Store      size={12} /> },
   user_banned:         { label: 'User Banned',         color: 'bg-red-100 text-red-700',       icon: <UserX      size={12} /> },
   user_unbanned:       { label: 'User Unbanned',       color: 'bg-green-100 text-green-700',   icon: <UserCheck  size={12} /> },
   offer_paused:        { label: 'Offer Paused',        color: 'bg-yellow-100 text-yellow-700', icon: <XCircle    size={12} /> },
@@ -71,7 +72,7 @@ function ActionBadge({ action }: { action: string }) {
 const ACTION_OPTIONS = [
   'all',
   'student_verified', 'student_rejected',
-  'vendor_approved',  'vendor_rejected',
+  'vendor_approved',  'vendor_rejected',  'vendor_plan_changed',
   'user_banned',      'user_unbanned',
   'offer_paused',     'offer_activated', 'offer_deleted',
   'review_deleted',   'announcement_sent', 'config_updated',

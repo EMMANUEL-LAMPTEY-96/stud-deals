@@ -135,7 +135,7 @@ function CustomerRow({
       </div>
 
       {/* Avatar */}
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+      <div className={`relative w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${
         loyal ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
       }`}>
         {customer.display_name[0]?.toUpperCase() ?? 'S'}

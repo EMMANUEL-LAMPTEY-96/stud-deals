@@ -21,6 +21,7 @@
 //   trials_expiring: [VendorRow],        // trial_ends_at within 7 days
 //   past_due:        [VendorRow],        // plan_status = 'past_due'
 //   recent_upgrades: [VendorRow],        // moved to growth/pro in last 30 days
+//   all_vendors:     [VendorRow],        // every business, for the plan editor
 // }
 // =============================================================================
 
@@ -55,7 +56,7 @@ export async function GET() {
   const { data: vendors, error } = await admin
     .from('vendor_profiles')
     .select(
-      'id, user_id, business_name, city, plan_tier, plan_status, trial_ends_at, plan_started_at, plan_expires_at, stripe_customer_id, stripe_subscription_id, created_at'
+      'id, user_id, business_name, city, plan_tier, plan_status, trial_ends_at, plan_started_at, plan_expires_at, created_at'
     )
     .order('created_at', { ascending: false });
 
@@ -68,7 +69,7 @@ export async function GET() {
         total_past_due: 0, total_cancelled: 0,
         estimated_mrr_huf: 0, estimated_mrr_eur: 0,
       },
-      by_tier: [], by_city: [], trials_expiring: [], past_due: [], recent_upgrades: [],
+      by_tier: [], by_city: [], trials_expiring: [], past_due: [], recent_upgrades: [], all_vendors: [],
     });
   }
 
@@ -177,7 +178,7 @@ export async function GET() {
     plan_status:           v.plan_status ?? 'free',
     trial_ends_at:         v.trial_ends_at,
     plan_started_at:       v.plan_started_at,
-    has_stripe:            !!v.stripe_subscription_id,
+    plan_expires_at:       v.plan_expires_at,
   });
 
   return NextResponse.json({
@@ -187,5 +188,6 @@ export async function GET() {
     trials_expiring: trials_expiring.slice(0, 20).map(mapVendor),
     past_due:        past_due.slice(0, 20).map(mapVendor),
     recent_upgrades: recent_upgrades.slice(0, 20).map(mapVendor),
+    all_vendors:     vendors.slice(0, 500).map(mapVendor),
   });
 }

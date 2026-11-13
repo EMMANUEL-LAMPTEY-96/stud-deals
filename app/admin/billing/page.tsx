@@ -3,17 +3,18 @@
 // =============================================================================
 // /admin/billing — Billing & Revenue Dashboard
 // Shows MRR, plan tier distribution, trials expiring soon, past-due vendors,
-// recent upgrades, and revenue by city.
+// recent upgrades, and revenue by city — plus the plan editor: there are no
+// online payments, so admins set a business's plan here after it emails us.
 // =============================================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import AdminNav from '@/components/admin/AdminNav';
 import {
   CreditCard, RefreshCw, Loader2, TrendingUp, Users,
   AlertTriangle, CheckCircle, Clock, XCircle, Banknote,
-  ArrowUpRight, Building2, ChevronRight,
+  ArrowUpRight, Building2, ChevronRight, Search, Save,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -55,7 +56,7 @@ interface VendorRow {
   plan_status: string;
   trial_ends_at: string | null;
   plan_started_at: string | null;
-  has_stripe: boolean;
+  plan_expires_at: string | null;
 }
 
 interface BillingData {
@@ -65,6 +66,7 @@ interface BillingData {
   trials_expiring: VendorRow[];
   past_due: VendorRow[];
   recent_upgrades: VendorRow[];
+  all_vendors: VendorRow[];
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -226,6 +228,175 @@ function VendorTable({
   );
 }
 
+// ── Plan editor ──────────────────────────────────────────────────────────────
+
+const STATUS_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  free:   [{ value: 'free', label: 'Free' }],
+  growth: [
+    { value: 'active', label: 'Active (paid)' },
+    { value: 'trialing', label: 'Trial' },
+    { value: 'past_due', label: 'Payment overdue' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ],
+};
+STATUS_OPTIONS.pro = STATUS_OPTIONS.growth;
+
+function PlanRow({ v, onSaved }: { v: VendorRow; onSaved: (msg: string) => void }) {
+  const initialTier = v.plan_tier === 'starter' ? 'growth' : v.plan_tier;
+  const [tier, setTier] = useState(initialTier);
+  const [status, setStatus] = useState(v.plan_status);
+  const [until, setUntil] = useState(
+    (v.plan_status === 'trialing' ? v.trial_ends_at : v.plan_expires_at)?.slice(0, 10) ?? '',
+  );
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const changeTier = (t: string) => {
+    setTier(t);
+    const allowed = STATUS_OPTIONS[t].map((o) => o.value);
+    if (!allowed.includes(status)) setStatus(allowed[0]);
+  };
+
+  const origUntil = (v.plan_status === 'trialing' ? v.trial_ends_at : v.plan_expires_at)?.slice(0, 10) ?? '';
+  const dirty = tier !== initialTier || status !== v.plan_status || until !== origUntil;
+
+  const save = async () => {
+    setSaving(true); setErr(null);
+    try {
+      const res = await fetch('/api/admin/vendor-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendor_profile_id: v.id,
+          plan_tier: tier,
+          plan_status: status,
+          paid_until: tier === 'free' ? null : (until || null),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? `Error ${res.status}`);
+      const paused = json.offers_paused ? ` · ${json.offers_paused} offer(s) paused to fit the limit` : '';
+      onSaved(`${v.business_name}: now ${tier}${tier === 'free' ? '' : ` (${status})`}${paused}`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <tr className="align-top">
+      <td className="px-4 py-3">
+        <div className="font-semibold text-gray-800">{v.business_name}</div>
+        <div className="text-xs text-gray-400">{v.city}</div>
+      </td>
+      <td className="px-4 py-3">
+        <select
+          aria-label={`Plan for ${v.business_name}`}
+          value={tier}
+          onChange={(e) => changeTier(e.target.value)}
+          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white"
+        >
+          <option value="free">Free</option>
+          <option value="growth">Growth</option>
+          <option value="pro">Pro</option>
+        </select>
+      </td>
+      <td className="px-4 py-3">
+        <select
+          aria-label={`Status for ${v.business_name}`}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          disabled={tier === 'free'}
+          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white disabled:bg-gray-50 disabled:text-gray-400"
+        >
+          {STATUS_OPTIONS[tier].map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </td>
+      <td className="px-4 py-3">
+        <input
+          type="date"
+          aria-label={`${status === 'trialing' ? 'Trial ends' : 'Paid until'} for ${v.business_name}`}
+          value={tier === 'free' ? '' : until}
+          onChange={(e) => setUntil(e.target.value)}
+          disabled={tier === 'free'}
+          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm disabled:bg-gray-50"
+        />
+        <div className="text-[11px] text-gray-400 mt-0.5">
+          {tier === 'free' ? '—' : status === 'trialing' ? 'Trial ends (required)' : 'Paid until (optional)'}
+        </div>
+      </td>
+      <td className="px-4 py-3 text-right">
+        <button
+          onClick={save}
+          disabled={!dirty || saving || (status === 'trialing' && !until)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-100 disabled:text-gray-400"
+        >
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          Save
+        </button>
+        {err && <div className="text-xs text-red-600 mt-1 max-w-[12rem] ml-auto">{err}</div>}
+      </td>
+    </tr>
+  );
+}
+
+function PlanEditor({ vendors, onSaved }: { vendors: VendorRow[]; onSaved: (msg: string) => void }) {
+  const [q, setQ] = useState('');
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return needle
+      ? vendors.filter((v) => `${v.business_name} ${v.city}`.toLowerCase().includes(needle))
+      : vendors;
+  }, [q, vendors]);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-6">
+      <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-100">
+        <div>
+          <h2 className="text-sm font-bold text-gray-800">Change a business&apos;s plan</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            No online payments — businesses email hello@studeals.app and you set the plan here.
+            Downgrading pauses the newest offers above the new limit. Each change is logged and the business is notified.
+          </p>
+        </div>
+        <label className="ml-auto relative">
+          <span className="sr-only">Search businesses</span>
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name or city"
+            className="pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-sm w-56"
+          />
+        </label>
+      </div>
+      {shown.length === 0 ? (
+        <div className="text-center py-10 text-sm text-gray-400">No businesses match.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="text-left text-xs text-gray-400 uppercase tracking-wide">
+                <th className="px-4 py-2 font-semibold">Business</th>
+                <th className="px-4 py-2 font-semibold">Plan</th>
+                <th className="px-4 py-2 font-semibold">Status</th>
+                <th className="px-4 py-2 font-semibold">Until</th>
+                <th className="px-4 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {shown.map((v) => (
+                <PlanRow key={`${v.id}-${v.plan_tier}-${v.plan_status}-${v.plan_expires_at}-${v.trial_ends_at}`} v={v} onSaved={onSaved} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function AdminBillingPage() {
@@ -233,6 +404,7 @@ export default function AdminBillingPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<BillingData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -241,8 +413,8 @@ export default function AdminBillingPage() {
     });
   }, [router]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (quiet = false) => {
+    if (!quiet) setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/admin/billing');
@@ -278,7 +450,7 @@ export default function AdminBillingPage() {
             </p>
           </div>
           <button
-            onClick={fetchData}
+            onClick={() => fetchData()}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -294,10 +466,23 @@ export default function AdminBillingPage() {
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
             <AlertTriangle size={24} className="text-red-500 mx-auto mb-2" />
             <p className="text-red-700 font-semibold text-sm">{error}</p>
-            <button onClick={fetchData} className="mt-3 text-red-600 text-xs underline">Retry</button>
+            <button onClick={() => fetchData()} className="mt-3 text-red-600 text-xs underline">Retry</button>
           </div>
         ) : s ? (
           <>
+            {notice && (
+              <div role="status" className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 flex items-start gap-2">
+                <CheckCircle size={16} className="mt-0.5 shrink-0" />
+                <span className="flex-1">{notice}</span>
+                <button onClick={() => setNotice(null)} className="text-xs underline">Dismiss</button>
+              </div>
+            )}
+
+            <PlanEditor
+              vendors={data!.all_vendors ?? []}
+              onSaved={(msg) => { setNotice(msg); fetchData(true); }}
+            />
+
             {/* ── KPI cards ─────────────────────────────────────────── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <KpiCard

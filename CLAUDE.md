@@ -175,7 +175,7 @@ Rate limiting for document uploads is backed by a `verification_attempts` table 
 - **Security headers** (CSP frame-ancestors etc., X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) are set in `next.config.mjs`. The QR scanners need `camera=(self)`; keep it if you edit Permissions-Policy.
 - **University auto-verification** (026): `institutions.email_domains` holds STUDENT mail domains only (e.g. `student.elte.hu`), never a staff/root domain — sub-domain matching would let staff verify as students. `lib/types/database.types.ts` includes hand-added types for 016–020 — regenerate after applying.
 - Demo accounts: `profiles.is_demo` (migration 020) + `supabase/seed/demo_accounts.sql` (re-runnable reset). Use `lib/utils/demo.ts` — demo users can't delete themselves or upload IDs, and the demo vendor must only ever see demo students.
-- **No online payments** (removed 2026-11-13): `/vendor/billing` shows plans and an email-to-upgrade button (hello@studeals.app); an admin sets `vendor_profiles.plan_tier` / `plan_status` by hand. The `stripe_*` columns are kept but unused.
+- **No online payments** (removed 2026-11-13): `/vendor/billing` shows plans and an email-to-upgrade button (hello@studeals.app); an admin sets the plan in the plan editor on `/admin/billing` (`POST /api/admin/vendor-plan`: audit-logged, notifies the business, and on a downgrade pauses the newest active offers above the new limit). The `stripe_*` columns are kept but unused.
 
 ### Components
 
